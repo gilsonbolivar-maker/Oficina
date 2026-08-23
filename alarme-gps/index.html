@@ -56,6 +56,7 @@
     <label class="opcao"><input type="checkbox" id="opt-tela" checked><span>Manter a tela ligada enquanto vigia</span></label>
     <button class="botao discreto" id="btn-testar" type="button">Testar alarme</button>
     <button class="botao discreto" id="btn-instalar" type="button" hidden>Instalar no celular</button>
+    <button class="botao discreto" id="btn-limpar-mapas" type="button" hidden>Apagar mapas guardados</button>
   </section>
 
   <details class="ajuda">
@@ -65,7 +66,8 @@
     <p><b>Deixe o app aberto na tela</b> enquanto estiver vigiando. O Android congela páginas em
       segundo plano e o alarme pode atrasar ou não tocar. Com a opção “manter a tela ligada”
       o app segura a tela acesa sozinho — só não deixe o aparelho bloqueado.</p>
-    <p>Funciona sem internet depois da primeira visita: só o desenho do mapa precisa de rede.</p>
+    <p>Funciona sem internet depois da primeira visita. O desenho do mapa é a única parte que
+      pede rede — e, se você tocar em <b>Guardar mapa desta área</b> ao criar o ponto, nem isso.</p>
     <p><b>Instalar:</b> no Android, use “Instalar app” no menu do Chrome. No iPhone e no iPad,
       abra no Safari e use <b>Compartilhar → Adicionar à Tela de Início</b> — instalado, ele abre em
       tela cheia e pode mostrar notificações.</p>
@@ -108,6 +110,11 @@
     </label>
 
     <p class="coords" id="coords">—</p>
+
+    <div class="offline">
+      <button class="botao discreto" id="btn-guardar-mapa" type="button">Guardar mapa desta área</button>
+      <p class="offline-info" id="offline-info">Baixa o mapa num raio de 1,5&nbsp;km para funcionar sem sinal.</p>
+    </div>
   </div>
 
   <div class="acoes">

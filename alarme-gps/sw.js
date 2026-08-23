@@ -7,6 +7,7 @@
 const VERSAO = 'v2';
 const CACHE_APP = 'alarme-gps-app-' + VERSAO;
 const CACHE_TILES = 'alarme-gps-tiles';
+const CACHE_SALVO = 'alarme-gps-mapa-salvo';
 const LIMITE_TILES = 400;
 
 const ARQUIVOS = [
@@ -75,8 +76,13 @@ self.addEventListener('fetch', ev => {
 });
 
 async function servirTile(req) {
+  // O mapa guardado de propósito vem primeiro e nunca é podado.
+  const salvo = await caches.open(CACHE_SALVO);
+  const daArea = await salvo.match(req, { ignoreVary: true });
+  if (daArea) return daArea;
+
   const cache = await caches.open(CACHE_TILES);
-  const guardado = await cache.match(req);
+  const guardado = await cache.match(req, { ignoreVary: true });
   if (guardado) return guardado;
   try {
     const resp = await fetch(req);

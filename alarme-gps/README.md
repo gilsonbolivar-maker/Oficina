@@ -25,6 +25,26 @@ quando falta o dobro do raio.
 Abra o site no Chrome e use **Instalar app** (ou "Adicionar à tela inicial") no menu
 do navegador. Instalado, ele abre em tela cheia, sem barra de endereço.
 
+## Mapa sem internet
+
+Ao criar ou editar um ponto, o botão **Guardar mapa desta área** baixa os pedaços do
+mapa num raio de 1,5 km em volta dele, nos zooms 13 a 16 — cerca de 75 imagens, uns
+poucos megabytes. Depois disso o mapa desenha mesmo em modo avião ou sem sinal.
+
+O download é feito devagar, uma imagem de cada vez, e nunca passa de 200 imagens por
+área: os servidores do OpenStreetMap são mantidos por doação e a política de uso deles
+não admite download em massa. Guardar a área do seu ponto de descida é uso pessoal
+normal; varrer uma cidade inteira não é.
+
+Em *Ajustes* aparece quantos pedaços estão guardados e um botão para apagar tudo.
+
+O que já foi visto na tela também fica guardado sozinho, mas isso é limitado e vai
+sendo descartado conforme você navega — para viagem, use o botão.
+
+> No iPhone e no iPad, o Safari descarta os dados de sites que ficam uma semana sem
+> uso. Adicionando o app à Tela de Início isso não acontece: o armazenamento passa a
+> ser tratado como permanente (o app também pede isso ao navegador ao guardar o mapa).
+
 ### Instalar no iPhone e no iPad
 
 Abra o site **no Safari** (o botão "Instalar" do Chrome não existe no iOS) e use
@@ -62,8 +82,8 @@ Automático* para *Nunca* enquanto estiver usando.
 - **A precisão é a do GPS do aparelho** — normalmente 5 a 30 m a céu aberto,
   pior dentro de veículos e entre prédios. Raios muito curtos (50 m) podem
   disparar tarde; para ônibus, 300 a 500 m costuma ser um bom valor.
-- Os pontos ficam salvos só neste navegador (`localStorage`). Limpar os dados
-  do site apaga a lista.
+- Os pontos ficam salvos só neste navegador (`localStorage`) e o mapa guardado,
+  no cache do site. Limpar os dados do site apaga os dois.
 
 ## Publicar
 
@@ -88,7 +108,7 @@ app.css               estilos (tema escuro, layout de celular)
 app.js                estado, armazenamento, rastreio e disparo
 mapa.js               mapa deslizante próprio sobre tiles do OpenStreetMap
 alarme.js             sirene: WAV montado na hora + reserva em Web Audio
-sw.js                 service worker: app offline e cache dos tiles
+sw.js                 service worker: app offline, mapa guardado e cache dos tiles
 manifest.webmanifest  dados de instalação do PWA
 icones/               ícones 180, 192, 512 e maskable
 ```

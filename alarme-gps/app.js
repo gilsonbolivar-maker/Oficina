@@ -9,6 +9,12 @@
 const CHAVE_PONTOS = 'alarme-gps:pontos';
 const CHAVE_CONFIG = 'alarme-gps:config';
 
+const CACHE_MAPA = 'alarme-gps-mapa-salvo';
+const RAIO_OFFLINE = 1600;      // metros guardados em volta do ponto
+const ZOOM_OFFLINE = [13, 16];  // do bairro inteiro até a esquina
+const TETO_TILES = 200;         // nunca virar download em massa dos servidores do OSM
+const PAUSA = 120;              // ms entre pedidos, para pegar leve com o servidor
+
 const $ = id => document.getElementById(id);
 
 const el = {
@@ -45,6 +51,9 @@ const el = {
   raio: $('raio'),
   raioValor: $('raio-valor'),
   coords: $('coords'),
+  guardarMapa: $('btn-guardar-mapa'),
+  offlineInfo: $('offline-info'),
+  limparMapas: $('btn-limpar-mapas'),
   mais: $('btn-mais'),
   menos: $('btn-menos'),
   aqui: $('btn-aqui'),
@@ -371,6 +380,8 @@ function abrirEditor(ponto) {
   el.raio.value = ponto ? ponto.raio : 300;
   el.busca.value = '';
   el.resultados.hidden = true;
+  el.offlineInfo.className = 'offline-info';
+  el.offlineInfo.textContent = 'Baixa o mapa num raio de 1,5 km para funcionar sem sinal.';
   atualizarRaio();
 
   if (!mapa) {
@@ -439,6 +450,76 @@ function guardarPonto() {
   avisar('Ponto salvo.');
 }
 
+/* ————————————————— mapa guardado para uso offline ————————————————— */
+
+const espera = ms => new Promise(r => setTimeout(r, ms));
+let baixando = false;
+
+/**
+ * Baixa e guarda os pedaços do mapa em volta do ponto. São dezenas de
+ * imagens, buscadas uma a uma e com pausa: o OpenStreetMap é servido por
+ * doação e a política de uso não admite download em massa.
+ */
+async function guardarMapaDaArea() {
+  if (!('caches' in window)) { avisar('Este navegador não guarda mapas.'); return; }
+  if (baixando || !mapa) return;
+
+  const centro = mapa.centro();
+  const lista = Mapa.tilesDaArea(
+    centro.lat, centro.lon, RAIO_OFFLINE, ZOOM_OFFLINE[0], ZOOM_OFFLINE[1], TETO_TILES);
+
+  baixando = true;
+  el.guardarMapa.disabled = true;
+  el.offlineInfo.className = 'offline-info';
+  if (navigator.storage && navigator.storage.persist) {
+    navigator.storage.persist().catch(() => {});   // pede para o navegador não descartar
+  }
+
+  const cache = await caches.open(CACHE_MAPA);
+  let guardados = 0;
+  let falhas = 0;
+
+  for (let i = 0; i < lista.length; i++) {
+    el.offlineInfo.textContent = `Guardando ${i + 1} de ${lista.length}…`;
+    try {
+      if (await cache.match(lista[i])) { guardados++; continue; }
+      const resp = await fetch(lista[i]);
+      if (resp.ok) { await cache.put(lista[i], resp); guardados++; } else { falhas++; }
+    } catch (e) {
+      falhas++;
+    }
+    await espera(PAUSA);
+  }
+
+  baixando = false;
+  el.guardarMapa.disabled = false;
+  if (falhas) {
+    el.offlineInfo.textContent =
+      `Guardei ${guardados} de ${lista.length} pedaços. Tente de novo com sinal melhor.`;
+  } else {
+    el.offlineInfo.className = 'offline-info pronto';
+    el.offlineInfo.textContent = `Pronto: ${guardados} pedaços do mapa disponíveis sem internet.`;
+  }
+  contarMapasGuardados();
+}
+
+async function contarMapasGuardados() {
+  if (!('caches' in window)) return;
+  try {
+    const cache = await caches.open(CACHE_MAPA);
+    const total = (await cache.keys()).length;
+    el.limparMapas.hidden = total === 0;
+    el.limparMapas.textContent = `Apagar mapas guardados (${total})`;
+  } catch (e) { /* sem acesso ao cache */ }
+}
+
+async function apagarMapasGuardados() {
+  if (!confirm('Apagar os mapas guardados para uso offline?')) return;
+  await caches.delete(CACHE_MAPA);
+  contarMapasGuardados();
+  avisar('Mapas guardados apagados.');
+}
+
 /* ————————————————— busca de endereço ————————————————— */
 
 async function buscarEndereco() {
@@ -495,6 +576,8 @@ el.mais.addEventListener('click', () => mapa.aproximar());
 el.menos.addEventListener('click', () => mapa.afastar());
 el.aqui.addEventListener('click', () => localizarAgora(false));
 el.buscar.addEventListener('click', buscarEndereco);
+el.guardarMapa.addEventListener('click', guardarMapaDaArea);
+el.limparMapas.addEventListener('click', apagarMapasGuardados);
 el.busca.addEventListener('keydown', ev => {
   if (ev.key === 'Enter') { ev.preventDefault(); el.busca.blur(); buscarEndereco(); }
 });
@@ -553,6 +636,7 @@ if ('serviceWorker' in navigator) {
 /* ————————————————— arranque ————————————————— */
 
 renderizarLista();
+contarMapasGuardados();
 definirEstado('Nenhum ponto vigiado');
 if (pontos.length) localizarAgora(true);
 

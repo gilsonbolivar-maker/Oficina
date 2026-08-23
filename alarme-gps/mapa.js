@@ -7,11 +7,14 @@
 
 const Mapa = (() => {
   const TAM = 256;                       // lado do tile, em pixels
-  const URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+  const URL_TILE = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
   const ZOOM_MIN = 3;
   const ZOOM_MAX = 18;
 
   const escala = z => TAM * Math.pow(2, z);
+
+  const endereco = (z, x, y) =>
+    URL_TILE.replace('{z}', z).replace('{x}', x).replace('{y}', y);
 
   const lonParaX = (lon, z) => (lon + 180) / 360 * escala(z);
 
@@ -77,7 +80,7 @@ const Mapa = (() => {
             img.alt = '';
             img.decoding = 'async';
             img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
-            img.src = URL.replace('{z}', zoom).replace('{x}', wx).replace('{y}', ty);
+            img.src = endereco(zoom, wx, ty);
             camada.appendChild(img);
             tiles.set(chave, img);
           }
@@ -243,6 +246,33 @@ const Mapa = (() => {
     return api;
   }
 
+  /**
+   * Endereços dos tiles que cobrem um quadrado de `metros` de raio em volta
+   * do ponto, nos zooms pedidos — usado para guardar o mapa para uso offline.
+   */
+  function tilesDaArea(lat, lon, metros, zMin, zMax, limite) {
+    const lista = [];
+    for (let z = zMin; z <= zMax; z++) {
+      const raioPx = metros / metrosPorPixel(lat, z);
+      const px = lonParaX(lon, z);
+      const py = latParaY(lat, z);
+      const n = Math.pow(2, z);
+      const doZoom = [];
+      const y0 = Math.max(0, Math.floor((py - raioPx) / TAM));
+      const y1 = Math.min(n - 1, Math.floor((py + raioPx) / TAM));
+      for (let y = y0; y <= y1; y++) {
+        for (let x = Math.floor((px - raioPx) / TAM); x <= Math.floor((px + raioPx) / TAM); x++) {
+          doZoom.push(endereco(z, ((x % n) + n) % n, y));
+        }
+      }
+      // zoom que não cabe inteiro no limite fica de fora: melhor faltar
+      // detalhe do que baixar um pedaço solto.
+      if (limite && lista.length + doZoom.length > limite) break;
+      lista.push(...doZoom);
+    }
+    return lista;
+  }
+
   /** Distância em metros entre dois pontos (fórmula de haversine). */
   function distancia(lat1, lon1, lat2, lon2) {
     const R = 6371008.8;
@@ -254,5 +284,5 @@ const Mapa = (() => {
     return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
   }
 
-  return { criar, distancia, metrosPorPixel };
+  return { criar, distancia, metrosPorPixel, tilesDaArea };
 })();

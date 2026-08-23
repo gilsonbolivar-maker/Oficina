@@ -327,6 +327,16 @@ html[data-tela="editor"] .tela-editor { display: block; }
   color: var(--texto-fraco);
   font-variant-numeric: tabular-nums;
 }
+.offline { margin-top: 4px; }
+.offline .botao { width: 100%; }
+.offline-info {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--texto-fraco);
+  text-align: center;
+}
+.offline-info.pronto { color: var(--ok); }
+
 .acoes { display: flex; gap: 10px; margin-top: 20px; }
 .acoes .botao { flex: 1; }
 
