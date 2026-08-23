@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="pt-BR" data-tela="lista">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Alarme GPS</title>
+<meta name="description" content="Toca um alarme quando você chega perto de um ponto marcado no mapa.">
+<meta name="theme-color" content="#0b1220">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Alarme GPS">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icones/icone-192.png" sizes="192x192">
+<link rel="apple-touch-icon" sizes="180x180" href="icones/icone-180.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header class="topo">
+  <h1>Alarme&nbsp;GPS</h1>
+  <p class="estado" id="estado" role="status" aria-live="polite">Nenhum ponto vigiado</p>
+</header>
+
+<!-- ————————————————— lista de pontos ————————————————— -->
+<main class="tela tela-lista" id="tela-lista">
+  <div class="painel-vigia" id="painel-vigia" hidden>
+    <p class="rotulo">Indo para</p>
+    <p class="destino" id="vigia-nome">—</p>
+    <p class="distancia"><span id="vigia-distancia">—</span></p>
+    <div class="barra"><i id="vigia-barra"></i></div>
+    <dl class="detalhes">
+      <div><dt>Raio</dt><dd id="vigia-raio">—</dd></div>
+      <div><dt>Precisão</dt><dd id="vigia-precisao">—</dd></div>
+      <div><dt>Atualizado</dt><dd id="vigia-idade">—</dd></div>
+    </dl>
+    <p class="aviso-tela" id="aviso-tela"></p>
+    <button class="botao perigo largo" id="btn-desarmar" type="button">Desarmar</button>
+  </div>
+
+  <ul class="pontos" id="pontos"></ul>
+
+  <p class="vazio" id="vazio">
+    Nenhum ponto salvo ainda.<br>
+    Toque em <b>Novo ponto</b>, arraste o mapa até o lugar onde o alarme deve tocar
+    e escolha a distância de aviso.
+  </p>
+
+  <button class="botao principal largo" id="btn-novo" type="button">＋ Novo ponto</button>
+
+  <section class="ajustes">
+    <h2>Ajustes</h2>
+    <label class="opcao"><input type="checkbox" id="opt-som" checked><span>Tocar sirene</span></label>
+    <label class="opcao"><input type="checkbox" id="opt-vibrar" checked><span>Vibrar</span></label>
+    <label class="opcao"><input type="checkbox" id="opt-aviso" checked><span>Bipe de aproximação (no dobro do raio)</span></label>
+    <label class="opcao"><input type="checkbox" id="opt-tela" checked><span>Manter a tela ligada enquanto vigia</span></label>
+    <button class="botao discreto" id="btn-testar" type="button">Testar alarme</button>
+    <button class="botao discreto" id="btn-instalar" type="button" hidden>Instalar no celular</button>
+    <button class="botao discreto" id="btn-limpar-mapas" type="button" hidden>Apagar mapas guardados</button>
+  </section>
+
+  <details class="ajuda">
+    <summary>Como funciona</summary>
+    <p>O celular acompanha sua posição pelo GPS e compara com o ponto salvo. Quando a
+      distância fica menor que o raio escolhido, a sirene toca até você tocar em <b>Parar</b>.</p>
+    <p><b>Deixe o app aberto na tela</b> enquanto estiver vigiando. O Android congela páginas em
+      segundo plano e o alarme pode atrasar ou não tocar. Com a opção “manter a tela ligada”
+      o app segura a tela acesa sozinho — só não deixe o aparelho bloqueado.</p>
+    <p>Funciona sem internet depois da primeira visita. O desenho do mapa é a única parte que
+      pede rede — e, se você tocar em <b>Guardar mapa desta área</b> ao criar o ponto, nem isso.</p>
+    <p><b>Instalar:</b> no Android, use “Instalar app” no menu do Chrome. No iPhone e no iPad,
+      abra no Safari e use <b>Compartilhar → Adicionar à Tela de Início</b> — instalado, ele abre em
+      tela cheia e pode mostrar notificações.</p>
+    <p><b>No iPhone e no iPad:</b> desligue o modo silencioso e deixe o volume alto — e lembre que
+      iPad só de Wi‑Fi não tem GPS, ele se localiza pelas redes por perto, o que é impreciso demais
+      para um alarme em movimento.</p>
+  </details>
+</main>
+
+<!-- ————————————————— editor de ponto ————————————————— -->
+<main class="tela tela-editor" id="tela-editor">
+  <div class="busca">
+    <input type="search" id="busca" placeholder="Buscar endereço ou cidade" autocomplete="off" enterkeyhint="search">
+    <button class="botao discreto" id="btn-buscar" type="button">Buscar</button>
+  </div>
+  <ul class="resultados" id="resultados" hidden></ul>
+
+  <div class="mapa" id="mapa">
+    <div class="mapa-tiles" id="mapa-tiles"></div>
+    <div class="mapa-raio" id="mapa-raio"></div>
+    <div class="mapa-eu" id="mapa-eu" hidden></div>
+    <div class="mapa-mira"><svg viewBox="0 0 24 34" aria-hidden="true"><path d="M12 0a9 9 0 0 0-9 9c0 6.6 9 25 9 25s9-18.4 9-25a9 9 0 0 0-9-9z"/><circle cx="12" cy="9" r="3.6"/></svg></div>
+    <div class="mapa-botoes">
+      <button type="button" id="btn-mais" aria-label="Aproximar">＋</button>
+      <button type="button" id="btn-menos" aria-label="Afastar">−</button>
+      <button type="button" id="btn-aqui" aria-label="Ir para minha localização">◎</button>
+    </div>
+    <p class="mapa-creditos">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></p>
+  </div>
+
+  <div class="campos">
+    <label class="campo">
+      <span>Nome do ponto</span>
+      <input type="text" id="nome" placeholder="Ex.: Rodoviária" maxlength="60" enterkeyhint="done">
+    </label>
+
+    <label class="campo">
+      <span>Tocar quando chegar a <b id="raio-valor">300 m</b> do ponto</span>
+      <input type="range" id="raio" min="50" max="3000" step="50" value="300">
+    </label>
+
+    <p class="coords" id="coords">—</p>
+
+    <div class="offline">
+      <button class="botao discreto" id="btn-guardar-mapa" type="button">Guardar mapa desta área</button>
+      <p class="offline-info" id="offline-info">Baixa o mapa num raio de 1,5&nbsp;km para funcionar sem sinal.</p>
+    </div>
+  </div>
+
+  <div class="acoes">
+    <button class="botao discreto" id="btn-cancelar" type="button">Cancelar</button>
+    <button class="botao principal" id="btn-salvar" type="button">Salvar ponto</button>
+  </div>
+</main>
+
+<!-- ————————————————— alarme ————————————————— -->
+<div class="alarme" id="alarme" hidden>
+  <div class="alarme-caixa">
+    <p class="alarme-titulo">Chegou!</p>
+    <p class="alarme-nome" id="alarme-nome">—</p>
+    <p class="alarme-texto" id="alarme-texto">—</p>
+    <button class="botao parar" id="btn-parar" type="button">Parar alarme</button>
+  </div>
+</div>
+
+<div class="aviso" id="toast" hidden></div>
+
+<script src="mapa.js"></script>
+<script src="alarme.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
