@@ -154,6 +154,11 @@ const Mapa = (() => {
     caixa.addEventListener('pointerup', soltar);
     caixa.addEventListener('pointercancel', soltar);
 
+    // O Safari dispara gestos próprios na pinça; sem isso ele dá zoom na página.
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(nome => {
+      caixa.addEventListener(nome, ev => ev.preventDefault());
+    });
+
     caixa.addEventListener('wheel', ev => {
       ev.preventDefault();
       aplicarZoom(ev.deltaY < 0 ? 1 : -1);

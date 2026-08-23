@@ -46,6 +46,8 @@ h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
   top: 0;
   z-index: 5;
   background: linear-gradient(var(--fundo) 70%, transparent);
+  max-width: 620px;
+  margin: 0 auto;
 }
 .topo h1 { font-size: 20px; }
 .estado {
@@ -58,7 +60,12 @@ h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
 .estado.erro { color: var(--perigo); }
 
 /* ——— troca de telas ——— */
-.tela { display: none; padding: 0 16px 32px; }
+.tela {
+  display: none;
+  padding: 0 16px 32px;
+  max-width: 620px;
+  margin: 0 auto;
+}
 html[data-tela="lista"] .tela-lista { display: block; }
 html[data-tela="editor"] .tela-editor { display: block; }
 

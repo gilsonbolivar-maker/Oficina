@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = 'v1';
+const VERSAO = 'v2';
 const CACHE_APP = 'alarme-gps-app-' + VERSAO;
 const CACHE_TILES = 'alarme-gps-tiles';
 const LIMITE_TILES = 400;
@@ -17,6 +17,7 @@ const ARQUIVOS = [
   'mapa.js',
   'alarme.js',
   'manifest.webmanifest',
+  'icones/icone-180.png',
   'icones/icone-192.png',
   'icones/icone-512.png',
   'icones/icone-maskable-512.png'

@@ -506,6 +506,9 @@ el.testar.addEventListener('click', () => {
   el.alarme.hidden = false;
 });
 
+// O iPhone e o iPad não têm a API de vibração: some com a opção por lá.
+if (!navigator.vibrate) el.optVibrar.closest('.opcao').hidden = true;
+
 const opcoes = [[el.optSom, 'som'], [el.optVibrar, 'vibrar'],
                 [el.optAviso, 'aviso'], [el.optTela, 'tela']];
 for (const [caixa, chave] of opcoes) {

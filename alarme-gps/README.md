@@ -25,6 +25,31 @@ quando falta o dobro do raio.
 Abra o site no Chrome e use **Instalar app** (ou "Adicionar à tela inicial") no menu
 do navegador. Instalado, ele abre em tela cheia, sem barra de endereço.
 
+### Instalar no iPhone e no iPad
+
+Abra o site **no Safari** (o botão "Instalar" do Chrome não existe no iOS) e use
+**Compartilhar → Adicionar à Tela de Início**. Instalado, ele abre em tela cheia e
+passa a poder mostrar notificações — no iOS, notificação de site só funciona depois
+de adicionado à tela de início.
+
+No iPhone e no iPad valem três cuidados a mais:
+
+- **Desligue o modo silencioso e deixe o volume alto.** O iOS cala som gerado pela
+  Web Audio API quando o aparelho está no silencioso. Por isso a sirene deste app é
+  montada como um WAV e tocada por um elemento `<audio>`, que continua sendo ouvido
+  — mas o volume de mídia ainda precisa estar em pé.
+- **Não há vibração.** O iOS não expõe a API de vibração para sites; a opção some
+  sozinha do menu de ajustes por lá. O aviso é visual e sonoro.
+- **iPad só de Wi‑Fi não tem GPS.** Os modelos Wi‑Fi se localizam pelas redes sem fio
+  ao redor, com erro de dezenas ou centenas de metros e sem atualizar direito em
+  movimento — não dá para confiar num alarme de percurso. Modelos com Cellular têm
+  GPS de verdade e funcionam como um celular. Para pegar ônibus, o celular é a
+  ferramenta certa.
+
+A trava de tela funciona no iPadOS/iOS 16.4 ou mais novo. Em versões anteriores a
+tela apaga sozinha e o alarme para — ajuste *Ajustes → Tela e Brilho → Bloqueio
+Automático* para *Nunca* enquanto estiver usando.
+
 ## Limites que vale conhecer
 
 - **Deixe o app aberto e a tela acesa.** O Android congela páginas em segundo
@@ -62,10 +87,10 @@ index.html            telas: lista, editor de ponto e alarme
 app.css               estilos (tema escuro, layout de celular)
 app.js                estado, armazenamento, rastreio e disparo
 mapa.js               mapa deslizante próprio sobre tiles do OpenStreetMap
-alarme.js             sirene sintetizada pela Web Audio API
+alarme.js             sirene: WAV montado na hora + reserva em Web Audio
 sw.js                 service worker: app offline e cache dos tiles
 manifest.webmanifest  dados de instalação do PWA
-icones/               ícones 192, 512 e maskable
+icones/               ícones 180, 192, 512 e maskable
 ```
 
 Nada aqui é gerado por ferramenta: os arquivos do repositório são exatamente os
