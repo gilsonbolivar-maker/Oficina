@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tabela de Férias</title>
+<meta name="description" content="Tabela para marcar os pedidos de férias da equipe: início, fim e observações de cada período.">
+<meta name="theme-color" content="#0b1220">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Férias">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icones/icone-192.png" sizes="192x192">
+<link rel="apple-touch-icon" sizes="180x180" href="icones/icone-180.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header class="topo">
+  <h1>Tabela de Férias</h1>
+  <p class="estado" id="estado" role="status" aria-live="polite">—</p>
+</header>
+
+<main class="folha">
+
+  <!-- ————————————————— barra de comandos ————————————————— -->
+  <section class="comandos">
+    <label class="campo-ano">
+      <span>Ano</span>
+      <select id="ano"></select>
+    </label>
+    <div class="botoes">
+      <button class="botao discreto" id="btn-imprimir" type="button">Imprimir</button>
+      <button class="botao discreto" id="btn-csv" type="button">Baixar CSV</button>
+      <button class="botao discreto" id="btn-salvar" type="button">Salvar arquivo</button>
+      <button class="botao discreto" id="btn-abrir" type="button">Abrir arquivo</button>
+      <input type="file" id="arquivo" accept="application/json,.json" hidden>
+    </div>
+  </section>
+
+  <!-- ————————————————— tabela ————————————————— -->
+  <div class="cabecalho" aria-hidden="true">
+    <span>Colega</span>
+    <span>Início</span>
+    <span>Fim</span>
+    <span>Dias</span>
+  </div>
+
+  <div class="lista" id="lista"></div>
+
+  <button class="botao discreto largo" id="btn-colega" type="button">＋ Adicionar colega</button>
+
+  <!-- ————————————————— coincidências ————————————————— -->
+  <section class="coincidencias" id="coincidencias" hidden>
+    <h2>Coincidências</h2>
+    <ul id="lista-coincidencias"></ul>
+  </section>
+
+  <!-- ————————————————— mapa do ano ————————————————— -->
+  <section class="ano">
+    <h2>Mapa do ano <span id="ano-titulo"></span></h2>
+    <div class="rolagem">
+      <div class="quadro">
+        <div class="meses" id="meses"></div>
+        <div class="faixas" id="faixas"></div>
+      </div>
+    </div>
+    <p class="vazio" id="ano-vazio">Nenhum período marcado ainda neste ano.</p>
+  </section>
+
+  <details class="ajuda">
+    <summary>Como funciona</summary>
+    <p>Cada colega tem uma linha. Marque <b>início</b> e <b>fim</b> de cada período de férias;
+      a contagem de dias e o total do ano aparecem sozinhos. Use <b>＋ período</b> para dividir
+      as férias em mais de uma etapa e o campo de <b>observações</b> para combinados, trocas
+      de plantão ou o que precisar ficar registrado.</p>
+    <p>Quando dois colegas ficam fora ao mesmo tempo, os períodos ficam marcados e a
+      coincidência é listada logo abaixo da tabela — é só um aviso, nada impede a marcação.</p>
+    <p>O <b>ano</b> lá em cima escolhe o que o mapa desenha e entra no nome dos arquivos
+      baixados — as datas você marca à vontade, inclusive de um ano para o outro.</p>
+    <p><b>Onde fica salvo:</b> tudo é gravado sozinho neste navegador, neste aparelho. Ninguém mais
+      enxerga a sua tabela. Para passar a tabela adiante, use <b>Salvar arquivo</b> e envie o arquivo
+      gerado — quem recebe abre com <b>Abrir arquivo</b>. <b>Baixar CSV</b> gera uma planilha e
+      <b>Imprimir</b> sai em papel ou PDF.</p>
+    <p>Limpar os dados do navegador apaga a tabela. Se ela for importante, guarde o arquivo.</p>
+  </details>
+
+</main>
+
+<template id="modelo-pessoa">
+  <article class="pessoa">
+    <div class="identidade">
+      <input class="nome" type="text" maxlength="60" aria-label="Nome do colega" placeholder="Nome">
+      <p class="total"><b>0</b> dias</p>
+      <button class="remover pessoa-remover" type="button" aria-label="Remover colega">✕</button>
+    </div>
+    <div class="corpo">
+      <ol class="periodos"></ol>
+      <div class="rodape">
+        <button class="botao discreto periodo-novo" type="button">＋ período</button>
+        <textarea class="obs" rows="1" aria-label="Observações"
+                  placeholder="Observações — emenda com feriado, troca de plantão…"></textarea>
+      </div>
+    </div>
+  </article>
+</template>
+
+<template id="modelo-periodo">
+  <li class="periodo">
+    <label class="campo-data de"><span>Início</span><input type="date" class="inicio"><b class="valor"></b></label>
+    <label class="campo-data ate"><span>Fim</span><input type="date" class="fim"><b class="valor"></b></label>
+    <span class="dias">—</span>
+    <button class="remover periodo-remover" type="button" aria-label="Remover período">✕</button>
+    <p class="erro" hidden></p>
+  </li>
+</template>
+
+<div class="aviso" id="toast" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>

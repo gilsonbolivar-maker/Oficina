@@ -1,0 +1,392 @@
+/* ——————————————— Tabela de Férias ——————————————— */
+
+:root {
+  --fundo: #0b1220;
+  --superficie: #141d2e;
+  --superficie-alta: #1e2a41;
+  --borda: #2b3a56;
+  --texto: #e8edf7;
+  --texto-fraco: #93a1bd;
+  --acento: #ffb020;
+  --perigo: #ff4d4d;
+  --ok: #35d07f;
+  --raio-borda: 14px;
+  --gap: 14px;
+}
+
+* { box-sizing: border-box; }
+
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--fundo);
+  color: var(--texto);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+  min-height: 100dvh;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+           env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+
+.folha { max-width: 980px; margin: 0 auto; padding: 0 16px 40px; }
+
+/* ——— topo ——— */
+.topo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px 16px 10px;
+  max-width: 980px;
+  margin: 0 auto;
+}
+.topo h1 { font-size: 20px; }
+.estado { margin: 0; font-size: 13px; color: var(--texto-fraco); text-align: right; }
+
+/* ——— botões ——— */
+.botao {
+  appearance: none;
+  border: 1px solid var(--borda);
+  background: var(--superficie-alta);
+  color: var(--texto);
+  font: inherit;
+  font-weight: 600;
+  padding: 11px 16px;
+  border-radius: var(--raio-borda);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.botao:active { transform: translateY(1px); }
+.botao.discreto { background: transparent; color: var(--texto-fraco); }
+.botao.discreto:hover { color: var(--texto); border-color: var(--acento); }
+.botao.largo { display: block; width: 100%; margin-top: var(--gap); }
+
+.remover {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--texto-fraco);
+  font-size: 15px;
+  line-height: 1;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  cursor: pointer;
+  flex: none;
+}
+.remover:hover { color: var(--perigo); border-color: var(--perigo); }
+
+/* ——— barra de comandos ——— */
+.comandos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0 16px;
+}
+.campo-ano { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--texto-fraco); }
+.campo-ano select {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  color: var(--texto);
+  font: inherit;
+  font-weight: 600;
+  padding: 9px 12px;
+}
+.comandos .botoes { display: flex; flex-wrap: wrap; gap: 8px; }
+.comandos .botao { padding: 9px 14px; font-size: 14px; }
+
+/* ——— cabeçalho da tabela (só em tela larga) ——— */
+.cabecalho { display: none; }
+
+/* ——— lista de colegas ——— */
+.lista { display: grid; gap: 10px; }
+
+.pessoa {
+  min-width: 0;   /* deixa o cartão encolher junto com a tela */
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-borda);
+  padding: 12px;
+}
+.pessoa.marcada { border-color: #3d4f72; }
+
+.identidade { display: flex; align-items: center; gap: 8px; }
+.identidade .nome {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--texto);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 620;
+  padding: 6px 8px;
+}
+.identidade .nome:hover { border-color: var(--borda); }
+.identidade .nome:focus { border-color: var(--acento); outline: none; background: var(--fundo); }
+.identidade .total {
+  margin: 0;
+  font-size: 13px;
+  color: var(--texto-fraco);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.identidade .total b { color: var(--acento); font-size: 15px; }
+.identidade .total.demais b { color: var(--perigo); }
+.identidade .total.zero b { color: var(--texto-fraco); font-weight: 600; }
+
+.corpo { margin-top: 8px; }
+
+/* ——— períodos ——— */
+.periodos { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.periodo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    "de   ate"
+    "dias rem"
+    "erro erro";
+  align-items: end;
+  gap: 4px 8px;
+}
+.periodo .de { grid-area: de; }
+.periodo .ate { grid-area: ate; }
+.periodo .dias { grid-area: dias; }
+.periodo .remover { grid-area: rem; justify-self: end; }
+.periodo .erro { grid-area: erro; }
+.periodo.coincide .campo-data input { border-color: var(--acento); }
+.periodo.invalido .campo-data input { border-color: var(--perigo); }
+
+.campo-data { display: grid; gap: 4px; font-size: 12px; color: var(--texto-fraco); min-width: 0; }
+.campo-data input {
+  width: 100%;
+  min-width: 0;
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  color: var(--texto);
+  font: inherit;
+  font-size: 15px;
+  padding: 9px 10px;
+  color-scheme: dark;
+}
+.campo-data input:focus { outline: none; border-color: var(--acento); }
+.campo-data .valor { display: none; }   /* só na impressão, no lugar do seletor */
+
+.periodo .dias {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--texto-fraco);
+  white-space: nowrap;
+  align-self: center;
+}
+.periodo .dias.contado { color: var(--texto); }
+.periodo .erro { margin: 0; font-size: 12px; color: var(--perigo); }
+
+/* ——— pé do colega: novo período e observações ——— */
+.rodape { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; margin-top: 10px; }
+.periodo-novo { flex: none; padding: 8px 12px; font-size: 13px; }
+.obs {
+  flex: 1 1 240px;
+  min-width: 0;
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  color: var(--texto);
+  font: inherit;
+  font-size: 14px;
+  padding: 9px 10px;
+  resize: none;
+  overflow: hidden;
+}
+.obs:focus { outline: none; border-color: var(--acento); }
+
+/* ——— coincidências ——— */
+.coincidencias { margin-top: 26px; }
+.coincidencias h2, .ano h2 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--texto-fraco);
+  margin-bottom: 10px;
+}
+.coincidencias ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.coincidencias li {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-left: 3px solid var(--acento);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 14px;
+}
+.coincidencias li b { font-weight: 620; }
+.coincidencias li span { color: var(--texto-fraco); font-variant-numeric: tabular-nums; }
+
+/* ——— mapa do ano ——— */
+.ano { margin-top: 26px; }
+.ano h2 span { color: var(--acento); }
+.rolagem { overflow-x: auto; }
+.quadro { min-width: 620px; }
+
+.meses {
+  display: flex;
+  margin-left: 130px;
+  font-size: 11px;
+  color: var(--texto-fraco);
+}
+.meses i {
+  font-style: normal;
+  text-align: center;
+  border-left: 1px solid var(--borda);
+  padding: 2px 0;
+  overflow: hidden;
+}
+.meses i:first-child { border-left: 0; }
+
+.faixas { display: grid; gap: 4px; margin-top: 4px; }
+.faixa { display: grid; grid-template-columns: 130px 1fr; align-items: center; gap: 8px; }
+.faixa .quem {
+  font-size: 13px;
+  color: var(--texto-fraco);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.trilho {
+  position: relative;
+  height: 22px;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.grade { position: absolute; inset: 0; display: flex; }
+.grade i { border-left: 1px solid var(--borda); opacity: .6; }
+.grade i:first-child { border-left: 0; }
+.barra {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  background: var(--acento);
+  border-radius: 4px;
+  min-width: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #201400;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.barra.coincide { background: var(--perigo); color: #fff; }
+.hoje {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--ok);
+  opacity: .85;
+}
+
+.vazio { color: var(--texto-fraco); text-align: center; padding: 18px 6px; font-size: 14px; }
+
+/* ——— ajuda ——— */
+.ajuda { margin-top: 26px; color: var(--texto-fraco); font-size: 14px; }
+.ajuda summary { cursor: pointer; padding: 8px 0; color: var(--texto); }
+.ajuda p { margin: 8px 0; }
+.ajuda b { color: var(--texto); }
+
+/* ——— aviso flutuante ——— */
+.aviso {
+  position: fixed;
+  left: 50%;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 40;
+  max-width: calc(100% - 32px);
+  background: var(--superficie-alta);
+  border: 1px solid var(--borda);
+  color: var(--texto);
+  padding: 12px 18px;
+  border-radius: 99px;
+  font-size: 14px;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .45);
+}
+
+/* ——— tela larga: vira tabela de verdade ——— */
+@media (min-width: 760px) {
+  .cabecalho {
+    display: grid;
+    grid-template-columns: 240px 1fr 1fr 62px 34px;
+    gap: 8px;
+    padding: 0 12px 8px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--texto-fraco);
+  }
+  .cabecalho span:nth-child(4) { text-align: right; }
+
+  .pessoa { display: grid; grid-template-columns: 240px 1fr; gap: 8px; align-items: start; }
+  .identidade { flex-direction: column; align-items: stretch; gap: 4px; position: relative; }
+  .identidade .nome { font-size: 16px; padding-right: 34px; }
+  .identidade .total { padding-left: 8px; }
+  .identidade .pessoa-remover { position: absolute; top: 0; right: 0; }
+  .corpo { margin-top: 0; }
+  .campo-data span { display: none; }
+  .periodo {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 62px 34px;
+    grid-template-areas:
+      "de   ate  dias rem"
+      "erro erro erro erro";
+    align-items: center;
+  }
+  .periodo .dias { text-align: right; }
+}
+
+/* ——— impressão: papel branco, sem comandos ——— */
+@media print {
+  :root {
+    --fundo: #fff;
+    --superficie: #fff;
+    --superficie-alta: #fff;
+    --borda: #b9c2d0;
+    --texto: #101418;
+    --texto-fraco: #4a5568;
+    --acento: #a06000;
+  }
+  .comandos, .ajuda, .aviso, .remover, .periodo-novo, #btn-colega { display: none !important; }
+  .folha { max-width: none; padding: 0; }
+  .topo { padding: 0 0 10px; }
+  .pessoa, .coincidencias li, .trilho { break-inside: avoid; }
+  .pessoa { border-color: var(--borda); }
+  /* no papel, data vira texto: o seletor imprimiria "mm/dd/aaaa" nas vazias */
+  .campo-data input { display: none; }
+  .campo-data .valor {
+    display: block;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    border-bottom: 1px solid var(--borda);
+    min-height: 1.5em;
+    padding: 2px 2px 3px;
+  }
+  .obs {
+    border-color: var(--borda);
+    color-scheme: light;
+    resize: none;
+  }
+  .obs::placeholder { color: transparent; }
+  .barra { background: #a06000; color: #fff; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .barra.coincide { background: #b81f1f; }
+  .rolagem { overflow: visible; }
+}
