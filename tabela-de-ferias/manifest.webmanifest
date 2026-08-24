@@ -1,7 +1,7 @@
 {
-  "name": "Tabela de Férias",
-  "short_name": "Férias",
-  "description": "Tabela para marcar os pedidos de férias da equipe: início, fim e observações de cada período.",
+  "name": "Escala de Férias do Grupo A",
+  "short_name": "Férias Grupo A",
+  "description": "Escala de férias do Grupo A: três períodos por colega, com o quadro do mês e as folgas da escala de turnos.",
   "lang": "pt-BR",
   "dir": "ltr",
   "start_url": ".",

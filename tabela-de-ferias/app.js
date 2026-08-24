@@ -1,6 +1,6 @@
 /* ————————————————————————————————————————————————————————————
-   Tabela de Férias — pedidos da equipe: períodos, contagem de
-   dias, coincidências e o mapa do ano.
+   Escala de Férias do Grupo A — três períodos por colega, quadro do
+   mês com as folgas da escala de turnos, coincidências e mapa do ano.
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
@@ -27,8 +27,22 @@ const GRUPO = [
   'Alvaro Lima'
 ];
 
-const DIAS_CLT = 30;   // teto de dias de férias por período aquisitivo
+const DIAS_CLT = 30;      // teto de dias de férias por período aquisitivo
+const PERIODOS = 3;       // cada colega escolhe até três períodos
 const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+const MESES_INTEIRO = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+                       'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+const SEMANA = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+const SEMANA_INTEIRO = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+
+/* Escala de turnos da INB: ciclo de 35 dias, aqui só a coluna do Grupo A,
+   tirada do app Escala de Turnos. 'F' é folga; 0, 8 e 16 são as horas em que
+   o turno começa. O dia de índice 0 é 02/08/2026, e o ciclo se repete. */
+const ESCALA_A = [
+  '16', 'F', '0', '0', 'F', 'F', 'F', 'F', '8', '8', '16', '16', 'F', '0', '0', '0', 'F', 'F',
+  'F', '8', '8', '8', '16', '16', 'F', '0', '0', 'F', 'F', 'F', 'F', '8', '8', '16', '16'
+];
+const ESCALA_BASE = new Date(2026, 7, 2);
 
 const $ = id => document.getElementById(id);
 
@@ -38,7 +52,7 @@ const el = {
   anoTitulo: $('ano-titulo'),
   lista: $('lista'),
   novoColega: $('btn-colega'),
-  imprimir: $('btn-imprimir'),
+  pdf: $('btn-pdf'),
   csv: $('btn-csv'),
   salvar: $('btn-salvar'),
   abrir: $('btn-abrir'),
@@ -121,14 +135,47 @@ function plural(n, um, muitos) {
   return n + ' ' + (Math.abs(n) === 1 ? um : muitos);
 }
 
+/* Diferença em dias inteiros, sem depender de hora nem de fuso. */
+function distancia(a, b) {
+  return Math.floor((Date.UTC(b.getFullYear(), b.getMonth(), b.getDate()) -
+                     Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())) / DIA);
+}
+
+/* ————————————————— escala de turnos ————————————————— */
+
+function turnoDoDia(d) {
+  const volta = ESCALA_A.length;
+  return ESCALA_A[((distancia(ESCALA_BASE, d) % volta) + volta) % volta];
+}
+
+function ehFolga(d) {
+  return turnoDoDia(d) === 'F';
+}
+
+function comoTurno(d) {
+  const turno = turnoDoDia(d);
+  return turno === 'F' ? 'Folga do Grupo A' : 'Turno das ' + turno.padStart(2, '0') + 'h';
+}
+
 /* ————————————————— estado ————————————————— */
 
 function novoId() {
   return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
 
+function periodosVazios() {
+  return Array.from({ length: PERIODOS }, () => ({ inicio: '', fim: '' }));
+}
+
 function pessoaVazia(nome) {
-  return { id: novoId(), nome: nome || '', periodos: [{ inicio: '', fim: '' }], obs: '' };
+  return { id: novoId(), nome: nome || '', periodos: periodosVazios(), obs: '' };
+}
+
+/* Todo mundo tem os três períodos disponíveis; tabelas antigas ganham os que faltam. */
+function completar(periodos) {
+  const lista = periodos.slice();
+  while (lista.length < PERIODOS) lista.push({ inicio: '', fim: '' });
+  return lista;
 }
 
 function grupoInicial() {
@@ -141,12 +188,12 @@ function saneado(bruto) {
     id: typeof p.id === 'string' ? p.id : novoId(),
     nome: typeof p.nome === 'string' ? p.nome.slice(0, 60) : '',
     obs: typeof p.obs === 'string' ? p.obs : '',
-    periodos: Array.isArray(p.periodos) && p.periodos.length
+    periodos: completar(Array.isArray(p.periodos)
       ? p.periodos.map(f => ({
           inicio: typeof f.inicio === 'string' ? f.inicio : '',
           fim: typeof f.fim === 'string' ? f.fim : ''
         }))
-      : [{ inicio: '', fim: '' }]
+      : [])
   }));
   return limpo.length ? limpo : null;
 }
@@ -167,6 +214,9 @@ function montarPeriodo(pessoa, periodo, indice) {
 
   li.dataset.pessoa = pessoa.id;
   li.dataset.indice = String(indice);
+  li.querySelector('.ordem').textContent = (indice + 1) + 'º';
+  li.querySelector('.de span').textContent = (indice + 1) + 'º início';
+  li.querySelector('.ate span').textContent = 'fim';
   inicio.value = periodo.inicio || '';
   fim.value = periodo.fim || '';
 
@@ -183,10 +233,12 @@ function montarPeriodo(pessoa, periodo, indice) {
   });
   fim.addEventListener('input', () => { periodo.fim = fim.value; aoMudar(); });
 
-  li.querySelector('.periodo-remover').addEventListener('click', () => {
-    pessoa.periodos.splice(indice, 1);
-    if (!pessoa.periodos.length) pessoa.periodos.push({ inicio: '', fim: '' });
-    montarLista();
+  /* Os três períodos ficam sempre na tela: limpar esvazia, não remove a linha. */
+  li.querySelector('.periodo-limpar').addEventListener('click', () => {
+    periodo.inicio = '';
+    periodo.fim = '';
+    inicio.value = '';
+    fim.value = '';
     aoMudar();
   });
 
@@ -210,13 +262,6 @@ function montarPessoa(pessoa) {
     pessoa.obs = obs.value;
     esticar(obs);
     agendarGravacao();
-  });
-
-  artigo.querySelector('.periodo-novo').addEventListener('click', () => {
-    pessoa.periodos.push({ inicio: '', fim: '' });
-    montarLista();
-    const campos = el.lista.querySelectorAll(`[data-pessoa="${pessoa.id}"] .inicio`);
-    if (campos.length) campos[campos.length - 1].focus();
   });
 
   artigo.querySelector('.pessoa-remover').addEventListener('click', () => {
@@ -308,6 +353,7 @@ function atualizar() {
     campoDias.textContent = periodo.inicio && periodo.fim && !invalido ? plural(dias, 'dia', 'dias') : '—';
     li.querySelector('.de .valor').textContent = dataBr(periodo.inicio);
     li.querySelector('.ate .valor').textContent = dataBr(periodo.fim);
+    desenharQuadro(li, periodo, invalido);
     campoDias.classList.toggle('contado', Boolean(dias > 0 && !invalido));
     li.classList.toggle('invalido', invalido);
     li.classList.toggle('coincide', marcados.has(pessoa.id + ':' + Number(li.dataset.indice)));
@@ -367,6 +413,92 @@ function mostrarCoincidencias(pares) {
 
 function escapar(texto) {
   return texto.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+/* ————————————————— quadro do mês escolhido ————————————————— */
+
+/* Um quadro por mês que o período atravessa: verde do primeiro ao último dia
+   de férias, contorno nas folgas do Grupo A. Só é redesenhado quando as datas
+   do período mudam. */
+function desenharQuadro(li, periodo, invalido) {
+  const quadro = li.querySelector('.quadro');
+  const assinatura = (periodo.inicio || '') + '|' + (periodo.fim || '') + '|' + invalido;
+  if (quadro.dataset.assinatura === assinatura) return;
+  quadro.dataset.assinatura = assinatura;
+  quadro.textContent = '';
+
+  const inicio = data(periodo.inicio);
+  if (!inicio || invalido) {
+    quadro.hidden = true;
+    return;
+  }
+  const fim = data(periodo.fim) || inicio;
+  quadro.hidden = false;
+
+  let folgas = 0;
+  for (let d = new Date(inicio); d <= fim; d.setDate(d.getDate() + 1)) {
+    if (ehFolga(d)) folgas++;
+  }
+
+  const meses = [];
+  const passo = new Date(inicio.getFullYear(), inicio.getMonth(), 1);
+  while (passo <= fim && meses.length < 4) {
+    meses.push(new Date(passo));
+    passo.setMonth(passo.getMonth() + 1);
+  }
+  meses.forEach(mes => quadro.append(montarMes(mes, inicio, fim)));
+
+  const nota = document.createElement('p');
+  nota.className = 'quadro-nota';
+  nota.textContent = folgas
+    ? plural(folgas, 'dia', 'dias') + ' do período já seriam folga do Grupo A.'
+    : 'Nenhuma folga do Grupo A cai dentro do período.';
+  quadro.append(nota);
+}
+
+function montarMes(mes, inicio, fim) {
+  const bloco = document.createElement('div');
+  bloco.className = 'mes';
+
+  const titulo = document.createElement('p');
+  titulo.className = 'mes-nome';
+  titulo.textContent = MESES_INTEIRO[mes.getMonth()] + ' de ' + mes.getFullYear();
+  bloco.append(titulo);
+
+  const grade = document.createElement('div');
+  grade.className = 'grade-mes';
+
+  SEMANA.forEach((letra, i) => {
+    const cabeca = document.createElement('i');
+    cabeca.textContent = letra;
+    cabeca.title = SEMANA_INTEIRO[i];
+    grade.append(cabeca);
+  });
+
+  const primeiro = new Date(mes.getFullYear(), mes.getMonth(), 1);
+  const ultimo = new Date(mes.getFullYear(), mes.getMonth() + 1, 0).getDate();
+  for (let i = 0; i < primeiro.getDay(); i++) {
+    const vazio = document.createElement('span');
+    vazio.className = 'dia fora';
+    grade.append(vazio);
+  }
+
+  const hoje = new Date();
+  for (let n = 1; n <= ultimo; n++) {
+    const d = new Date(mes.getFullYear(), mes.getMonth(), n);
+    const celula = document.createElement('span');
+    const ferias = distancia(inicio, d) >= 0 && distancia(d, fim) >= 0;
+    const folga = ehFolga(d);
+
+    celula.className = 'dia' + (ferias ? ' ferias' : '') + (folga ? ' folga' : '') +
+      (distancia(hoje, d) === 0 ? ' hoje' : '');
+    celula.textContent = String(n);
+    celula.title = dataBr(paraIso(d)) + ' · ' + comoTurno(d) + (ferias ? ' · férias' : '');
+    grade.append(celula);
+  }
+
+  bloco.append(grade);
+  return bloco;
 }
 
 /* ————————————————— mapa do ano ————————————————— */
@@ -521,7 +653,12 @@ el.arquivo.addEventListener('change', async () => {
   }
 });
 
-el.imprimir.addEventListener('click', () => window.print());
+/* Não há como um site salvar PDF sozinho: o caminho é a janela de impressão,
+   onde “Salvar como PDF” é um dos destinos. */
+el.pdf.addEventListener('click', () => {
+  avisar('Na janela que abrir, escolha “Salvar como PDF” no destino.');
+  setTimeout(() => window.print(), 700);
+});
 
 /* ————————————————— comandos gerais ————————————————— */
 

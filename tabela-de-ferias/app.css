@@ -1,4 +1,4 @@
-/* ——————————————— Tabela de Férias ——————————————— */
+/* ——————————————— Escala de Férias do Grupo A ——————————————— */
 
 :root {
   --fundo: #0b1220;
@@ -10,6 +10,7 @@
   --acento: #ffb020;
   --perigo: #ff4d4d;
   --ok: #35d07f;
+  --azul: #4a9eff;
   --raio-borda: 14px;
   --gap: 14px;
 }
@@ -104,6 +105,28 @@ h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
 .comandos .botoes { display: flex; flex-wrap: wrap; gap: 8px; }
 .comandos .botao { padding: 9px 14px; font-size: 14px; }
 
+/* ——— legenda das cores ——— */
+.legenda {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 18px;
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--texto-fraco);
+}
+.amostra {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  vertical-align: -3px;
+  margin-right: 5px;
+  border: 2px solid transparent;
+}
+.amostra.ferias { background: var(--ok); }
+.amostra.folga { background: var(--superficie-alta); border-color: var(--azul); }
+
 /* ——— cabeçalho da tabela (só em tela larga) ——— */
 .cabecalho { display: none; }
 
@@ -145,25 +168,29 @@ h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
 .identidade .total.demais b { color: var(--perigo); }
 .identidade .total.zero b { color: var(--texto-fraco); font-weight: 600; }
 
-.corpo { margin-top: 8px; }
+.corpo { margin-top: 8px; min-width: 0; }
 
 /* ——— períodos ——— */
-.periodos { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.periodos { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; min-width: 0; }
 .periodo {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   grid-template-areas:
-    "de   ate"
-    "dias rem"
-    "erro erro";
+    "de     ate"
+    "dias   rem"
+    "erro   erro"
+    "quadro quadro";
   align-items: end;
   gap: 4px 8px;
+  min-width: 0;
 }
 .periodo .de { grid-area: de; }
 .periodo .ate { grid-area: ate; }
 .periodo .dias { grid-area: dias; }
 .periodo .remover { grid-area: rem; justify-self: end; }
 .periodo .erro { grid-area: erro; }
+.periodo .quadro { grid-area: quadro; }
+.periodo .ordem { grid-area: ord; display: none; }
 .periodo.coincide .campo-data input { border-color: var(--acento); }
 .periodo.invalido .campo-data input { border-color: var(--perigo); }
 
@@ -192,10 +219,47 @@ h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
 }
 .periodo .dias.contado { color: var(--texto); }
 .periodo .erro { margin: 0; font-size: 12px; color: var(--perigo); }
+.periodo + .periodo { margin-top: 10px; border-top: 1px solid var(--borda); padding-top: 10px; }
 
-/* ——— pé do colega: novo período e observações ——— */
+/* ——— quadro do mês escolhido ——— */
+.quadro {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+}
+.mes-nome { margin: 0 0 6px; font-size: 12px; color: var(--texto-fraco); }
+.mes-nome::first-letter { text-transform: uppercase; }
+.grade-mes { display: grid; grid-template-columns: repeat(7, 26px); gap: 3px; }
+.grade-mes i {
+  font-style: normal;
+  font-size: 10px;
+  text-align: center;
+  color: var(--texto-fraco);
+}
+.dia {
+  display: grid;
+  place-items: center;
+  height: 26px;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background: var(--superficie-alta);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.dia.fora { background: transparent; }
+.dia.folga { border-color: var(--azul); }
+.dia.ferias { background: var(--ok); color: #04241a; font-weight: 700; }
+.dia.hoje { outline: 2px dashed var(--acento); outline-offset: -1px; }
+.quadro-nota { flex-basis: 100%; margin: 0; font-size: 12px; color: var(--texto-fraco); }
+
+/* ——— pé do colega: observações ——— */
 .rodape { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; margin-top: 10px; }
-.periodo-novo { flex: none; padding: 8px 12px; font-size: 13px; }
 .obs {
   flex: 1 1 240px;
   min-width: 0;
@@ -236,7 +300,7 @@ h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
 .ano { margin-top: 26px; }
 .ano h2 span { color: var(--acento); }
 .rolagem { overflow-x: auto; }
-.quadro { min-width: 620px; }
+.moldura { min-width: 620px; }
 
 .meses {
   display: flex;
@@ -288,7 +352,7 @@ h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
   overflow: hidden;
 }
 .barra.coincide { background: var(--perigo); color: #fff; }
-.hoje {
+.trilho .hoje {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -327,7 +391,7 @@ h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
 @media (min-width: 760px) {
   .cabecalho {
     display: grid;
-    grid-template-columns: 240px 1fr 1fr 62px 34px;
+    grid-template-columns: 240px 26px 1fr 1fr 62px 34px;
     gap: 8px;
     padding: 0 12px 8px;
     font-size: 11px;
@@ -335,7 +399,7 @@ h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
     letter-spacing: .08em;
     color: var(--texto-fraco);
   }
-  .cabecalho span:nth-child(4) { text-align: right; }
+  .cabecalho span:nth-child(5) { text-align: right; }
 
   .pessoa { display: grid; grid-template-columns: 240px 1fr; gap: 8px; align-items: start; }
   .identidade { flex-direction: column; align-items: stretch; gap: 4px; position: relative; }
@@ -345,13 +409,20 @@ h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
   .corpo { margin-top: 0; }
   .campo-data span { display: none; }
   .periodo {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 62px 34px;
+    grid-template-columns: 26px minmax(0, 1fr) minmax(0, 1fr) 62px 34px;
     grid-template-areas:
-      "de   ate  dias rem"
-      "erro erro erro erro";
+      "ord    de     ate    dias   rem"
+      "erro   erro   erro   erro   erro"
+      "quadro quadro quadro quadro quadro";
     align-items: center;
   }
   .periodo .dias { text-align: right; }
+  .periodo .ordem {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--texto-fraco);
+  }
 }
 
 /* ——— impressão: papel branco, sem comandos ——— */
@@ -365,7 +436,7 @@ h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
     --texto-fraco: #4a5568;
     --acento: #a06000;
   }
-  .comandos, .ajuda, .aviso, .remover, .periodo-novo, #btn-colega { display: none !important; }
+  .comandos, .ajuda, .aviso, .remover, #btn-colega { display: none !important; }
   .folha { max-width: none; padding: 0; }
   .topo { padding: 0 0 10px; }
   .pessoa, .coincidencias li, .trilho { break-inside: avoid; }
@@ -388,5 +459,20 @@ h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
   .obs::placeholder { color: transparent; }
   .barra { background: #a06000; color: #fff; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   .barra.coincide { background: #b81f1f; }
+
+  /* o quadro do mês é o miolo do papel: as cores têm de sair impressas */
+  .periodo, .quadro, .mes { break-inside: avoid; }
+  .quadro { background: #fff; }
+  .dia {
+    background: #eef1f6;
+    color: #101418;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .dia.fora { background: transparent; }
+  .dia.folga { border-color: #2b6cb0; }
+  .dia.ferias { background: #2e8b57; color: #fff; }
+  .amostra.ferias { background: #2e8b57; }
+  .amostra.folga { border-color: #2b6cb0; }
   .rolagem { overflow: visible; }
 }

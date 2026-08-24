@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Tabela de Férias</title>
-<meta name="description" content="Tabela para marcar os pedidos de férias da equipe: início, fim e observações de cada período.">
+<title>Escala de Férias do Grupo A</title>
+<meta name="description" content="Escala de férias do Grupo A: três períodos por colega, com o quadro do mês e as folgas da escala de turnos.">
 <meta name="theme-color" content="#0b1220">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Férias">
+<meta name="apple-mobile-web-app-title" content="Férias Grupo A">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icones/icone-192.png" sizes="192x192">
 <link rel="apple-touch-icon" sizes="180x180" href="icones/icone-180.png">
@@ -17,7 +17,7 @@
 <body>
 
 <header class="topo">
-  <h1>Tabela de Férias</h1>
+  <h1>Escala de Férias <span>do Grupo&nbsp;A</span></h1>
   <p class="estado" id="estado" role="status" aria-live="polite">—</p>
 </header>
 
@@ -30,7 +30,7 @@
       <select id="ano"></select>
     </label>
     <div class="botoes">
-      <button class="botao discreto" id="btn-imprimir" type="button">Imprimir</button>
+      <button class="botao discreto" id="btn-pdf" type="button" title="Abre a impressão — escolha “Salvar como PDF” no destino">Salvar PDF</button>
       <button class="botao discreto" id="btn-csv" type="button">Baixar CSV</button>
       <button class="botao discreto" id="btn-salvar" type="button">Salvar arquivo</button>
       <button class="botao discreto" id="btn-abrir" type="button">Abrir arquivo</button>
@@ -38,9 +38,15 @@
     </div>
   </section>
 
+  <p class="legenda">
+    <b class="amostra ferias"></b> férias marcadas
+    <b class="amostra folga"></b> folga do Grupo A na escala de turnos
+  </p>
+
   <!-- ————————————————— tabela ————————————————— -->
   <div class="cabecalho" aria-hidden="true">
     <span>Colega</span>
+    <span>Nº</span>
     <span>Início</span>
     <span>Fim</span>
     <span>Dias</span>
@@ -60,7 +66,7 @@
   <section class="ano">
     <h2>Mapa do ano <span id="ano-titulo"></span></h2>
     <div class="rolagem">
-      <div class="quadro">
+      <div class="moldura">
         <div class="meses" id="meses"></div>
         <div class="faixas" id="faixas"></div>
       </div>
@@ -70,10 +76,14 @@
 
   <details class="ajuda">
     <summary>Como funciona</summary>
-    <p>Cada colega tem uma linha. Marque <b>início</b> e <b>fim</b> de cada período de férias;
-      a contagem de dias e o total do ano aparecem sozinhos. Use <b>＋ período</b> para dividir
-      as férias em mais de uma etapa e o campo de <b>observações</b> para combinados, trocas
-      de plantão ou o que precisar ficar registrado.</p>
+    <p>Cada colega tem <b>três períodos</b> para escolher. Marque <b>início</b> e <b>fim</b> em
+      quantos deles precisar — quem tira as férias de uma vez usa só o primeiro. A contagem de
+      dias e o total do ano aparecem sozinhos, e o campo de <b>observações</b> guarda combinados,
+      trocas de plantão ou o que precisar ficar registrado. O <b>✕</b> limpa o período.</p>
+    <p>Abaixo de cada período aparece o <b>quadro do mês escolhido</b>: em verde, os dias de
+      férias, do primeiro ao último; com contorno azul, as <b>folgas do Grupo A</b> pela escala
+      de turnos de 35 dias. Assim dá para ver quantos dias de férias cairiam em folga de
+      qualquer jeito — o número vem escrito embaixo do quadro.</p>
     <p>Quando dois colegas ficam fora ao mesmo tempo, os períodos ficam marcados e a
       coincidência é listada logo abaixo da tabela — é só um aviso, nada impede a marcação.</p>
     <p>O <b>ano</b> lá em cima escolhe o que o mapa desenha e entra no nome dos arquivos
@@ -81,7 +91,8 @@
     <p><b>Onde fica salvo:</b> tudo é gravado sozinho neste navegador, neste aparelho. Ninguém mais
       enxerga a sua tabela. Para passar a tabela adiante, use <b>Salvar arquivo</b> e envie o arquivo
       gerado — quem recebe abre com <b>Abrir arquivo</b>. <b>Baixar CSV</b> gera uma planilha e
-      <b>Imprimir</b> sai em papel ou PDF.</p>
+      <b>Salvar PDF</b> abre a impressão — é só escolher “Salvar como PDF” no destino
+      (ou a impressora, para sair em papel).</p>
     <p>Limpar os dados do navegador apaga a tabela. Se ela for importante, guarde o arquivo.</p>
   </details>
 
@@ -97,7 +108,6 @@
     <div class="corpo">
       <ol class="periodos"></ol>
       <div class="rodape">
-        <button class="botao discreto periodo-novo" type="button">＋ período</button>
         <textarea class="obs" rows="1" aria-label="Observações"
                   placeholder="Observações — emenda com feriado, troca de plantão…"></textarea>
       </div>
@@ -107,11 +117,13 @@
 
 <template id="modelo-periodo">
   <li class="periodo">
+    <b class="ordem"></b>
     <label class="campo-data de"><span>Início</span><input type="date" class="inicio"><b class="valor"></b></label>
     <label class="campo-data ate"><span>Fim</span><input type="date" class="fim"><b class="valor"></b></label>
     <span class="dias">—</span>
-    <button class="remover periodo-remover" type="button" aria-label="Remover período">✕</button>
+    <button class="remover periodo-limpar" type="button" title="Limpar este período" aria-label="Limpar este período">✕</button>
     <p class="erro" hidden></p>
+    <div class="quadro" hidden></div>
   </li>
 </template>
 

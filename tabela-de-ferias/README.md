@@ -1,28 +1,44 @@
-# Tabela de Férias
+# Escala de Férias do Grupo A
 
-Tabela para a equipe marcar os pedidos de férias: início e fim de cada período,
-um espaço de observações para cada colega e um mapa do ano mostrando quem está
-fora e quando.
+Tabela para o Grupo A marcar os pedidos de férias: **três períodos por colega**,
+um espaço de observações para cada um e, embaixo de cada período, o **quadro do
+mês escolhido** — em verde os dias de férias, com contorno azul as folgas do
+grupo na escala de turnos.
 
 Página estática em HTML, CSS e JavaScript puros — sem build, sem dependências,
 sem servidor. Depois da primeira visita ela abre offline.
 
+> A pasta continua chamando `tabela-de-ferias/` para não mudar o endereço de quem
+> já salvou o link; o nome do app é Escala de Férias do Grupo A.
+
 ## Como usar
 
-1. Cada colega tem uma linha. Marque **início** e **fim** do período de férias
-   nos dois seletores de data.
-2. Precisa dividir as férias? **＋ período** acrescenta outra faixa de datas para
-   a mesma pessoa.
-3. Use o campo de **observações** para o que precisar ficar registrado — troca de
+1. Cada colega tem **três períodos** — 1º, 2º e 3º. Marque **início** e **fim**
+   nos que precisar; quem tira as férias de uma vez usa só o primeiro.
+2. Ao preencher só o início, o fim vem sugerido com 30 dias — é só trocar se o
+   pedido for menor.
+3. O **✕** ao lado do período limpa aquelas datas (a linha continua ali).
+4. Use o campo de **observações** para o que precisar ficar registrado — troca de
    plantão, emenda com feriado, preferência de mês.
-4. A contagem de dias de cada período e o total do colega aparecem sozinhos.
-
-Ao preencher só o início, o fim vem sugerido com 30 dias — é só trocar se o
-pedido for menor.
 
 O grupo já vem preenchido com os nomes da equipe. Os nomes são editáveis: é só
 clicar em cima. **＋ Adicionar colega** inclui quem faltar e o **✕** ao lado do
 nome remove.
+
+## O quadro do mês
+
+Assim que um período tem data, aparece embaixo dele o calendário do mês escolhido
+(dois calendários, quando as férias viram o mês ou o ano):
+
+- **Verde**: os dias de férias, do primeiro ao último do período.
+- **Contorno azul**: as **folgas do Grupo A** naquele mês, pela escala de turnos.
+- **Tracejado**: o dia de hoje.
+- Embaixo, quantos dias do período já cairiam em folga de qualquer jeito.
+
+A escala vem do app **Escala de Turnos** (INB): um ciclo de 35 dias que se repete,
+com o dia 02/08/2026 como referência. Deste ciclo o app usa só a coluna do Grupo A
+— `F` é folga; `0`, `8` e `16` são as horas em que o turno começa. Fica em
+`ESCALA_A`, no topo do `app.js`; mudou a escala, muda ali.
 
 ## O que a tabela mostra sozinha
 
@@ -31,7 +47,7 @@ nome remove.
 - **Coincidências**: quando duas pessoas ficam fora ao mesmo tempo, os períodos
   são destacados e a sobreposição é listada abaixo da tabela, com as datas e
   quantos dias se cruzam. É só um aviso; nada impede a marcação.
-- **Mapa do ano**: uma barra por período, do jan ao dez, com a linha verde do dia
+- **Mapa do ano**: uma barra por período, de jan a dez, com a linha verde do dia
   de hoje. As barras vermelhas são as que coincidem com as de outro colega.
 
 O aviso de 30 dias e o de coincidência são conferências de bom senso, não
@@ -44,13 +60,16 @@ mais enxerga a sua tabela, e limpar os dados do site apaga tudo.
 
 Como não há servidor, a tabela viaja em arquivo:
 
+- **Salvar PDF** abre a janela de impressão: escolha *Salvar como PDF* no destino
+  (ou a impressora, para sair em papel). No papel as datas viram texto, os quadros
+  saem coloridos e os períodos em branco viram linhas para preencher à mão.
+  Um site não consegue gerar o PDF sozinho sem carregar uma biblioteca; quem monta
+  o arquivo é o próprio navegador, por essa janela.
 - **Salvar arquivo** baixa um `.json` com a tabela inteira. Mande para quem
   precisa; quem recebe abre em **Abrir arquivo** (isso substitui a tabela que
   estiver aberta).
 - **Baixar CSV** gera uma planilha (`;` e datas em dd/mm/aaaa, do jeito que o
   Excel em português abre direto).
-- **Imprimir** sai em papel ou PDF: fundo branco, sem botões, e as datas viram
-  texto — as linhas em branco ficam prontas para preencher à mão.
 
 ## Instalar no celular
 
@@ -78,7 +97,7 @@ E abra `http://localhost:8080`.
 ```
 index.html            tabela, coincidências, mapa do ano e os modelos de linha
 app.css               estilos (tema escuro, layout de celular e de impressão)
-app.js                estado, contas, coincidências, mapa, CSV e arquivo
+app.js                escala do grupo, contas, quadros do mês, mapa, CSV e arquivo
 sw.js                 service worker: abre sem rede
 manifest.webmanifest  dados de instalação do PWA
 icones/               ícones 180, 192, 512 e maskable
