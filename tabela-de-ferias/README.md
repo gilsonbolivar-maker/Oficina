@@ -21,9 +21,10 @@ sem servidor. Depois da primeira visita ela abre offline.
 4. Use o campo de **observações** para o que precisar ficar registrado — troca de
    plantão, emenda com feriado, preferência de mês.
 
-O grupo já vem preenchido com os nomes da equipe. Os nomes são editáveis: é só
-clicar em cima. **＋ Adicionar colega** inclui quem faltar e o **✕** ao lado do
-nome remove.
+O grupo já vem preenchido com os nomes da equipe, e o cabeçalho traz a supervisora
+responsável. Para **trocar um nome**, toque no lápis **✎** ao lado dele (ou clique
+direto no nome) e escreva por cima. **＋ Adicionar colega** inclui quem faltar e o
+**✕** ao lado do nome remove.
 
 ## O quadro do mês
 

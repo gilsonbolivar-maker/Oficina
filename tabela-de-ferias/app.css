@@ -67,8 +67,20 @@ h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
   max-width: 980px;
   margin: 0 auto;
 }
+.titulo { min-width: 0; }
 .topo h1 { font-size: 20px; }
+.supervisora {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--texto-fraco);
+}
 .estado { margin: 0; font-size: 13px; color: var(--texto-fraco); text-align: right; }
+
+/* em tela estreita o título ganha a linha inteira, em vez de brigar com o estado */
+@media (max-width: 560px) {
+  .topo { flex-direction: column; align-items: stretch; gap: 4px; }
+  .estado { text-align: left; }
+}
 
 /* ——— botões ——— */
 .botao {
@@ -102,6 +114,8 @@ h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
   flex: none;
 }
 .remover:hover { color: var(--perigo); border-color: var(--perigo); }
+.nome-editar { font-size: 16px; }
+.nome-editar:hover { color: var(--acento); border-color: var(--acento); }
 
 /* ——— barra de comandos ——— */
 .comandos {
@@ -185,7 +199,8 @@ h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
   font-weight: 620;
   padding: 6px 8px;
 }
-.identidade .nome:hover { border-color: var(--borda); }
+.identidade .nome { border-color: var(--borda); background: var(--fundo); }
+.identidade .nome:hover { border-color: var(--acento); }
 .identidade .nome:focus { border-color: var(--acento); outline: none; background: var(--fundo); }
 .identidade .total {
   margin: 0;
@@ -462,6 +477,8 @@ h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
   .identidade { flex-direction: column; align-items: stretch; gap: 4px; position: relative; }
   .identidade .nome { font-size: 16px; padding-right: 34px; }
   .identidade .total { padding-left: 8px; }
+  .identidade .nome { padding-right: 62px; }
+  .identidade .nome-editar { position: absolute; top: 0; right: 30px; }
   .identidade .pessoa-remover { position: absolute; top: 0; right: 0; }
   .corpo { margin-top: 0; }
   .campo-data span { display: none; }

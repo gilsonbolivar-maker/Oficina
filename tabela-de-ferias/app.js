@@ -326,6 +326,11 @@ function montarPessoa(pessoa) {
     agendarGravacao();
   });
 
+  artigo.querySelector('.nome-editar').addEventListener('click', () => {
+    nome.focus();
+    nome.select();
+  });
+
   artigo.querySelector('.pessoa-remover').addEventListener('click', () => {
     const quem = pessoa.nome.trim() || 'este colega';
     if (!confirm(`Remover ${quem} da tabela?`)) return;

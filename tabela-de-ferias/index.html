@@ -28,7 +28,10 @@
 <body>
 
 <header class="topo">
-  <h1>Escala de Férias <span>do Grupo&nbsp;A</span></h1>
+  <div class="titulo">
+    <h1>Escala de Férias <span>do Grupo&nbsp;A</span></h1>
+    <p class="supervisora">Supervisora - Célia Fernandes</p>
+  </div>
   <p class="estado" id="estado" role="status" aria-live="polite">—</p>
 </header>
 
@@ -98,6 +101,9 @@
       <b>folgas do Grupo A</b> pela escala de turnos de 35 dias; com um ponto amarelo, os
       <b>feriados</b>. Embaixo do quadro fica a conta de quantos dias de férias já seriam folga
       e quantos feriados caem dentro do período.</p>
+    <p><b>Trocar um nome:</b> toque no lápis <b>✎</b> ao lado do nome (ou clique direto em cima
+      dele) e escreva por cima. <b>＋ Adicionar colega</b> inclui quem faltar e o <b>✕</b> ao lado
+      do nome remove.</p>
     <p>O botão <b>Tema claro</b> / <b>Tema escuro</b> troca entre fundo branco e fundo preto —
       a escolha fica guardada. Na primeira visita o app segue o tema do aparelho.</p>
     <p>Quando dois colegas ficam fora ao mesmo tempo, os períodos ficam marcados e a
@@ -117,9 +123,10 @@
 <template id="modelo-pessoa">
   <article class="pessoa">
     <div class="identidade">
-      <input class="nome" type="text" maxlength="60" aria-label="Nome do colega" placeholder="Nome">
+      <input class="nome" type="text" maxlength="60" aria-label="Nome do colega" placeholder="Nome do colega">
+      <button class="remover nome-editar" type="button" title="Editar o nome" aria-label="Editar o nome">✎</button>
       <p class="total"><b>0</b> dias</p>
-      <button class="remover pessoa-remover" type="button" aria-label="Remover colega">✕</button>
+      <button class="remover pessoa-remover" type="button" title="Remover colega" aria-label="Remover colega">✕</button>
     </div>
     <div class="corpo">
       <ol class="periodos"></ol>
