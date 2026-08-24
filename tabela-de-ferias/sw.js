@@ -3,7 +3,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = 'v1';
+const VERSAO = 'v2';
 const CACHE = 'tabela-de-ferias-' + VERSAO;
 
 const ARQUIVOS = [

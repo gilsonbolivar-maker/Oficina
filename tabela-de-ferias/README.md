@@ -28,12 +28,34 @@ nome remove.
 ## O quadro do mês
 
 Assim que um período tem data, aparece embaixo dele o calendário do mês escolhido
-(dois calendários, quando as férias viram o mês ou o ano):
+(dois calendários, quando as férias viram o mês ou o ano). No alto do quadro fica o
+período escrito por extenso, sempre em **dd/mm/aaaa**, e no calendário:
 
 - **Verde**: os dias de férias, do primeiro ao último do período.
 - **Contorno azul**: as **folgas do Grupo A** naquele mês, pela escala de turnos.
+- **Ponto amarelo**: **feriado** — o nome aparece ao passar o dedo ou o mouse em cima.
 - **Tracejado**: o dia de hoje.
-- Embaixo, quantos dias do período já cairiam em folga de qualquer jeito.
+- Embaixo, quantos dias do período já cairiam em folga e quantos feriados caem dentro dele.
+
+Os feriados são os nacionais: os de data fixa (1º de janeiro, Tiradentes, Dia do
+Trabalho, Independência, Nossa Senhora Aparecida, Finados, Proclamação da República,
+Consciência Negra e Natal) e os que andam com a Páscoa — Sexta-feira Santa, e ainda
+Carnaval e Corpus Christi, marcados como ponto facultativo. A Páscoa é calculada pelo
+app, então vale para qualquer ano. Feriado municipal ou estadual não entra: se houver
+algum que conte para o grupo, o lugar dele é o campo de observações.
+
+## Tema claro e tema escuro
+
+O botão **Tema claro** / **Tema escuro** troca entre fundo branco e fundo preto, e a
+escolha fica guardada no aparelho. Na primeira visita o app segue o tema do sistema.
+A impressão sai sempre em fundo branco, seja qual for o tema da tela.
+
+## Datas em dd/mm/aaaa
+
+Tudo que o app escreve — quadro do mês, coincidências, CSV e papel — sai em
+dd/mm/aaaa. O seletor de data em si é o do navegador, e ele desenha no formato do
+**idioma do aparelho**: em português já aparece dd/mm/aaaa. Se o navegador estiver em
+outro idioma, o app percebe e escreve a data em dd/mm/aaaa logo abaixo do campo.
 
 A escala vem do app **Escala de Turnos** (INB): um ciclo de 35 dias que se repete,
 com o dia 02/08/2026 como referência. Deste ciclo o app usa só a coluna do Grupo A
@@ -96,8 +118,8 @@ E abra `http://localhost:8080`.
 
 ```
 index.html            tabela, coincidências, mapa do ano e os modelos de linha
-app.css               estilos (tema escuro, layout de celular e de impressão)
-app.js                escala do grupo, contas, quadros do mês, mapa, CSV e arquivo
+app.css               estilos (temas claro e escuro, celular e impressão)
+app.js                escala, feriados, contas, quadros do mês, mapa, CSV e arquivo
 sw.js                 service worker: abre sem rede
 manifest.webmanifest  dados de instalação do PWA
 icones/               ícones 180, 192, 512 e maskable

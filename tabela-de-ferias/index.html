@@ -13,6 +13,17 @@
 <link rel="icon" href="icones/icone-192.png" sizes="192x192">
 <link rel="apple-touch-icon" sizes="180x180" href="icones/icone-180.png">
 <link rel="stylesheet" href="app.css">
+<script>
+  /* Aplica o tema salvo antes da primeira pintura; sem isto a tela pisca. */
+  (() => {
+    let tema;
+    try { tema = localStorage.getItem('tabela-de-ferias:tema'); } catch (e) { /* modo privado */ }
+    if (tema !== 'claro' && tema !== 'escuro') {
+      tema = matchMedia('(prefers-color-scheme: light)').matches ? 'claro' : 'escuro';
+    }
+    document.documentElement.dataset.tema = tema;
+  })();
+</script>
 </head>
 <body>
 
@@ -30,6 +41,7 @@
       <select id="ano"></select>
     </label>
     <div class="botoes">
+      <button class="botao discreto" id="btn-tema" type="button" aria-pressed="false">Tema claro</button>
       <button class="botao discreto" id="btn-pdf" type="button" title="Abre a impressão — escolha “Salvar como PDF” no destino">Salvar PDF</button>
       <button class="botao discreto" id="btn-csv" type="button">Baixar CSV</button>
       <button class="botao discreto" id="btn-salvar" type="button">Salvar arquivo</button>
@@ -41,6 +53,7 @@
   <p class="legenda">
     <b class="amostra ferias"></b> férias marcadas
     <b class="amostra folga"></b> folga do Grupo A na escala de turnos
+    <b class="amostra feriado"></b> feriado
   </p>
 
   <!-- ————————————————— tabela ————————————————— -->
@@ -80,10 +93,13 @@
       quantos deles precisar — quem tira as férias de uma vez usa só o primeiro. A contagem de
       dias e o total do ano aparecem sozinhos, e o campo de <b>observações</b> guarda combinados,
       trocas de plantão ou o que precisar ficar registrado. O <b>✕</b> limpa o período.</p>
-    <p>Abaixo de cada período aparece o <b>quadro do mês escolhido</b>: em verde, os dias de
-      férias, do primeiro ao último; com contorno azul, as <b>folgas do Grupo A</b> pela escala
-      de turnos de 35 dias. Assim dá para ver quantos dias de férias cairiam em folga de
-      qualquer jeito — o número vem escrito embaixo do quadro.</p>
+    <p>Abaixo de cada período aparece o <b>quadro do mês escolhido</b>, com as datas escritas
+      em dd/mm/aaaa: em verde, os dias de férias, do primeiro ao último; com contorno azul, as
+      <b>folgas do Grupo A</b> pela escala de turnos de 35 dias; com um ponto amarelo, os
+      <b>feriados</b>. Embaixo do quadro fica a conta de quantos dias de férias já seriam folga
+      e quantos feriados caem dentro do período.</p>
+    <p>O botão <b>Tema claro</b> / <b>Tema escuro</b> troca entre fundo branco e fundo preto —
+      a escolha fica guardada. Na primeira visita o app segue o tema do aparelho.</p>
     <p>Quando dois colegas ficam fora ao mesmo tempo, os períodos ficam marcados e a
       coincidência é listada logo abaixo da tabela — é só um aviso, nada impede a marcação.</p>
     <p>O <b>ano</b> lá em cima escolhe o que o mapa desenha e entra no nome dos arquivos

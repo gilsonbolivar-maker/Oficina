@@ -1,6 +1,8 @@
 /* ——————————————— Escala de Férias do Grupo A ——————————————— */
 
+/* tema escuro (padrão) — o claro vem logo abaixo, trocado pelo botão */
 :root {
+  color-scheme: dark;
   --fundo: #0b1220;
   --superficie: #141d2e;
   --superficie-alta: #1e2a41;
@@ -10,9 +12,27 @@
   --acento: #ffb020;
   --perigo: #ff4d4d;
   --ok: #35d07f;
+  --ok-texto: #04241a;
   --azul: #4a9eff;
+  --feriado: #ffc043;
   --raio-borda: 14px;
   --gap: 14px;
+}
+
+:root[data-tema="claro"] {
+  color-scheme: light;
+  --fundo: #f4f7fb;
+  --superficie: #ffffff;
+  --superficie-alta: #e9eef6;
+  --borda: #cfd8e6;
+  --texto: #111a2b;
+  --texto-fraco: #566179;
+  --acento: #a86500;
+  --perigo: #c62828;
+  --ok: #1f8a54;
+  --ok-texto: #ffffff;
+  --azul: #1f5fa8;
+  --feriado: #f0a020;
 }
 
 * { box-sizing: border-box; }
@@ -126,6 +146,16 @@ h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
 }
 .amostra.ferias { background: var(--ok); }
 .amostra.folga { background: var(--superficie-alta); border-color: var(--azul); }
+.amostra.feriado { background: var(--superficie-alta); position: relative; }
+.amostra.feriado::after {
+  content: "";
+  position: absolute;
+  inset: 1px 1px auto auto;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--feriado);
+}
 
 /* ——— cabeçalho da tabela (só em tela larga) ——— */
 .cabecalho { display: none; }
@@ -205,10 +235,17 @@ h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
   font: inherit;
   font-size: 15px;
   padding: 9px 10px;
-  color-scheme: dark;
 }
 .campo-data input:focus { outline: none; border-color: var(--acento); }
-.campo-data .valor { display: none; }   /* só na impressão, no lugar do seletor */
+.campo-data .valor { display: none; }   /* na impressão, e na tela quando o navegador não usa dd/mm/aaaa */
+:root.datas-visiveis .campo-data .valor:not(:empty) {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--texto-fraco);
+}
 
 .periodo .dias {
   font-size: 13px;
@@ -233,6 +270,14 @@ h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
   border: 1px solid var(--borda);
   border-radius: 10px;
 }
+.quadro-titulo {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--texto-fraco);
+}
+.quadro-titulo b { color: var(--texto); font-weight: 620; }
 .mes-nome { margin: 0 0 6px; font-size: 12px; color: var(--texto-fraco); }
 .mes-nome::first-letter { text-transform: uppercase; }
 .grade-mes { display: grid; grid-template-columns: repeat(7, 26px); gap: 3px; }
@@ -243,6 +288,7 @@ h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
   color: var(--texto-fraco);
 }
 .dia {
+  position: relative;
   display: grid;
   place-items: center;
   height: 26px;
@@ -254,7 +300,18 @@ h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
 }
 .dia.fora { background: transparent; }
 .dia.folga { border-color: var(--azul); }
-.dia.ferias { background: var(--ok); color: #04241a; font-weight: 700; }
+.dia.feriado::after {
+  content: "";
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--feriado);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .25);
+}
+.dia.ferias { background: var(--ok); color: var(--ok-texto); font-weight: 700; }
 .dia.hoje { outline: 2px dashed var(--acento); outline-offset: -1px; }
 .quadro-nota { flex-basis: 100%; margin: 0; font-size: 12px; color: var(--texto-fraco); }
 
@@ -427,7 +484,8 @@ h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
 
 /* ——— impressão: papel branco, sem comandos ——— */
 @media print {
-  :root {
+  :root, :root[data-tema] {
+    color-scheme: light;
     --fundo: #fff;
     --superficie: #fff;
     --superficie-alta: #fff;
@@ -474,5 +532,6 @@ h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
   .dia.ferias { background: #2e8b57; color: #fff; }
   .amostra.ferias { background: #2e8b57; }
   .amostra.folga { border-color: #2b6cb0; }
+  .dia.feriado::after, .amostra.feriado::after { background: #e08a00; }
   .rolagem { overflow: visible; }
 }

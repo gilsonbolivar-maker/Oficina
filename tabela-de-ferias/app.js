@@ -8,6 +8,7 @@
 
 const CHAVE_DADOS = 'tabela-de-ferias:dados';
 const CHAVE_ANO = 'tabela-de-ferias:ano';
+const CHAVE_TEMA = 'tabela-de-ferias:tema';
 
 /* Grupo inicial. Os nomes são editáveis na própria tabela — isto é só o
    ponto de partida de quem abre o app pela primeira vez. */
@@ -52,6 +53,7 @@ const el = {
   anoTitulo: $('ano-titulo'),
   lista: $('lista'),
   novoColega: $('btn-colega'),
+  tema: $('btn-tema'),
   pdf: $('btn-pdf'),
   csv: $('btn-csv'),
   salvar: $('btn-salvar'),
@@ -139,6 +141,66 @@ function plural(n, um, muitos) {
 function distancia(a, b) {
   return Math.floor((Date.UTC(b.getFullYear(), b.getMonth(), b.getDate()) -
                      Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())) / DIA);
+}
+
+/* ————————————————— feriados ————————————————— */
+
+const FERIADOS_FIXOS = [
+  [0, 1, 'Confraternização Universal'],
+  [3, 21, 'Tiradentes'],
+  [4, 1, 'Dia do Trabalho'],
+  [8, 7, 'Independência'],
+  [9, 12, 'Nossa Senhora Aparecida'],
+  [10, 2, 'Finados'],
+  [10, 15, 'Proclamação da República'],
+  [10, 20, 'Consciência Negra'],
+  [11, 25, 'Natal']
+];
+
+/* Domingo de Páscoa pelo algoritmo gregoriano — dele saem Carnaval,
+   Sexta-feira Santa e Corpus Christi. */
+function pascoa(ano) {
+  const a = ano % 19;
+  const b = Math.floor(ano / 100);
+  const c = ano % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const total = h + l - 7 * m + 114;
+  return new Date(ano, Math.floor(total / 31) - 1, (total % 31) + 1);
+}
+
+const feriadosGuardados = new Map();
+
+function feriadosDoAno(ano) {
+  if (feriadosGuardados.has(ano)) return feriadosGuardados.get(ano);
+
+  const lista = new Map();
+  const marcar = (d, nome) => lista.set(d.getMonth() + '-' + d.getDate(), nome);
+  FERIADOS_FIXOS.forEach(([mes, dia, nome]) => marcar(new Date(ano, mes, dia), nome));
+
+  const domingo = pascoa(ano);
+  const movel = (dias, nome) => {
+    const d = new Date(domingo);
+    d.setDate(d.getDate() + dias);
+    marcar(d, nome);
+  };
+  movel(-47, 'Carnaval (ponto facultativo)');
+  movel(-2, 'Sexta-feira Santa');
+  movel(60, 'Corpus Christi (ponto facultativo)');
+
+  feriadosGuardados.set(ano, lista);
+  return lista;
+}
+
+function feriadoDe(d) {
+  return feriadosDoAno(d.getFullYear()).get(d.getMonth() + '-' + d.getDate()) || '';
 }
 
 /* ————————————————— escala de turnos ————————————————— */
@@ -436,9 +498,18 @@ function desenharQuadro(li, periodo, invalido) {
   quadro.hidden = false;
 
   let folgas = 0;
+  let feriados = 0;
   for (let d = new Date(inicio); d <= fim; d.setDate(d.getDate() + 1)) {
     if (ehFolga(d)) folgas++;
+    if (feriadoDe(d)) feriados++;
   }
+
+  const titulo = document.createElement('p');
+  titulo.className = 'quadro-titulo';
+  titulo.innerHTML = (Number(li.dataset.indice) + 1) + 'º período · <b>' +
+    dataBr(periodo.inicio) + ' a ' + dataBr(periodo.fim || periodo.inicio) + '</b> · ' +
+    plural(diasEntre(periodo.inicio, periodo.fim || periodo.inicio), 'dia', 'dias');
+  quadro.append(titulo);
 
   const meses = [];
   const passo = new Date(inicio.getFullYear(), inicio.getMonth(), 1);
@@ -450,9 +521,10 @@ function desenharQuadro(li, periodo, invalido) {
 
   const nota = document.createElement('p');
   nota.className = 'quadro-nota';
-  nota.textContent = folgas
-    ? plural(folgas, 'dia', 'dias') + ' do período já seriam folga do Grupo A.'
-    : 'Nenhuma folga do Grupo A cai dentro do período.';
+  nota.textContent = (folgas
+    ? plural(folgas, 'dia', 'dias') + ' do período já seriam folga do Grupo A'
+    : 'nenhuma folga do Grupo A cai no período') +
+    ' · ' + (feriados ? plural(feriados, 'feriado', 'feriados') + ' dentro do período' : 'nenhum feriado no período') + '.';
   quadro.append(nota);
 }
 
@@ -489,11 +561,13 @@ function montarMes(mes, inicio, fim) {
     const celula = document.createElement('span');
     const ferias = distancia(inicio, d) >= 0 && distancia(d, fim) >= 0;
     const folga = ehFolga(d);
+    const feriado = feriadoDe(d);
 
     celula.className = 'dia' + (ferias ? ' ferias' : '') + (folga ? ' folga' : '') +
-      (distancia(hoje, d) === 0 ? ' hoje' : '');
+      (feriado ? ' feriado' : '') + (distancia(hoje, d) === 0 ? ' hoje' : '');
     celula.textContent = String(n);
-    celula.title = dataBr(paraIso(d)) + ' · ' + comoTurno(d) + (ferias ? ' · férias' : '');
+    celula.title = dataBr(paraIso(d)) + ' · ' + comoTurno(d) +
+      (feriado ? ' · ' + feriado : '') + (ferias ? ' · férias' : '');
     grade.append(celula);
   }
 
@@ -694,6 +768,40 @@ el.ano.addEventListener('change', () => {
   atualizar();
 });
 
+/* ————————————————— tema claro e escuro ————————————————— */
+
+function temaAtual() {
+  return document.documentElement.dataset.tema === 'claro' ? 'claro' : 'escuro';
+}
+
+function aplicarTema(tema) {
+  document.documentElement.dataset.tema = tema;
+  el.tema.textContent = tema === 'claro' ? 'Tema escuro' : 'Tema claro';
+  el.tema.setAttribute('aria-pressed', String(tema === 'claro'));
+  const cor = document.querySelector('meta[name="theme-color"]');
+  if (cor) cor.setAttribute('content', tema === 'claro' ? '#f4f7fb' : '#0b1220');
+}
+
+el.tema.addEventListener('click', () => {
+  const novo = temaAtual() === 'claro' ? 'escuro' : 'claro';
+  aplicarTema(novo);
+  try { localStorage.setItem(CHAVE_TEMA, novo); } catch (e) { /* modo privado */ }
+});
+
+/* O seletor de data desenha no formato do idioma do navegador. Quando esse
+   formato não começa pelo dia, o app escreve a data em dd/mm/aaaa embaixo
+   do campo — o pedido é ver sempre dd/mm/aaaa. */
+function comecaPeloDia() {
+  try {
+    const partes = new Intl.DateTimeFormat(navigator.language || 'pt-BR',
+      { day: '2-digit', month: '2-digit', year: 'numeric' }).formatToParts(new Date());
+    const ordem = partes.filter(p => p.type !== 'literal').map(p => p.type);
+    return ordem[0] === 'day';
+  } catch (e) {
+    return true;
+  }
+}
+
 let temporizadorAviso = 0;
 function avisar(texto) {
   el.toast.textContent = texto;
@@ -716,6 +824,8 @@ if ('serviceWorker' in navigator) {
 
 /* ————————————————— arranque ————————————————— */
 
+aplicarTema(temaAtual());
+document.documentElement.classList.toggle('datas-visiveis', !comecaPeloDia());
 montarAnos();
 montarLista();
 
