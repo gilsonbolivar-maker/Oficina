@@ -5,6 +5,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
+const VERSAO = '1.2.0';   // precisa casar com a VERSAO do sw.js
 const CHAVE = 'caderno-pencil:v1';
 
 const el = id => document.getElementById(id);
@@ -415,8 +416,51 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('pagehide', () => gravar(true));
 
-if ('serviceWorker' in navigator) {
+/* ——— versão e atualização ——— */
+el('versao').textContent = 'v' + VERSAO;
+
+const estadoVersao = el('estado-versao');
+
+function mostrarEstadoVersao(texto, nova) {
+  estadoVersao.textContent = texto;
+  estadoVersao.classList.toggle('nova', Boolean(nova));
+}
+
+if (!('serviceWorker' in navigator)) {
+  mostrarEstadoVersao('Aberto pela internet — para funcionar offline, adicione à Tela de Início.');
+} else {
+  mostrarEstadoVersao('Esta é a versão instalada no aparelho.');
+
+  // Sem controlador agora é primeira instalação, não atualização: nada a anunciar.
+  const jaEstavaInstalado = Boolean(navigator.serviceWorker.controller);
+
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+    navigator.serviceWorker.register('sw.js').then(registro => {
+      // Um service worker novo instalando significa versão nova no ar.
+      registro.addEventListener('updatefound', () => {
+        const chegando = registro.installing;
+        if (!chegando) return;
+        chegando.addEventListener('statechange', () => {
+          if (chegando.state === 'activated' && jaEstavaInstalado) {
+            mostrarEstadoVersao('Nova versão pronta — toque em Atualizar.', true);
+            el('aviso-versao').hidden = false;
+          }
+        });
+      });
+
+      // Procura atualização ao abrir e sempre que o app volta para a frente.
+      const procurar = () => registro.update().catch(() => {});
+      procurar();
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') procurar();
+      });
+    }).catch(() => {
+      mostrarEstadoVersao('Não deu para preparar o modo offline neste navegador.');
+    });
   });
 }
+
+el('btn-atualizar').addEventListener('click', () => {
+  gravar(true);
+  location.reload();
+});

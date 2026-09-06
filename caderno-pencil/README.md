@@ -62,6 +62,24 @@ de destino; quando ele recusa, **Copiar** e **Enviar** continuam ali.
 Letra grande e linhas espaçadas ajudam o Rabisco a acertar mais — dá para
 aumentar as duas coisas em **Aa**.
 
+## Versão
+
+O número da versão aparece no painel **Aa**, no rodapé — junto com o aviso de
+que aquela é a versão instalada no aparelho.
+
+Quando sai uma versão nova, o app percebe sozinho (ao abrir e sempre que volta
+para a frente) e mostra **Nova versão pronta · Atualizar**. Um toque recarrega
+já na nova; as notas continuam onde estavam.
+
+| Versão | O que mudou |
+| ------ | ----------- |
+| 1.2.0 | Alça para arrastar a nota; número de versão e aviso de atualização. |
+| 1.1.0 | Escolha do destino no botão **Enviar**. |
+| 1.0.0 | Folha, notas, copiar, compartilhar, ajustes, modo offline. |
+
+`app.js` e `sw.js` guardam a mesma constante `VERSAO` — mudar as duas é o que
+dispara a atualização nos aparelhos.
+
 ## Onde ficam as notas
 
 No `localStorage` do navegador, só no aparelho. Apagar os dados do site apaga as

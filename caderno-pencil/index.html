@@ -146,11 +146,18 @@
     <p><b>Dica:</b> letra grande e linhas espaçadas ajudam o Rabisco a acertar mais.</p>
   </details>
 
-  <p class="rodape">Caderno Pencil · funciona sem internet · tudo fica só no seu iPad.</p>
+  <p class="rodape">Caderno Pencil <b id="versao">—</b> · funciona sem internet ·
+    tudo fica só no seu iPad.</p>
+  <p class="rodape" id="estado-versao">Procurando atualização…</p>
 </section>
 
 <div class="fundo-painel" id="fundo-painel" hidden></div>
 <p class="aviso" id="aviso" role="status" aria-live="polite" hidden></p>
+
+<div class="aviso aviso-acao" id="aviso-versao" role="status" aria-live="polite" hidden>
+  <span>Nova versão pronta.</span>
+  <button class="botao" id="btn-atualizar" type="button">Atualizar</button>
+</div>
 
 <script src="app.js"></script>
 </body>

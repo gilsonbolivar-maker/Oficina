@@ -3,7 +3,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = 'v1';
+const VERSAO = '1.2.0';   // precisa casar com a VERSAO do app.js
 const CACHE_APP = 'caderno-pencil-app-' + VERSAO;
 
 const ARQUIVOS = [
@@ -19,9 +19,10 @@ const ARQUIVOS = [
 ];
 
 self.addEventListener('install', ev => {
+  // 'reload' ignora o cache do navegador: a versão nova vem inteira da rede.
   ev.waitUntil(
     caches.open(CACHE_APP)
-      .then(c => c.addAll(ARQUIVOS))
+      .then(c => c.addAll(ARQUIVOS.map(a => new Request(a, { cache: 'reload' }))))
       .then(() => self.skipWaiting())
   );
 });
