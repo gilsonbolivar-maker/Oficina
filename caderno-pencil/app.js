@@ -279,6 +279,32 @@ for (const botao of document.querySelectorAll('.destino')) {
   });
 }
 
+/* ——— alça: arrastar a nota para outro app ——— */
+const alca = el('alca');
+
+alca.addEventListener('dragstart', ev => {
+  const { texto } = textoParaSaida();
+  if (!texto) {
+    ev.preventDefault();
+    mostrarAviso('Não há nada escrito ainda.');
+    return;
+  }
+  ev.dataTransfer.setData('text/plain', texto);
+  ev.dataTransfer.effectAllowed = 'copy';
+  alca.classList.add('arrastando');
+});
+
+alca.addEventListener('dragend', () => alca.classList.remove('arrastando'));
+
+// Um toque só não arrasta nada: explica o gesto.
+alca.addEventListener('click', () => {
+  const { texto, parcial } = textoParaSaida();
+  if (!texto) { mostrarAviso('Não há nada escrito ainda.'); return; }
+  mostrarAviso(parcial
+    ? 'Segure aqui e arraste o trecho até o outro app.'
+    : 'Segure aqui e arraste a nota até o outro app.');
+});
+
 el('btn-desfazer').addEventListener('click', () => {
   areaTexto.focus();
   try { document.execCommand('undo'); } catch (e) { /* sem desfazer nativo */ }

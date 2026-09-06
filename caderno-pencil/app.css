@@ -163,6 +163,21 @@ html[data-pauta="on"] .papel {
 }
 .barra #btn-compartilhar { flex: 1; }
 .botao.discreto { background: transparent; border-color: transparent; color: var(--texto-fraco); }
+
+/* alça: segure e arraste para soltar a nota em outro app */
+.alca {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: grab;
+  -webkit-user-drag: element;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.alca:active { cursor: grabbing; }
+.alca.arrastando { border-color: var(--acento); color: var(--acento); }
+.alca .pega { font-size: 18px; line-height: 1; letter-spacing: -2px; }
+@media (max-width: 560px) { .rotulo-alca { display: none; } }
 .botao.perigo { background: transparent; border-color: var(--perigo); color: var(--perigo); }
 .botao.largo { display: block; width: 100%; margin-top: 18px; }
 
