@@ -26,11 +26,21 @@ Ou seja: **não precisa de internet e nada sai do seu iPad.**
 | Botão | O que faz |
 | ----- | --------- |
 | **Copiar** | Copia a nota inteira. Se houver um trecho selecionado, copia só ele. |
-| **Enviar** | Abre a folha de compartilhamento (WhatsApp, e-mail, Notas…). |
+| **Enviar** | Escolhe o destino: WhatsApp, e-mail, Mensagens ou a lista de apps do iPad. |
 | **↶** | Desfaz o último trecho escrito. |
 | **Aa** | Tamanho da letra, espaço entre linhas, pauta, modo noite. |
 | **☰** | Lista das notas guardadas. |
 | **＋** | Folha nova. |
+
+## Enviar para outro app
+
+O botão **Enviar** abre uma lista de destinos. WhatsApp, e-mail e Mensagens
+abrem o app já com o texto dentro (pelos endereços `whatsapp://`, `mailto:` e
+`sms:`); **Outros apps** abre a folha de compartilhamento do iPad, com tudo o
+mais — Notas, Drive, Telegram, imprimir.
+
+Em qualquer um deles o texto também vai para a área de transferência: se o app
+abrir vazio, porque o texto era longo demais para caber no endereço, é só colar.
 
 ## Gestos do Rabisco
 

@@ -15,6 +15,8 @@ const listaNotas = el('lista-notas');
 const notasVazio = el('notas-vazio');
 const painelNotas = el('painel-notas');
 const painelAjustes = el('painel-ajustes');
+const painelEnviar = el('painel-enviar');
+const paineis = [painelNotas, painelAjustes, painelEnviar];
 const fundoPainel = el('fundo-painel');
 const avisoEl = el('aviso');
 
@@ -229,12 +231,53 @@ el('btn-copiar').addEventListener('click', () => {
 el('btn-compartilhar').addEventListener('click', () => {
   const { texto } = textoParaSaida();
   if (!texto) { mostrarAviso('Não há nada escrito ainda.'); return; }
-  if (navigator.share) {
-    navigator.share({ text: texto }).catch(() => {});
-  } else {
-    mostrarAviso('Este navegador não abre a folha de compartilhamento.');
-  }
+  abrirPainel(painelEnviar);
 });
+
+/* Cada destino abre o app correspondente já com o texto.
+   O texto vai junto para a área de transferência: se o app abrir vazio
+   (texto longo demais para o endereço), basta colar. */
+const DESTINOS = {
+  whatsapp: {
+    nome: 'WhatsApp',
+    endereco: t => 'whatsapp://send?text=' + encodeURIComponent(t)
+  },
+  email: {
+    nome: 'e-mail',
+    endereco: (t, assunto) => 'mailto:?subject=' + encodeURIComponent(assunto)
+                            + '&body=' + encodeURIComponent(t)
+  },
+  mensagens: {
+    nome: 'Mensagens',
+    endereco: t => 'sms:&body=' + encodeURIComponent(t)
+  }
+};
+
+for (const botao of document.querySelectorAll('.destino')) {
+  botao.addEventListener('click', () => {
+    const { texto } = textoParaSaida();
+    if (!texto) { mostrarAviso('Não há nada escrito ainda.'); return; }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texto).catch(() => {});
+    }
+
+    const qual = botao.dataset.destino;
+
+    if (qual === 'outros') {
+      fecharPaineis();
+      if (navigator.share) navigator.share({ text: texto }).catch(() => {});
+      else mostrarAviso('Este navegador não abre a lista de apps.');
+      return;
+    }
+
+    const destino = DESTINOS[qual];
+    const assunto = (texto.split('\n')[0] || 'Nota do caderno').slice(0, 70);
+    fecharPaineis();
+    mostrarAviso('Abrindo o ' + destino.nome + '… o texto também foi copiado.');
+    location.href = destino.endereco(texto, assunto);
+  });
+}
 
 el('btn-desfazer').addEventListener('click', () => {
   areaTexto.focus();
@@ -260,14 +303,12 @@ el('btn-apagar').addEventListener('click', () => {
 
 /* ——— painéis ——— */
 function abrirPainel(painel) {
-  painelNotas.hidden = painel !== painelNotas;
-  painelAjustes.hidden = painel !== painelAjustes;
+  for (const p of paineis) p.hidden = p !== painel;
   fundoPainel.hidden = false;
 }
 
 function fecharPaineis() {
-  painelNotas.hidden = true;
-  painelAjustes.hidden = true;
+  for (const p of paineis) p.hidden = true;
   fundoPainel.hidden = true;
 }
 
