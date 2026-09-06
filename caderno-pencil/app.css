@@ -326,3 +326,21 @@ html[data-pauta="on"] .papel {
   box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
 }
 html[data-tema="noite"] .aviso { background: #1e2a41; border: 1px solid var(--borda); }
+
+.aviso-acao {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 10px 10px 20px;
+}
+.aviso-acao .botao {
+  padding: 9px 16px;
+  border-radius: 99px;
+  background: var(--acento);
+  border-color: var(--acento);
+  color: var(--acento-texto);
+  font-size: 14px;
+}
+
+#estado-versao { margin-top: 4px; }
+#estado-versao.nova { color: var(--acento); }
