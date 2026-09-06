@@ -27,6 +27,7 @@ Ou seja: **não precisa de internet e nada sai do seu iPad.**
 | ----- | --------- |
 | **Copiar** | Copia a nota inteira. Se houver um trecho selecionado, copia só ele. |
 | **Enviar** | Escolhe o destino: WhatsApp, e-mail, Mensagens ou a lista de apps do iPad. |
+| **⠿ Arrastar** | Alça: segure e arraste a nota direto para outro app aberto ao lado. |
 | **↶** | Desfaz o último trecho escrito. |
 | **Aa** | Tamanho da letra, espaço entre linhas, pauta, modo noite. |
 | **☰** | Lista das notas guardadas. |
@@ -41,6 +42,15 @@ mais — Notas, Drive, Telegram, imprimir.
 
 Em qualquer um deles o texto também vai para a área de transferência: se o app
 abrir vazio, porque o texto era longo demais para caber no endereço, é só colar.
+
+## Arrastar para outro app
+
+Com o app de destino aberto ao lado (Split View ou Slide Over), segure a alça
+**⠿ Arrastar** e leve a nota até ele. Se houver um trecho selecionado na folha,
+só esse trecho vai — igual ao botão **Copiar**.
+
+Arrastar a partir de uma página web depende do iPadOS aceitar a solta no campo
+de destino; quando ele recusa, **Copiar** e **Enviar** continuam ali.
 
 ## Gestos do Rabisco
 
