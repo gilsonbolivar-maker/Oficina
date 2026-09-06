@@ -1,0 +1,19 @@
+{
+  "name": "Caderno Pencil",
+  "short_name": "Caderno",
+  "description": "Escreva à mão com a Apple Pencil, o texto vira digitado e você copia com um toque.",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "start_url": ".",
+  "scope": ".",
+  "id": "caderno-pencil",
+  "display": "standalone",
+  "background_color": "#faf6ec",
+  "theme_color": "#faf6ec",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    { "src": "icones/icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icones/icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icones/icone-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
