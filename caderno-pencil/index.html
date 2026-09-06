@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="pt-BR" data-tema="papel">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Caderno Pencil</title>
+<meta name="description" content="Escreva à mão com a Apple Pencil, o texto vira digitado e você copia com um toque.">
+<meta name="theme-color" content="#faf6ec">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Caderno">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icones/icone-192.png" sizes="192x192">
+<link rel="apple-touch-icon" sizes="180x180" href="icones/icone-180.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header class="topo">
+  <button class="icone" id="btn-notas" type="button" aria-label="Minhas notas">
+    <span aria-hidden="true">☰</span>
+  </button>
+  <p class="estado" id="estado" role="status" aria-live="polite">Nota nova</p>
+  <button class="icone" id="btn-nova" type="button" aria-label="Nova nota">
+    <span aria-hidden="true">＋</span>
+  </button>
+</header>
+
+<!-- ————————————————— folha de escrita ————————————————— -->
+<main class="folha">
+  <textarea
+    id="texto"
+    class="papel"
+    lang="pt-BR"
+    placeholder="Escreva aqui com a Pencil…"
+    autocapitalize="sentences"
+    autocorrect="on"
+    spellcheck="true"
+    enterkeyhint="enter"></textarea>
+</main>
+
+<!-- ————————————————— barra de ações ————————————————— -->
+<footer class="barra">
+  <button class="botao principal" id="btn-copiar" type="button">Copiar</button>
+  <button class="botao" id="btn-compartilhar" type="button">Enviar</button>
+  <button class="botao" id="btn-desfazer" type="button" aria-label="Desfazer">↶</button>
+  <button class="botao" id="btn-ajustes" type="button" aria-label="Ajustes">Aa</button>
+</footer>
+
+<!-- ————————————————— painel: notas ————————————————— -->
+<section class="painel" id="painel-notas" hidden aria-label="Minhas notas">
+  <div class="painel-topo">
+    <h2>Notas</h2>
+    <button class="botao discreto" data-fechar type="button">Fechar</button>
+  </div>
+  <ul class="notas" id="lista-notas"></ul>
+  <p class="vazio" id="notas-vazio" hidden>Nenhuma nota guardada ainda.</p>
+</section>
+
+<!-- ————————————————— painel: ajustes ————————————————— -->
+<section class="painel" id="painel-ajustes" hidden aria-label="Ajustes">
+  <div class="painel-topo">
+    <h2>Ajustes</h2>
+    <button class="botao discreto" data-fechar type="button">Fechar</button>
+  </div>
+
+  <label class="campo">
+    Tamanho da letra <b id="valor-fonte">22 px</b>
+    <input type="range" id="ajuste-fonte" min="16" max="44" step="1">
+  </label>
+
+  <label class="campo">
+    Espaço entre linhas <b id="valor-pauta">2,2×</b>
+    <input type="range" id="ajuste-pauta" min="14" max="36" step="1">
+  </label>
+
+  <label class="opcao">
+    <input type="checkbox" id="ajuste-linhas">
+    Mostrar a pauta (linhas do caderno)
+  </label>
+
+  <label class="opcao">
+    <input type="checkbox" id="ajuste-noite">
+    Modo noite
+  </label>
+
+  <label class="opcao">
+    <input type="checkbox" id="ajuste-juntar">
+    Copiar tudo como um parágrafo só
+  </label>
+
+  <button class="botao perigo largo" id="btn-apagar" type="button">Apagar esta nota</button>
+
+  <details class="ajuda">
+    <summary>Como escrever com a Pencil</summary>
+    <p><b>1.</b> No iPad, abra <b>Ajustes › Apple Pencil</b> e ligue o <b>Rabisco</b>
+       (<i>Scribble</i>). É ele que transforma sua letra em texto digitado.</p>
+    <p><b>2.</b> Toque na folha com a Pencil e comece a escrever à mão, direto sobre
+       as linhas. O texto aparece digitado sozinho.</p>
+    <p><b>3.</b> Gestos úteis enquanto escreve:</p>
+    <p>• <b>Rabiscar por cima</b> de uma palavra: apaga.<br>
+       • <b>Circular</b> uma palavra: seleciona.<br>
+       • <b>Traço vertical</b> entre palavras: abre ou fecha espaço.<br>
+       • <b>Segurar</b> num espaço vazio: abre espaço para escrever no meio.</p>
+    <p><b>4.</b> Terminou? Toque em <b>Copiar</b> e cole onde quiser. Ou em
+       <b>Enviar</b> para mandar por WhatsApp, e-mail, Notas etc.</p>
+    <p><b>Dica:</b> letra grande e linhas espaçadas ajudam o Rabisco a acertar mais.</p>
+  </details>
+
+  <p class="rodape">Caderno Pencil · funciona sem internet · tudo fica só no seu iPad.</p>
+</section>
+
+<div class="fundo-painel" id="fundo-painel" hidden></div>
+<p class="aviso" id="aviso" role="status" aria-live="polite" hidden></p>
+
+<script src="app.js"></script>
+</body>
+</html>
