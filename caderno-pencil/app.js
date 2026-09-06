@@ -45,6 +45,7 @@ function carregar() {
 }
 
 let gravacaoPendente = 0;
+let avisouGravacao = false;
 
 function gravar(agora) {
   clearTimeout(gravacaoPendente);
@@ -52,7 +53,10 @@ function gravar(agora) {
     try {
       localStorage.setItem(CHAVE, JSON.stringify(dados));
     } catch (e) {
-      mostrarAviso('Não deu para guardar — memória do aparelho cheia.');
+      // Navegador em modo privado, armazenamento bloqueado ou cheio: avisa uma vez só.
+      if (avisouGravacao) return;
+      avisouGravacao = true;
+      mostrarAviso('Este navegador não está guardando as notas. Copie o texto antes de fechar.');
     }
   };
   if (agora) escrever();
