@@ -6,6 +6,7 @@ Oficina de desenvolvimento — Projetos e soluções
 | Pasta | O que é |
 | ----- | ------- |
 | [`alarme-gps/`](alarme-gps/) | PWA que toca um alarme ao chegar perto de um ponto marcado no mapa. |
+| [`escola/`](escola/) | App de treino, para mexer no código sem risco de quebrar os outros. |
 | [`caderno-pencil/`](caderno-pencil/) | PWA para escrever à mão com a Apple Pencil no iPad e copiar o texto digitado. |
 
 ## Publicação
@@ -17,3 +18,4 @@ preciso configurar nada em Settings.
 - Oficina: <https://gilsonbolivar-maker.github.io/Oficina/>
 - Alarme GPS: <https://gilsonbolivar-maker.github.io/Oficina/alarme-gps/>
 - Caderno Pencil: <https://gilsonbolivar-maker.github.io/Oficina/caderno-pencil/>
+- Escola: <https://gilsonbolivar-maker.github.io/Oficina/escola/>

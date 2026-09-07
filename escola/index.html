@@ -1,0 +1,97 @@
+<!doctype html>
+<!-- ═══════════════════════════════════════════════════════════
+     ESCOLA — o app de treino do Gilson.
+     Pode mexer à vontade: nada aqui afeta o Caderno Pencil.
+
+     O arquivo tem 3 partes, marcadas lá embaixo:
+       PARTE 1 — APARÊNCIA .... cores e tamanhos
+       PARTE 2 — TELA ......... o que aparece
+       PARTE 3 — AÇÃO ......... o que acontece ao tocar
+     ═══════════════════════════════════════════════════════════ -->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Escola</title>
+<meta name="theme-color" content="#0b1220">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Escola">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icones/icone-192.png" sizes="192x192">
+<link rel="apple-touch-icon" sizes="180x180" href="icones/icone-180.png">
+
+<style>
+/* ═══ PARTE 1 — APARÊNCIA ═══════════════════════════════════ */
+
+body {
+  background: #0b1220;      /* cor do fundo */
+  color: #e8edf7;           /* cor do texto */
+  font-family: system-ui, -apple-system, sans-serif;
+  text-align: center;
+  padding: 40px 20px;
+}
+
+h1 {
+  font-size: 34px;          /* tamanho do título */
+  margin-bottom: 40px;
+}
+
+button {
+  background: #ffb020;      /* cor do botão */
+  color: #201400;           /* cor da letra do botão */
+  font-size: 22px;          /* tamanho da letra do botão */
+  font-weight: 600;
+  border: 0;
+  border-radius: 16px;
+  padding: 20px 44px;       /* tamanho do botão */
+  cursor: pointer;
+}
+
+#contagem {
+  font-size: 20px;
+  color: #93a1bd;           /* cor da contagem */
+  margin-top: 30px;
+}
+
+.rodape {
+  margin-top: 60px;
+  font-size: 13px;
+  color: #5a6884;
+}
+</style>
+</head>
+
+<body>
+
+<!-- ═══ PARTE 2 — TELA ══════════════════════════════════════ -->
+
+<h1>Oficina do Gilson</h1>
+
+<button id="botao">Apertar</button>
+
+<p id="contagem">apertado 0 vezes</p>
+
+<p class="rodape">Escola v1</p>
+
+<script>
+/* ═══ PARTE 3 — AÇÃO ═══════════════════════════════════════ */
+
+let vezes = 0;                                    // começa no zero
+
+document.getElementById('botao').onclick = () => {
+  vezes = vezes + 1;                              // soma 1
+  document.getElementById('contagem').textContent =
+    'apertado ' + vezes + ' vezes';               // escreve na tela
+};
+
+
+/* daqui para baixo é o encanamento: faz o app abrir sem internet.
+   Não precisa mexer. */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+</script>
+
+</body>
+</html>
