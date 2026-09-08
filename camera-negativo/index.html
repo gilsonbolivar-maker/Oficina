@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Câmera Negativo</title>
+<meta name="description" content="Câmera fotográfica que mostra e fotografa com as cores invertidas.">
+<meta name="theme-color" content="#0b1220">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Negativo">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icones/icone-192.png" sizes="192x192">
+<link rel="apple-touch-icon" sizes="180x180" href="icones/icone-180.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<!-- ————————————————— visor ————————————————— -->
+<main class="visor" id="visor">
+  <video id="video" playsinline autoplay muted disablepictureinpicture></video>
+  <div class="grade" id="grade" hidden aria-hidden="true"></div>
+  <div class="clarao" id="clarao" aria-hidden="true"></div>
+  <p class="contagem" id="contagem" hidden aria-hidden="true"></p>
+
+  <div class="recado" id="recado" hidden>
+    <p class="recado-texto" id="recado-texto">Toque em <b>Ligar a câmera</b> e autorize o acesso.</p>
+    <button class="botao principal" id="btn-ligar" type="button">Ligar a câmera</button>
+  </div>
+</main>
+
+<!-- ————————————————— topo ————————————————— -->
+<header class="topo">
+  <button class="icone" id="btn-ajustes" type="button" aria-label="Ajustes">
+    <span aria-hidden="true">⚙</span>
+  </button>
+  <p class="estado" id="estado" role="status" aria-live="polite">Negativo</p>
+  <button class="icone" id="btn-lanterna" type="button" aria-label="Lanterna" hidden aria-pressed="false">
+    <span aria-hidden="true">🔦</span>
+  </button>
+</header>
+
+<!-- ————————————————— filtros ————————————————— -->
+<nav class="filtros" id="filtros" aria-label="Filtro de cor"></nav>
+
+<!-- ————————————————— barra de ações ————————————————— -->
+<footer class="barra">
+  <button class="miniatura" id="btn-carretel" type="button" aria-label="Fotos desta sessão" disabled>
+    <img id="miniatura-img" alt="">
+    <span class="contador" id="contador" hidden>0</span>
+  </button>
+
+  <button class="obturador" id="btn-foto" type="button" aria-label="Tirar foto" disabled>
+    <span class="obturador-anel" aria-hidden="true"></span>
+  </button>
+
+  <button class="icone grande" id="btn-trocar" type="button" aria-label="Trocar de câmera">
+    <span aria-hidden="true">⇄</span>
+  </button>
+</footer>
+
+<!-- ————————————————— painel: foto tirada ————————————————— -->
+<section class="painel" id="painel-foto" hidden aria-label="Foto tirada">
+  <div class="painel-topo">
+    <h2>Foto</h2>
+    <button class="botao discreto" data-fechar type="button">Fechar</button>
+  </div>
+
+  <figure class="previa">
+    <img id="previa-img" alt="Última foto tirada">
+    <figcaption id="previa-legenda">—</figcaption>
+  </figure>
+
+  <div class="acoes">
+    <button class="botao principal" id="btn-salvar" type="button">Salvar / Enviar</button>
+    <button class="botao perigo" id="btn-descartar" type="button">Descartar</button>
+  </div>
+
+  <p class="rodape">No iPhone e no iPad, <b>Salvar / Enviar</b> abre a folha de
+    compartilhamento — escolha <b>Salvar Imagem</b> para guardar em Fotos.</p>
+</section>
+
+<!-- ————————————————— painel: carretel ————————————————— -->
+<section class="painel" id="painel-carretel" hidden aria-label="Fotos desta sessão">
+  <div class="painel-topo">
+    <h2>Fotos desta sessão</h2>
+    <button class="botao discreto" data-fechar type="button">Fechar</button>
+  </div>
+
+  <ul class="carretel" id="lista-carretel"></ul>
+  <p class="vazio" id="carretel-vazio" hidden>Nenhuma foto ainda.</p>
+  <p class="rodape">As fotos ficam só na memória do app: <b>fechar apaga</b>.
+    Salve as que importam.</p>
+</section>
+
+<!-- ————————————————— painel: ajustes ————————————————— -->
+<section class="painel" id="painel-ajustes" hidden aria-label="Ajustes">
+  <div class="painel-topo">
+    <h2>Ajustes</h2>
+    <button class="botao discreto" data-fechar type="button">Fechar</button>
+  </div>
+
+  <label class="campo">
+    Força da inversão <b id="valor-forca">100%</b>
+    <input type="range" id="ajuste-forca" min="0" max="100" step="5">
+  </label>
+
+  <label class="campo">
+    Temporizador <b id="valor-tempo">desligado</b>
+    <input type="range" id="ajuste-tempo" min="0" max="10" step="1" list="tempos">
+    <datalist id="tempos">
+      <option value="0"></option><option value="3"></option><option value="10"></option>
+    </datalist>
+  </label>
+
+  <label class="opcao">
+    <input type="checkbox" id="ajuste-espelhar">
+    Espelhar a câmera frontal (como um espelho)
+  </label>
+
+  <label class="opcao">
+    <input type="checkbox" id="ajuste-grade">
+    Mostrar a grade dos terços
+  </label>
+
+  <label class="opcao">
+    <input type="checkbox" id="ajuste-clarao">
+    Clarão na tela ao fotografar
+  </label>
+
+  <details class="ajuda">
+    <summary>Como usar</summary>
+    <p><b>1.</b> Toque em <b>Ligar a câmera</b> e autorize o acesso. A permissão é
+       pedida uma vez por aparelho.</p>
+    <p><b>2.</b> Escolha o filtro na fileira acima da barra: <b>Negativo</b> inverte
+       todas as cores, <b>Negativo P&amp;B</b> vira um negativo de filme preto e
+       branco, <b>Raio-X</b> ainda estica o contraste.</p>
+    <p><b>3.</b> O botão redondo tira a foto — ela sai já invertida, não é só a tela
+       que muda.</p>
+    <p><b>4.</b> Em <b>Salvar / Enviar</b> a foto vai para Fotos, WhatsApp, e-mail ou
+       o download do computador.</p>
+    <p><b>Dica:</b> um negativo lido pela câmera no filtro <b>Negativo</b> aparece com
+       as cores certas — serve para ver filmes antigos.</p>
+  </details>
+
+  <p class="rodape">Câmera Negativo <b id="versao">—</b> · funciona sem internet ·
+    nenhuma imagem sai do aparelho.</p>
+  <p class="rodape" id="estado-versao">Procurando atualização…</p>
+</section>
+
+<div class="fundo-painel" id="fundo-painel" hidden></div>
+<p class="aviso" id="aviso" role="status" aria-live="polite" hidden></p>
+
+<div class="aviso aviso-acao" id="aviso-versao" role="status" aria-live="polite" hidden>
+  <span>Nova versão pronta.</span>
+  <button class="botao" id="btn-atualizar" type="button">Atualizar</button>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
