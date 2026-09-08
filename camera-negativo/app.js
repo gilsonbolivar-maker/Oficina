@@ -5,9 +5,10 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.0.1';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.1.0';   // precisa casar com a VERSAO do sw.js
 const CHAVE = 'camera-negativo:v1';
 const LIMITE_CARRETEL = 24;   // fotos guardadas na memória da sessão
+const ZOOM_MAX = 6;           // além disso o recorte não tem mais pixel para dar
 
 const el = id => document.getElementById(id);
 
@@ -38,6 +39,7 @@ const FILTROS = [
 /* ——— estado guardado ——— */
 const padrao = () => ({
   filtro: 'negativo',
+  zoom: 1,
   forca: 100,        // % da inversão
   tempo: 0,          // segundos do temporizador
   frontal: false,
@@ -54,6 +56,7 @@ function carregar() {
     if (!bruto) return padrao();
     const lido = Object.assign(padrao(), JSON.parse(bruto));
     if (!FILTROS.some(f => f.id === lido.filtro)) lido.filtro = 'negativo';
+    lido.zoom = Math.min(ZOOM_MAX, Math.max(1, Number(lido.zoom) || 1));
     return lido;
   } catch (e) {
     return padrao();
@@ -108,8 +111,8 @@ async function ligarCamera() {
     fluxo = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: dados.frontal ? 'user' : 'environment',
-        width: { ideal: 1920 },
-        height: { ideal: 1080 }
+        width: { ideal: 3840 },
+        height: { ideal: 2160 }
       },
       audio: false
     });
@@ -130,13 +133,16 @@ async function ligarCamera() {
   esconderRecado();
   el('btn-foto').disabled = false;
   prepararLanterna();
+  prepararZoom();
   aplicarAparencia();
+  aplicarZoom();
 }
 
 function desligarCamera() {
   if (fluxo) fluxo.getTracks().forEach(t => t.stop());
   fluxo = null;
   trilha = null;
+  zoomNativo = null;
   lanternaLigada = false;
   video.srcObject = null;
   el('btn-foto').disabled = true;
@@ -190,6 +196,118 @@ el('btn-lanterna').addEventListener('click', async () => {
   }
 });
 
+/* ——— zoom ——————————————————————————————————————————————————
+   Duas camadas: se a câmera tem zoom próprio (Android/Chrome), ele
+   é usado primeiro, porque não custa nitidez. O que passar do que o
+   hardware alcança — e tudo, no iPhone, onde o Safari não expõe zoom —
+   é recorte central: o visor amplia por CSS e a foto é recortada no
+   mesmo fator, então a imagem salva é ampliada de verdade, e não uma
+   foto inteira que só parecia perto na tela.
+   ———————————————————————————————————————————————————————————— */
+let zoomNativo = null;      // faixa de zoom do hardware, quando existe
+let zoomDigital = 1;        // o que sobrou para o recorte fazer
+
+function prepararZoom() {
+  const cap = trilha && trilha.getCapabilities ? trilha.getCapabilities() : null;
+  const z = cap && cap.zoom;
+  zoomNativo = (z && z.max > (z.min || 1)) ? z : null;
+}
+
+async function aplicarZoom() {
+  const alvo = dados.zoom;
+  let resto = alvo;
+
+  if (zoomNativo && trilha) {
+    // A faixa do hardware nem sempre começa em 1 (há câmeras que reportam 100–400).
+    const base = zoomNativo.min || 1;
+    const pedido = Math.min(zoomNativo.max, Math.max(base, alvo * base));
+    try {
+      await trilha.applyConstraints({ advanced: [{ zoom: pedido }] });
+      resto = alvo / (pedido / base);
+    } catch (e) {
+      zoomNativo = null;   // prometeu e não cumpriu: fica tudo com o recorte
+    }
+  }
+
+  zoomDigital = Math.max(1, resto);
+  document.documentElement.style.setProperty('--zoom', zoomDigital.toFixed(3));
+  mostrarZoom();
+}
+
+function mostrarZoom() {
+  const texto = dados.zoom.toFixed(1) + '×';
+  el('btn-zoom').textContent = texto;
+  el('btn-zoom').classList.toggle('ativo', dados.zoom > 1);
+  el('valor-zoom').textContent = texto;
+  el('ajuste-zoom').value = Math.round(dados.zoom * 10);
+}
+
+function definirZoom(valor, avisar) {
+  const antes = dados.zoom;
+  dados.zoom = Math.min(ZOOM_MAX, Math.max(1, Number(valor) || 1));
+  if (dados.zoom === antes) return;
+  gravar();
+  aplicarZoom();
+  if (avisar) mostrarAviso('Zoom ' + dados.zoom.toFixed(1) + '×');
+}
+
+// Atalho no topo: 1× → 2× → 3× → 5× → 1×
+el('btn-zoom').addEventListener('click', () => {
+  const passos = [1, 2, 3, 5];
+  const i = passos.findIndex(p => p > dados.zoom + 0.01);
+  definirZoom(i === -1 ? 1 : passos[i], false);
+});
+
+el('ajuste-zoom').addEventListener('input', ev => definirZoom(Number(ev.target.value) / 10, false));
+
+/* ——— pinça e dois toques no visor ——— */
+const dedos = new Map();
+let pincaInicial = 0;
+let zoomInicial = 1;
+let ultimoToque = 0;
+
+const visor = el('visor');
+
+visor.addEventListener('pointerdown', ev => {
+  dedos.set(ev.pointerId, ev);
+  if (dedos.size === 2) {
+    pincaInicial = distanciaDedos();
+    zoomInicial = dados.zoom;
+  }
+});
+
+visor.addEventListener('pointermove', ev => {
+  if (!dedos.has(ev.pointerId)) return;
+  dedos.set(ev.pointerId, ev);
+  if (dedos.size !== 2 || !pincaInicial) return;
+  const agora = distanciaDedos();
+  if (agora) definirZoom(zoomInicial * (agora / pincaInicial), false);
+});
+
+for (const fim of ['pointerup', 'pointercancel', 'pointerleave']) {
+  visor.addEventListener(fim, ev => {
+    const eraPinca = dedos.size === 2;
+    dedos.delete(ev.pointerId);
+    if (dedos.size < 2) pincaInicial = 0;
+    if (eraPinca || ev.type !== 'pointerup') return;
+
+    // Dois toques seguidos alternam entre 1× e 2×.
+    const t = Date.now();
+    if (t - ultimoToque < 320) {
+      definirZoom(dados.zoom > 1.05 ? 1 : 2, true);
+      ultimoToque = 0;
+    } else {
+      ultimoToque = t;
+    }
+  });
+}
+
+function distanciaDedos() {
+  const [a, b] = [...dedos.values()];
+  if (!a || !b) return 0;
+  return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+}
+
 /* ——— tirar a foto ————————————————————————————————————————————
    O visor é CSS, mas a foto precisa ser desenhada. Onde o navegador
    aceita ctx.filter (Safari 17+, Chrome, Firefox) é ele quem faz o
@@ -224,14 +342,23 @@ async function tirarFoto() {
   const alt = video.videoHeight;
   if (!larg || !alt) return mostrarAviso('A câmera ainda está aquecendo, tente de novo.');
 
+  // O zoom digital vira recorte central, no mesmo formato do quadro:
+  // a foto guarda um pouco mais das laterais do que cabe no visor,
+  // nunca menos, e sai no tamanho real dos pixels — sem esticar nada.
+  const z = Math.max(1, zoomDigital);
+  const rl = Math.max(16, Math.round(larg / z));
+  const ra = Math.max(16, Math.round(alt / z));
+  const rx = Math.round((larg - rl) / 2);
+  const ry = Math.round((alt - ra) / 2);
+
   const tela = document.createElement('canvas');
-  tela.width = larg;
-  tela.height = alt;
+  tela.width = rl;
+  tela.height = ra;
   const ctx = tela.getContext('2d');
 
   // A foto espelhada acompanha o visor: o que se vê é o que sai.
   if (dados.frontal && dados.espelhar) {
-    ctx.translate(larg, 0);
+    ctx.translate(rl, 0);
     ctx.scale(-1, 1);
   }
 
@@ -240,11 +367,11 @@ async function tirarFoto() {
   const filtroNativo = ('filter' in ctx) && receita !== 'none';
   if (filtroNativo) ctx.filter = receita;
 
-  ctx.drawImage(video, 0, 0, larg, alt);
+  ctx.drawImage(video, rx, ry, rl, ra, 0, 0, rl, ra);
 
   ctx.filter = 'none';
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  if (!filtroNativo && receita !== 'none') aplicarNaMao(ctx, larg, alt, f);
+  if (!filtroNativo && receita !== 'none') aplicarNaMao(ctx, rl, ra, f);
 
   piscar();
 
@@ -312,7 +439,8 @@ function guardarFoto(blob, f) {
     url: URL.createObjectURL(blob),
     nome: 'negativo-' + carimbo(quando) + '.jpg',
     quando,
-    filtro: f.nome
+    filtro: f.nome,
+    zoom: dados.zoom
   };
   carretel.unshift(foto);
 
@@ -370,7 +498,9 @@ let fotoAberta = null;
 function abrirFoto(foto) {
   fotoAberta = foto;
   el('previa-img').src = foto.url;
-  el('previa-legenda').textContent = foto.filtro + ' · ' + hora(foto.quando) + ' · ' + foto.nome;
+  const comZoom = foto.zoom > 1.05 ? ' · ' + foto.zoom.toFixed(1) + '×' : '';
+  el('previa-legenda').textContent = foto.filtro + comZoom + ' · ' + hora(foto.quando) +
+    ' · ' + foto.nome;
   abrirPainel(painelFoto);
 }
 
@@ -469,6 +599,7 @@ function aplicarAparencia() {
   el('estado').textContent = filtroAtual().nome +
     (dados.forca < 100 && filtroAtual().inverter ? ' · ' + dados.forca + '%' : '');
 
+  mostrarZoom();
   el('valor-forca').textContent = dados.forca + '%';
   el('valor-tempo').textContent = dados.tempo ? dados.tempo + ' s' : 'desligado';
   el('ajuste-forca').value = dados.forca;
