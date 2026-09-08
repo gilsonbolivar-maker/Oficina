@@ -5,7 +5,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.2.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.3.0';   // precisa casar com a VERSAO do sw.js
 const CHAVE = 'camera-negativo:v1';
 const LIMITE_CARRETEL = 24;   // fotos guardadas na memória da sessão
 const ZOOM_MAX = 6;           // além disso o recorte não tem mais pixel para dar
@@ -541,6 +541,62 @@ el('btn-pdf').addEventListener('click', async () => {
   } catch (e) {
     mostrarAviso('Não deu para montar o PDF desta foto.');
   }
+});
+
+/* ——— transcrever ————————————————————————————————————————————
+   O app não lê o texto da foto: ele entrega a foto pronta para quem
+   lê — o Claude, uma conversa, um e-mail — junto com o pedido já
+   escrito. O pedido também vai para a área de transferência, porque
+   alguns apps levam só a imagem da folha de compartilhamento.
+   ———————————————————————————————————————————————————————————— */
+function pedidoDeTranscricao(foto) {
+  const quando = foto.quando.toLocaleDateString('pt-BR') + ' ' + hora(foto.quando);
+  return [
+    'Transcreva em texto os campos desta foto.',
+    '',
+    '- um campo por linha, no formato TAG: valor unidade',
+    '- agrupe por área/seção, na ordem em que aparecem',
+    '- campo vazio: escreva "(sem leitura)" — não invente número',
+    '- anote a cor do valor quando houver (verde, amarelo, vermelho)',
+    '- diga o que não deu para ler, em vez de adivinhar',
+    '- no fim, repita tudo separado por ponto e vírgula, para planilha',
+    '',
+    'Foto: Câmera Negativo · filtro ' + foto.filtro +
+      (foto.zoom > 1.05 ? ' · zoom ' + foto.zoom.toFixed(1) + '×' : '') +
+      ' · ' + quando
+  ].join('\n');
+}
+
+el('btn-transcrever').addEventListener('click', async () => {
+  if (!fotoAberta) return;
+  const pedido = pedidoDeTranscricao(fotoAberta);
+
+  // Copiar antes de compartilhar: depois da folha abrir, o toque do
+  // usuário já não vale como permissão para mexer na área de transferência.
+  let copiou = false;
+  try {
+    await navigator.clipboard.writeText(pedido);
+    copiou = true;
+  } catch (e) {
+    // Sem permissão de área de transferência: o pedido ainda vai no compartilhamento.
+  }
+
+  const arquivo = new File([fotoAberta.blob], fotoAberta.nome, { type: 'image/jpeg' });
+  if (navigator.canShare && navigator.canShare({ files: [arquivo] })) {
+    try {
+      await navigator.share({ files: [arquivo], text: pedido, title: 'Transcrever esta foto' });
+      mostrarAviso(copiou ? 'Enviado. Se o app abrir só com a foto, cole o pedido.'
+                          : 'Enviado — peça a transcrição no app escolhido.');
+      return;
+    } catch (e) {
+      if (e && e.name === 'AbortError') return;   // o usuário desistiu, não é erro
+    }
+  }
+
+  // Sem folha de compartilhamento (computador): baixa a foto e deixa o pedido copiado.
+  await entregar(fotoAberta.blob, fotoAberta.nome, 'Foto para transcrever');
+  mostrarAviso(copiou ? 'Foto baixada e pedido copiado — cole junto com a imagem.'
+                      : 'Foto baixada — envie junto o pedido de transcrição.');
 });
 
 /* ——— PDF ——————————————————————————————————————————————————————
