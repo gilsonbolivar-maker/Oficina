@@ -15,6 +15,7 @@
   /* ajustados pelo app.js */
   --filtro: invert(1);
   --espelho: 1;
+  --zoom: 1;
 }
 
 * { box-sizing: border-box; }
@@ -43,6 +44,7 @@ h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
 /* ——— visor ——— */
 .visor {
   position: relative;
+  touch-action: none;   /* a pinça é do app, não do navegador */
   flex: 1 1 auto;
   min-height: 0;
   background: #000;
@@ -56,7 +58,7 @@ h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
   display: block;
   background: #000;
   filter: var(--filtro);
-  transform: scaleX(var(--espelho));
+  transform: scaleX(var(--espelho)) scale(var(--zoom));
 }
 
 .grade {
@@ -175,6 +177,8 @@ h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
   -webkit-tap-highlight-color: transparent;
 }
 .icone.grande { width: 52px; height: 52px; font-size: 24px; }
+.icone.zoom-atalho { font-size: 13px; font-weight: 700; letter-spacing: -0.02em; }
+.icone.zoom-atalho.ativo { border-color: var(--acento); color: var(--acento); }
 .icone[aria-pressed="true"] { background: var(--acento); color: var(--acento-texto); }
 
 /* ——— filtros ——— */

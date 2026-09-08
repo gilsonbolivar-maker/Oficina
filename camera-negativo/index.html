@@ -40,6 +40,8 @@
     <button class="versao-topo" id="versao-topo" type="button"
             aria-label="Versão do app — abre os ajustes">v—</button>
   </div>
+  <button class="icone zoom-atalho" id="btn-zoom" type="button"
+          aria-label="Zoom — toque para ampliar">1.0×</button>
   <button class="icone" id="btn-lanterna" type="button" aria-label="Lanterna" hidden aria-pressed="false">
     <span aria-hidden="true">🔦</span>
   </button>
@@ -106,6 +108,11 @@
   </div>
 
   <label class="campo">
+    Zoom <b id="valor-zoom">1.0×</b>
+    <input type="range" id="ajuste-zoom" min="10" max="60" step="1">
+  </label>
+
+  <label class="campo">
     Força da inversão <b id="valor-forca">100%</b>
     <input type="range" id="ajuste-forca" min="0" max="100" step="5">
   </label>
@@ -140,6 +147,9 @@
     <p><b>2.</b> Escolha o filtro na fileira acima da barra: <b>Negativo</b> inverte
        todas as cores, <b>Negativo P&amp;B</b> vira um negativo de filme preto e
        branco, <b>Raio-X</b> ainda estica o contraste.</p>
+    <p><b>2b.</b> Para aproximar: <b>pince o visor com dois dedos</b>, dê <b>dois toques</b>
+       para alternar 1×/2×, ou toque no número do zoom no alto da tela. A foto sai
+       ampliada de verdade — o recorte é feito no arquivo, não é só a tela.</p>
     <p><b>3.</b> O botão redondo tira a foto — ela sai já invertida, não é só a tela
        que muda.</p>
     <p><b>4.</b> Em <b>Salvar / Enviar</b> a foto vai para Fotos, WhatsApp, e-mail ou

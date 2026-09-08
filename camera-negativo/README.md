@@ -30,8 +30,9 @@ barra de endereço (computador).
 
 | Botão | O que faz |
 | ----- | --------- |
-| **⚙** | Ajustes: força da inversão, temporizador, espelho, grade. |
-| **v1.0.1** | O número da versão, abaixo do nome do filtro; toque para abrir os ajustes. |
+| **⚙** | Ajustes: zoom fino, força da inversão, temporizador, espelho, grade. |
+| **1.0×** | Zoom: toque para ciclar 1× → 2× → 3× → 5×. Fica laranja quando ampliado. |
+| **v1.1.0** | O número da versão, abaixo do nome do filtro; toque para abrir os ajustes. |
 | **🔦** | Lanterna — só aparece quando a câmera de trás permite acender. |
 | Fileira de filtros | Troca o filtro; o escolhido fica aceso. |
 | Miniatura | Abre as fotos desta sessão. |
@@ -50,6 +51,32 @@ barra de endereço (computador).
 
 A **força da inversão** (nos ajustes) vai de 0% a 100% e vale para os filtros
 que invertem: em 50%, a imagem fica no meio do caminho, cinzenta.
+
+## Zoom
+
+Três jeitos de aproximar, até **6×**:
+
+| Gesto | O que faz |
+| ----- | --------- |
+| **Pinça** com dois dedos no visor | Zoom contínuo |
+| **Dois toques** no visor | Alterna 1× e 2× |
+| Toque no **número** no alto da tela | Cicla 1× → 2× → 3× → 5× |
+| Ajuste **Zoom** no painel ⚙ | Passo fino, de 0,1 em 0,1 |
+
+**A foto sai ampliada de verdade**, não é só a tela que aproxima:
+
+```
+câmera 3840×2160  ──►  zoom 2×  ──►  recorte central 1920×1080
+                                     (pixels reais, nada esticado)
+```
+
+Onde a câmera tem zoom próprio (Android/Chrome), ele é usado primeiro — não custa
+nitidez. O que passar do alcance do hardware — e tudo no iPhone, onde o Safari não
+expõe zoom — vira recorte central. Por isso o app pede a maior resolução que a
+câmera oferecer: é dela que o recorte tira nitidez.
+
+O recorte mantém o formato do quadro, então **a foto guarda um pouco mais das
+laterais do que cabe no visor** — nunca menos.
 
 ## A foto sai igual ao visor
 
@@ -82,6 +109,7 @@ Quando sai uma versão nova o app percebe sozinho: o número no visor fica
 
 | Versão | O que mudou |
 | ------ | ----------- |
+| 1.1.0 | Zoom até 6× por pinça, dois toques, atalho e ajuste fino — com recorte real na foto. |
 | 1.0.1 | Número da versão no visor, logo abaixo do nome do filtro. |
 | 1.0.0 | Visor invertido, cinco filtros, foto igual ao visor, carretel da sessão, offline. |
 
