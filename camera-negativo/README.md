@@ -32,7 +32,7 @@ barra de endereço (computador).
 | ----- | --------- |
 | **⚙** | Ajustes: zoom fino, força da inversão, temporizador, espelho, grade. |
 | **1.0×** | Zoom: toque para ciclar 1× → 2× → 3× → 5×. Fica laranja quando ampliado. |
-| **v1.2.0** | O número da versão, abaixo do nome do filtro; toque para abrir os ajustes. |
+| **v1.3.0** | O número da versão, abaixo do nome do filtro; toque para abrir os ajustes. |
 | **🔦** | Lanterna — só aparece quando a câmera de trás permite acender. |
 | Fileira de filtros | Troca o filtro; o escolhido fica aceso. |
 | Miniatura | Abre as fotos desta sessão. |
@@ -88,6 +88,23 @@ receita** — cinza, inversão e contraste, nessa ordem. Onde o navegador aceita
 Se a câmera frontal estiver espelhada no visor, a foto sai espelhada também: o
 que se vê é o que se leva.
 
+## Transcrever a foto em texto
+
+O botão **Transcrever**, no painel da foto, é para fotos de **tela, painel ou
+documento**: abre a folha de compartilhamento com a imagem **e o pedido de
+transcrição já escrito** — um campo por linha, campo vazio marcado como
+*(sem leitura)*, cor do valor anotada e um bloco separado por `;` no fim, para
+planilha. O pedido também vai para a **área de transferência**, porque alguns
+apps levam só a imagem.
+
+**O app não lê o texto sozinho.** Quem transcreve é quem recebe a foto — o
+Claude, um colega no WhatsApp, você mesmo no e-mail. Foi uma escolha: um
+reconhecedor embarcado custaria ~10 MB e erraria dígito justamente na fonte de
+painel (`FIT-140008` virando `FIT-14000B`), e num instrumento errar um dígito é
+pior do que não ler.
+
+Combina com o zoom: aproxime até o campo ficar nítido, fotografe, transcreva.
+
 ## Salvar em PDF
 
 O botão **PDF**, no painel da foto, monta uma **folha A4** com a imagem
@@ -125,6 +142,7 @@ Quando sai uma versão nova o app percebe sozinho: o número no visor fica
 
 | Versão | O que mudou |
 | ------ | ----------- |
+| 1.3.0 | Botão **Transcrever**: envia a foto com o pedido de transcrição pronto. |
 | 1.2.0 | Botão **PDF**: folha A4 com a foto e a data, montada no próprio app. |
 | 1.1.0 | Zoom até 6× por pinça, dois toques, atalho e ajuste fino — com recorte real na foto. |
 | 1.0.1 | Número da versão no visor, logo abaixo do nome do filtro. |
