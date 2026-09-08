@@ -31,6 +31,7 @@ barra de endereço (computador).
 | Botão | O que faz |
 | ----- | --------- |
 | **⚙** | Ajustes: força da inversão, temporizador, espelho, grade. |
+| **v1.0.1** | O número da versão, abaixo do nome do filtro; toque para abrir os ajustes. |
 | **🔦** | Lanterna — só aparece quando a câmera de trás permite acender. |
 | Fileira de filtros | Troca o filtro; o escolhido fica aceso. |
 | Miniatura | Abre as fotos desta sessão. |
@@ -73,11 +74,15 @@ Para guardar uma foto, abra-a e toque em **Salvar / Enviar**:
 
 ## Versão
 
-O número aparece no painel **⚙**, no rodapé. Quando sai uma versão nova o app
-percebe sozinho e mostra **Nova versão pronta · Atualizar**.
+O número aparece **no visor**, em letra miúda logo abaixo do nome do filtro —
+tocar nele abre os ajustes, onde o rodapé repete a versão por extenso.
+
+Quando sai uma versão nova o app percebe sozinho: o número no visor fica
+**laranja** e aparece **Nova versão pronta · Atualizar**.
 
 | Versão | O que mudou |
 | ------ | ----------- |
+| 1.0.1 | Número da versão no visor, logo abaixo do nome do filtro. |
 | 1.0.0 | Visor invertido, cinco filtros, foto igual ao visor, carretel da sessão, offline. |
 
 `app.js` e `sw.js` guardam a mesma constante `VERSAO` — mudar as duas é o que

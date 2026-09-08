@@ -5,7 +5,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.0.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.0.1';   // precisa casar com a VERSAO do sw.js
 const CHAVE = 'camera-negativo:v1';
 const LIMITE_CARRETEL = 24;   // fotos guardadas na memória da sessão
 
@@ -522,12 +522,17 @@ window.addEventListener('pagehide', desligarCamera);
 
 /* ——— versão e atualização ——— */
 el('versao').textContent = 'v' + VERSAO;
+el('versao-topo').textContent = 'v' + VERSAO;
+
+// A versão no visor também é atalho para os ajustes, onde está o resto.
+el('versao-topo').addEventListener('click', () => abrirPainel(painelAjustes));
 
 const estadoVersao = el('estado-versao');
 
 function mostrarEstadoVersao(texto, nova) {
   estadoVersao.textContent = texto;
   estadoVersao.classList.toggle('nova', Boolean(nova));
+  el('versao-topo').classList.toggle('nova', Boolean(nova));
 }
 
 if (!('serviceWorker' in navigator)) {
