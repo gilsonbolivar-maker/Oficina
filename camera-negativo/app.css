@@ -128,8 +128,15 @@ h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
   background: linear-gradient(to bottom, rgba(0,0,0,.55), transparent);
 }
 
-.estado {
+.centro {
   flex: 1;
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+}
+
+.estado {
   margin: 0;
   text-align: center;
   font-size: 14px;
@@ -137,6 +144,21 @@ h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
   color: #fff;
   text-shadow: 0 1px 6px rgba(0,0,0,.7);
 }
+
+.versao-topo {
+  padding: 0;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  border: 0;
+  background: none;
+  color: rgba(255,255,255,.72);
+  text-shadow: 0 1px 6px rgba(0,0,0,.7);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.versao-topo.nova { color: var(--acento); }
 
 .icone {
   flex: none;
