@@ -5,7 +5,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.1.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.2.0';   // precisa casar com a VERSAO do sw.js
 const CHAVE = 'camera-negativo:v1';
 const LIMITE_CARRETEL = 24;   // fotos guardadas na memória da sessão
 const ZOOM_MAX = 6;           // além disso o recorte não tem mais pixel para dar
@@ -504,13 +504,12 @@ function abrirFoto(foto) {
   abrirPainel(painelFoto);
 }
 
-el('btn-salvar').addEventListener('click', async () => {
-  if (!fotoAberta) return;
-  const arquivo = new File([fotoAberta.blob], fotoAberta.nome, { type: 'image/jpeg' });
+async function entregar(blob, nome, titulo) {
+  const arquivo = new File([blob], nome, { type: blob.type });
 
   if (navigator.canShare && navigator.canShare({ files: [arquivo] })) {
     try {
-      await navigator.share({ files: [arquivo], title: 'Foto em negativo' });
+      await navigator.share({ files: [arquivo], title: titulo });
       return;
     } catch (e) {
       if (e && e.name === 'AbortError') return;   // o usuário desistiu, não é erro
@@ -518,14 +517,157 @@ el('btn-salvar').addEventListener('click', async () => {
   }
 
   // Sem folha de compartilhamento: baixa o arquivo.
+  const endereco = URL.createObjectURL(blob);
   const link = document.createElement('a');
-  link.href = fotoAberta.url;
-  link.download = fotoAberta.nome;
+  link.href = endereco;
+  link.download = nome;
   document.body.append(link);
   link.click();
   link.remove();
-  mostrarAviso('Foto baixada: ' + fotoAberta.nome);
+  setTimeout(() => URL.revokeObjectURL(endereco), 10000);
+  mostrarAviso('Baixado: ' + nome);
+}
+
+el('btn-salvar').addEventListener('click', () => {
+  if (!fotoAberta) return;
+  entregar(fotoAberta.blob, fotoAberta.nome, 'Foto em negativo');
 });
+
+el('btn-pdf').addEventListener('click', async () => {
+  if (!fotoAberta) return;
+  try {
+    const pdf = await pdfDaFoto(fotoAberta);
+    entregar(pdf, fotoAberta.nome.replace(/\.jpg$/, '.pdf'), 'Foto em negativo (PDF)');
+  } catch (e) {
+    mostrarAviso('Não deu para montar o PDF desta foto.');
+  }
+});
+
+/* ——— PDF ——————————————————————————————————————————————————————
+   O JPEG entra inteiro no PDF, pelo filtro /DCTDecode: nada é
+   recomprimido nem redesenhado, a folha carrega exatamente a foto que
+   foi tirada. O arquivo é montado byte a byte aqui — sem biblioteca
+   nenhuma, para o app continuar abrindo e funcionando sem internet.
+   ———————————————————————————————————————————————————————————— */
+const A4_CURTO = 595.28;    // pontos (72 por polegada)
+const A4_LONGO = 841.89;
+const MARGEM = 28;
+const ALTURA_RODAPE = 18;
+
+// Largura, altura e nº de componentes vêm do próprio cabeçalho do JPEG.
+function lerJpeg(bytes) {
+  let i = 2;
+  while (i + 9 < bytes.length) {
+    if (bytes[i] !== 0xFF) { i++; continue; }
+    const marca = bytes[i + 1];
+    if (marca === 0xD8 || marca === 0x01 || (marca >= 0xD0 && marca <= 0xD7)) { i += 2; continue; }
+    const tamanho = (bytes[i + 2] << 8) | bytes[i + 3];
+    const quadro = marca >= 0xC0 && marca <= 0xCF &&
+                   marca !== 0xC4 && marca !== 0xC8 && marca !== 0xCC;
+    if (quadro) {
+      return {
+        altura: (bytes[i + 5] << 8) | bytes[i + 6],
+        largura: (bytes[i + 7] << 8) | bytes[i + 8],
+        componentes: bytes[i + 9]
+      };
+    }
+    if (tamanho < 2) break;
+    i += 2 + tamanho;
+  }
+  return null;
+}
+
+// O PDF guarda texto em bytes; Helvetica com WinAnsi cobre os acentos.
+function bytesLatin1(texto) {
+  const saida = new Uint8Array(texto.length);
+  for (let i = 0; i < texto.length; i++) {
+    const c = texto.charCodeAt(i);
+    saida[i] = c < 256 ? c : 63;   // 63 = '?'
+  }
+  return saida;
+}
+
+function escaparPdf(texto) {
+  return texto.replace(/([\\()])/g, '\\$1');
+}
+
+async function pdfDaFoto(foto) {
+  const jpeg = new Uint8Array(await foto.blob.arrayBuffer());
+  const info = lerJpeg(jpeg);
+  if (!info || !info.largura || !info.altura) throw new Error('JPEG ilegível');
+
+  const espaco = info.componentes === 1 ? '/DeviceGray'
+               : info.componentes === 4 ? '/DeviceCMYK' : '/DeviceRGB';
+
+  // A folha acompanha a foto: retrato para foto em pé, paisagem para deitada.
+  const deitada = info.largura > info.altura;
+  const pl = deitada ? A4_LONGO : A4_CURTO;
+  const pa = deitada ? A4_CURTO : A4_LONGO;
+  const areaL = pl - 2 * MARGEM;
+  const areaA = pa - 2 * MARGEM - ALTURA_RODAPE;
+  const escala = Math.min(areaL / info.largura, areaA / info.altura);
+  const dl = info.largura * escala;
+  const da = info.altura * escala;
+  const dx = (pl - dl) / 2;
+  const dy = MARGEM + ALTURA_RODAPE + (areaA - da) / 2;
+
+  const quando = foto.quando;
+  const legenda = 'Câmera Negativo · ' + foto.filtro +
+    (foto.zoom > 1.05 ? ' · ' + foto.zoom.toFixed(1) + '×' : '') +
+    ' · ' + quando.toLocaleDateString('pt-BR') + ' ' + hora(quando) +
+    ' · ' + info.largura + '×' + info.altura + ' px';
+
+  const conteudo =
+    'q\n' + dl.toFixed(2) + ' 0 0 ' + da.toFixed(2) + ' ' +
+    dx.toFixed(2) + ' ' + dy.toFixed(2) + ' cm\n/Im0 Do\nQ\n' +
+    'BT /F1 8 Tf 0.35 0.35 0.35 rg ' + MARGEM + ' ' +
+    (MARGEM * 0.7).toFixed(2) + ' Td (' + escaparPdf(legenda) + ') Tj ET\n';
+
+  /* ——— montagem: cada objeto anota onde começou, para a tabela xref ——— */
+  const partes = [];
+  const inicios = [];
+  let total = 0;
+
+  const por = pedaco => {
+    const b = typeof pedaco === 'string' ? bytesLatin1(pedaco) : pedaco;
+    partes.push(b);
+    total += b.length;
+  };
+  const objeto = (n, dicionario, fluxo) => {
+    inicios[n] = total;
+    por(n + ' 0 obj\n' + dicionario + '\n');
+    if (fluxo !== undefined) {
+      por('stream\n');
+      por(fluxo);
+      por('\nendstream\n');
+    }
+    por('endobj\n');
+  };
+
+  por('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+  objeto(1, '<< /Type /Catalog /Pages 2 0 R >>');
+  objeto(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+  objeto(3, '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' +
+    pl.toFixed(2) + ' ' + pa.toFixed(2) + '] ' +
+    '/Resources << /XObject << /Im0 4 0 R >> /Font << /F1 6 0 R >> >> ' +
+    '/Contents 5 0 R >>');
+  objeto(4, '<< /Type /XObject /Subtype /Image /Width ' + info.largura +
+    ' /Height ' + info.altura + ' /ColorSpace ' + espaco +
+    ' /BitsPerComponent 8 /Filter /DCTDecode /Length ' + jpeg.length + ' >>', jpeg);
+  objeto(5, '<< /Length ' + bytesLatin1(conteudo).length + ' >>', conteudo);
+  objeto(6, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica ' +
+    '/Encoding /WinAnsiEncoding >>');
+
+  const inicioXref = total;
+  let xref = 'xref\n0 7\n0000000000 65535 f \n';
+  for (let n = 1; n <= 6; n++) {
+    xref += String(inicios[n]).padStart(10, '0') + ' 00000 n \n';
+  }
+  por(xref);
+  por('trailer\n<< /Size 7 /Root 1 0 R >>\nstartxref\n' + inicioXref + '\n%%EOF\n');
+
+  return new Blob(partes, { type: 'application/pdf' });
+}
 
 el('btn-descartar').addEventListener('click', () => {
   if (!fotoAberta) return;
