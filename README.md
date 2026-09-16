@@ -9,6 +9,7 @@ Oficina de desenvolvimento — Projetos e soluções
 | [`escola/`](escola/) | App de treino, para mexer no código sem risco de quebrar os outros. |
 | [`caderno-pencil/`](caderno-pencil/) | PWA para escrever à mão com a Apple Pencil no iPad e copiar o texto digitado. |
 | [`camera-negativo/`](camera-negativo/) | Câmera fotográfica que mostra e fotografa com as cores invertidas. |
+| [`ura-ios/`](ura-ios/) | PWA para consultar e treinar as Instruções Operacionais da URA, offline. |
 
 ## Publicação
 
@@ -21,3 +22,4 @@ preciso configurar nada em Settings.
 - Caderno Pencil: <https://gilsonbolivar-maker.github.io/Oficina/caderno-pencil/>
 - Escola: <https://gilsonbolivar-maker.github.io/Oficina/escola/>
 - Câmera Negativo: <https://gilsonbolivar-maker.github.io/Oficina/camera-negativo/>
+- IOs da URA: <https://gilsonbolivar-maker.github.io/Oficina/ura-ios/>
