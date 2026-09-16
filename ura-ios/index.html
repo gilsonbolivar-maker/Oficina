@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>IOs da URA</title>
+<meta name="description" content="Consulta e treino das Instruções Operacionais da URA, offline.">
+<meta name="theme-color" content="#0b1220">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="IOs URA">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icones/icone-192.png" sizes="192x192">
+<link rel="apple-touch-icon" sizes="180x180" href="icones/icone-180.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<!-- ————————————————— sem base carregada ————————————————— -->
+<section class="tela vazio" id="tela-vazio">
+  <div class="vazio-caixa">
+    <h1>IOs da URA</h1>
+    <p class="fraco">O app está vazio. Carregue o arquivo com as Instruções Operacionais
+      para consultar e treinar — tudo fica só neste aparelho.</p>
+    <label class="botao principal grande">
+      Escolher arquivo
+      <input type="file" id="arquivo-inicial" accept=".json,application/json" hidden>
+    </label>
+    <p class="fraco pequeno" id="estado-carga" role="status" aria-live="polite"></p>
+  </div>
+</section>
+
+<!-- ————————————————— buscar ————————————————— -->
+<section class="tela" id="tela-buscar" hidden>
+  <header class="topo">
+    <input class="campo-busca" id="busca" type="search" inputmode="search"
+           placeholder="Buscar passo, equipamento, IO…" autocomplete="off"
+           enterkeyhint="search" aria-label="Buscar nas Instruções Operacionais">
+  </header>
+  <div class="rolagem" id="resultados">
+    <p class="dica" id="dica-busca">
+      Busque por <b>equipamento</b> (VL-, BA-, TQ-), <b>código</b> da IO,
+      <b>área</b> (AA-330) ou pelo que precisa fazer (drenagem, retrolavagem).
+    </p>
+  </div>
+</section>
+
+<!-- ————————————————— instruções ————————————————— -->
+<section class="tela" id="tela-ios" hidden>
+  <header class="topo"><h1 class="titulo-tela">Instruções</h1></header>
+  <div class="rolagem" id="lista-ios"></div>
+</section>
+
+<!-- ————————————————— treinar ————————————————— -->
+<section class="tela" id="tela-treinar" hidden>
+  <header class="topo"><h1 class="titulo-tela">Treinar</h1></header>
+  <div class="rolagem" id="area-treino"></div>
+</section>
+
+<!-- ————————————————— ajustes ————————————————— -->
+<section class="tela" id="tela-ajustes" hidden>
+  <header class="topo"><h1 class="titulo-tela">Ajustes</h1></header>
+  <div class="rolagem" id="area-ajustes"></div>
+</section>
+
+<!-- ————————————————— leitor de documento ————————————————— -->
+<section class="tela leitor" id="tela-leitor" hidden>
+  <header class="topo topo-leitor">
+    <button class="icone" id="btn-voltar" type="button" aria-label="Voltar">‹</button>
+    <div class="leitor-titulo">
+      <b id="leitor-codigo"></b>
+      <span class="fraco pequeno" id="leitor-subtitulo"></span>
+    </div>
+  </header>
+  <div class="rolagem" id="leitor-corpo"></div>
+</section>
+
+<!-- ————————————————— abas ————————————————— -->
+<nav class="abas" id="abas" hidden>
+  <button class="aba ativa" type="button" data-tela="buscar"><span aria-hidden="true">🔎</span>Buscar</button>
+  <button class="aba" type="button" data-tela="ios"><span aria-hidden="true">📄</span>Instruções</button>
+  <button class="aba" type="button" data-tela="treinar"><span aria-hidden="true">🎯</span>Treinar</button>
+  <button class="aba" type="button" data-tela="ajustes"><span aria-hidden="true">⚙</span>Ajustes</button>
+</nav>
+
+<script src="dados.js"></script>
+<script src="busca.js"></script>
+<script src="treino.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
