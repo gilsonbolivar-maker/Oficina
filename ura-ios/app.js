@@ -156,6 +156,7 @@ function abrirIO(codigo, ir) {
     </details>`;
   });
 
+  if (d.nota) html += `<p class="fraco pequeno" style="margin-top:14px">⚠️ ${esc(d.nota)}</p>`;
   html += `<p class="fraco pequeno" style="margin-top:14px">
     Documento com controle de cópias. Confira sempre a revisão vigente antes de executar.</p>`;
 
