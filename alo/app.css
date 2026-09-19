@@ -1,0 +1,421 @@
+/* ————————————————————————————————————————————————————————————
+   Alô — aparência.
+   Mesma paleta da Oficina: fundo #0b1220, cartões #141d2e,
+   linhas #2b3a56, destaque #ffb020.
+   ———————————————————————————————————————————————————————————— */
+
+:root {
+  color-scheme: dark;
+  --fundo: #0b1220;
+  --alto: #141d2e;
+  --linha: #2b3a56;
+  --texto: #e8edf7;
+  --apagado: #93a1bd;
+  --destaque: #ffb020;
+  --minha: #1d4ed8;
+  --perigo: #f87171;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --raio: 14px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--fundo);
+  color: var(--texto);
+  font: 16px/1.5 var(--sans);
+  overflow: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+.oculto {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+[hidden] { display: none !important; }
+
+/* ——— Telas de cartão (configurar / entrar) ——————————————— */
+
+.tela {
+  min-height: 100dvh;
+  display: grid;
+  place-content: center;
+  padding: 24px;
+}
+
+.cartao {
+  width: min(420px, 100%);
+  display: grid;
+  gap: 12px;
+  padding: 28px;
+  background: var(--alto);
+  border: 1px solid var(--linha);
+  border-radius: 18px;
+}
+
+.cartao h1 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+}
+
+.marca {
+  font-size: 34px;
+  font-weight: 700;
+  color: var(--destaque);
+  letter-spacing: -0.02em;
+}
+
+.ajuda {
+  margin: 0;
+  color: var(--apagado);
+  font-size: 14px;
+}
+
+.ajuda.rodape { margin-top: 4px; }
+.ajuda a { color: var(--destaque); }
+
+.cartao label {
+  font-size: 13px;
+  color: var(--apagado);
+  margin-top: 4px;
+}
+
+input, textarea {
+  width: 100%;
+  padding: 13px 14px;
+  background: var(--fundo);
+  color: var(--texto);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  font: inherit;
+  font-size: 16px; /* 16px evita o zoom automático do iOS */
+}
+
+input:focus-visible, textarea:focus-visible, button:focus-visible {
+  outline: 2px solid var(--destaque);
+  outline-offset: 2px;
+}
+
+#forma-entrada { display: grid; gap: 12px; }
+
+.principal {
+  padding: 13px 16px;
+  background: var(--destaque);
+  color: #24170a;
+  border: 0;
+  border-radius: var(--raio);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.principal:disabled { opacity: 0.55; cursor: progress; }
+
+.erro {
+  margin: 0;
+  color: var(--perigo);
+  font-size: 14px;
+}
+
+/* ——— Aplicativo ——————————————————————————————————————————— */
+
+.app {
+  height: 100dvh;
+  display: grid;
+  grid-template-columns: 300px 1fr;
+}
+
+.lateral {
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  min-height: 0;
+  border-right: 1px solid var(--linha);
+  background: var(--alto);
+}
+
+.lateral-topo,
+.conversa-topo,
+.lateral-rodape {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--linha);
+}
+
+.lateral-rodape {
+  border-bottom: 0;
+  border-top: 1px solid var(--linha);
+  padding-bottom: max(14px, env(safe-area-inset-bottom));
+}
+
+.marca-pequena {
+  flex: 1;
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--destaque);
+}
+
+.icone {
+  background: transparent;
+  color: var(--apagado);
+  border: 1px solid var(--linha);
+  border-radius: 10px;
+  width: 34px; height: 34px;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  flex: none;
+}
+
+.icone:hover { color: var(--texto); border-color: var(--destaque); }
+
+.salas { padding: 8px; display: grid; gap: 4px; }
+
+.sala {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  color: inherit;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sala:hover { background: #1b2740; }
+
+.sala[aria-current="true"] {
+  background: #1b2740;
+  border-color: var(--destaque);
+}
+
+.sala-nome { font-weight: 600; font-size: 15px; }
+
+.sala-ultima {
+  grid-column: 2;
+  color: var(--apagado);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sala-marca { font-size: 17px; color: var(--apagado); }
+
+.nao-lidas {
+  min-width: 22px;
+  padding: 2px 7px;
+  background: var(--destaque);
+  color: #24170a;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.presenca {
+  padding: 8px 16px 16px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.rotulo {
+  margin: 8px 0;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--apagado);
+}
+
+.pessoas { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+
+.pessoa {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14px;
+  color: var(--apagado);
+}
+
+.avatar {
+  display: grid;
+  place-content: center;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: #24314d;
+  color: var(--texto);
+  font-size: 12px;
+  font-weight: 700;
+  flex: none;
+}
+
+.meu-nome {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sinal { color: var(--perigo); font-size: 22px; line-height: 1; }
+.sinal.ligado { color: #34d399; }
+
+/* ——— Conversa ————————————————————————————————————————————— */
+
+.conversa {
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  min-height: 0;
+  min-width: 0;
+}
+
+.conversa-topo h1 { margin: 0; font-size: 17px; }
+.conversa-topo p { margin: 0; font-size: 13px; color: var(--apagado); }
+
+.mensagens {
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  padding: 18px 16px;
+  display: grid;
+  gap: 3px;
+  align-content: start;
+  min-height: 0;
+}
+
+.dia {
+  justify-self: center;
+  margin: 14px 0 8px;
+  padding: 3px 12px;
+  background: var(--alto);
+  border: 1px solid var(--linha);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--apagado);
+}
+
+.balao {
+  max-width: min(68ch, 82%);
+  padding: 9px 13px;
+  background: var(--alto);
+  border: 1px solid var(--linha);
+  border-radius: 16px;
+  justify-self: start;
+}
+
+.balao.minha {
+  justify-self: end;
+  background: var(--minha);
+  border-color: transparent;
+}
+
+.balao.agrupada { margin-top: -1px; }
+
+.balao-autor {
+  margin: 0 0 3px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--destaque);
+}
+
+.balao-corpo { margin: 0; white-space: pre-wrap; }
+
+.balao-hora {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--apagado);
+  text-align: right;
+}
+
+.balao.minha .balao-hora { color: #c7d7ff; }
+.balao.enviando { opacity: 0.55; }
+
+.vazio {
+  justify-self: center;
+  margin-top: 36px;
+  color: var(--apagado);
+  font-size: 14px;
+  text-align: center;
+}
+
+/* ——— Caixa de escrita ————————————————————————————————————— */
+
+.redigir {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 12px 16px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--linha);
+  background: var(--alto);
+}
+
+.redigir textarea {
+  flex: 1;
+  resize: none;
+  max-height: 140px;
+  border-radius: 20px;
+}
+
+.enviar {
+  width: 44px; height: 44px;
+  flex: none;
+  background: var(--destaque);
+  color: #24170a;
+  border: 0;
+  border-radius: 50%;
+  font-size: 17px;
+  cursor: pointer;
+}
+
+.enviar:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.aviso {
+  margin: 0;
+  padding: 9px 16px;
+  background: #3b1d1d;
+  border-top: 1px solid var(--perigo);
+  color: #fecaca;
+  font-size: 14px;
+}
+
+/* ——— Telefone ————————————————————————————————————————————— */
+
+.so-telefone { display: none; }
+
+@media (max-width: 760px) {
+  .app { grid-template-columns: 1fr; }
+  .lateral { border-right: 0; }
+  .so-telefone { display: block; }
+
+  /* Uma coluna de cada vez: a lista, ou a conversa. */
+  .app[data-vista="salas"] .conversa { display: none; }
+  .app[data-vista="conversa"] .lateral { display: none; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .balao { animation: surgir 140ms ease-out; }
+  @keyframes surgir {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: none; }
+  }
+}

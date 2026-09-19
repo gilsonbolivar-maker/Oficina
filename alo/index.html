@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Alô</title>
+<meta name="description" content="Sala de conversa aberta: entre com um apelido e fale com quem estiver por aqui.">
+<meta name="theme-color" content="#0b1220">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icones/icone-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icones/icone-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Alô">
+<link rel="stylesheet" href="app.css">
+<script src="config.js"></script>
+</head>
+<body>
+
+<!-- ——— Tela 1: configurar o banco (só aparece se faltar config) ——— -->
+<section id="tela-config" class="tela" hidden>
+  <div class="cartao">
+    <h1>Falta ligar o banco</h1>
+    <p class="ajuda">
+      O Alô guarda as conversas no seu projeto do Supabase. Cole abaixo os
+      dados que aparecem em <b>Project Settings → Data API</b>.
+      Ficam guardados só neste navegador.
+    </p>
+    <label for="campo-url">URL do projeto</label>
+    <input id="campo-url" type="url" inputmode="url" autocomplete="off"
+           spellcheck="false" placeholder="https://abcdefgh.supabase.co">
+    <label for="campo-chave">Chave anon (publishable)</label>
+    <input id="campo-chave" type="text" autocomplete="off" spellcheck="false"
+           placeholder="eyJhbGciOi...">
+    <button id="botao-config" type="button" class="principal">Ligar</button>
+    <p id="erro-config" class="erro" role="alert" hidden></p>
+    <p class="ajuda rodape">
+      Ainda não tem projeto? O passo a passo está no
+      <a href="https://github.com/gilsonbolivar-maker/Oficina/blob/main/alo/README.md">README do Alô</a>.
+    </p>
+  </div>
+</section>
+
+<!-- ——— Tela 2: escolher o apelido ——— -->
+<section id="tela-entrada" class="tela" hidden>
+  <div class="cartao">
+    <div class="marca" aria-hidden="true">Alô</div>
+    <h1>Como quer ser chamado?</h1>
+    <p class="ajuda">
+      Escolha um apelido. Ele fica reservado para você — ninguém mais
+      consegue usar o mesmo.
+    </p>
+    <form id="forma-entrada" autocomplete="off">
+      <label for="campo-apelido" class="oculto">Apelido</label>
+      <input id="campo-apelido" type="text" maxlength="24" minlength="2"
+             placeholder="Seu apelido" spellcheck="false" required>
+      <button type="submit" class="principal" id="botao-entrar">Entrar</button>
+    </form>
+    <p id="erro-entrada" class="erro" role="alert" hidden></p>
+  </div>
+</section>
+
+<!-- ——— Tela 3: o aplicativo ——— -->
+<main id="tela-app" class="app" hidden>
+
+  <aside class="lateral" id="lateral">
+    <header class="lateral-topo">
+      <div class="marca-pequena">Alô</div>
+      <button type="button" class="icone" id="botao-sair" title="Trocar de apelido"
+              aria-label="Trocar de apelido">⎋</button>
+    </header>
+
+    <nav class="salas" id="lista-salas" aria-label="Salas"></nav>
+
+    <section class="presenca">
+      <h2 class="rotulo">Por aqui agora <span id="contagem-presenca">0</span></h2>
+      <ul id="lista-presenca" class="pessoas"></ul>
+    </section>
+
+    <footer class="lateral-rodape">
+      <span class="avatar" id="meu-avatar" aria-hidden="true"></span>
+      <span class="meu-nome" id="meu-nome"></span>
+      <span class="sinal" id="sinal" title="Conexão">•</span>
+    </footer>
+  </aside>
+
+  <section class="conversa">
+    <header class="conversa-topo">
+      <button type="button" class="icone so-telefone" id="botao-voltar"
+              aria-label="Voltar para as salas">‹</button>
+      <div>
+        <h1 id="titulo-sala">Geral</h1>
+        <p id="subtitulo-sala">Quem está por aqui</p>
+      </div>
+    </header>
+
+    <div class="mensagens" id="mensagens" role="log" aria-live="polite" aria-relevant="additions"></div>
+
+    <form class="redigir" id="forma-envio" autocomplete="off">
+      <label for="campo-mensagem" class="oculto">Mensagem</label>
+      <textarea id="campo-mensagem" rows="1" maxlength="500"
+                placeholder="Escreva uma mensagem" required></textarea>
+      <button type="submit" class="enviar" id="botao-enviar" aria-label="Enviar">➤</button>
+    </form>
+    <p id="aviso" class="aviso" role="status" hidden></p>
+  </section>
+
+</main>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
