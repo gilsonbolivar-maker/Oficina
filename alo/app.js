@@ -102,24 +102,160 @@ function mostrarTela(qual) {
   for (const t of ['tela-config', 'tela-entrada', 'tela-app']) $(t).hidden = t !== qual;
 }
 
+/**
+ * Assistente de instalação.
+ *
+ * Em vez de recusar a configuração com um "deu erro", cada passo do
+ * Supabase é conferido em separado, porque cada um falha de um jeito
+ * reconhecível: tabela que não existe é 42P01, entrada anônima desligada
+ * vem como anonymous_provider_disabled. Saber qual dos quatro passos
+ * faltou é o que evita recomeçar tudo do zero.
+ */
+
+/** Mostra o resultado da conferência, com o passo que falta em destaque. */
+function contarResultado(tipo, titulo, detalhe, passo) {
+  const caixa = $('resultado-config');
+  caixa.className = 'resultado ' + tipo;
+  caixa.replaceChildren();
+
+  const h = el('p', 'resultado-titulo');
+  h.textContent = titulo;
+  caixa.append(h);
+
+  if (detalhe) {
+    const d = el('p', 'resultado-detalhe');
+    d.textContent = detalhe;
+    caixa.append(d);
+  }
+
+  caixa.hidden = false;
+  caixa.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  // Acende o passo que precisa de atenção e apaga os outros.
+  document.querySelectorAll('.passo').forEach((n, i) => {
+    n.classList.toggle('passo-pendente', passo === i + 1);
+  });
+}
+
+/**
+ * Confere os quatro passos na ordem e devolve o primeiro que falhou.
+ * Devolve null quando está tudo de pé.
+ */
+async function conferirInstalacao(config) {
+  let createClient;
+  try {
+    createClient = await carregarBiblioteca();
+  } catch (e) {
+    return { passo: 0, titulo: 'Sem conexão com a internet',
+      detalhe: 'Não consegui carregar a biblioteca do Supabase. ' + (e.message || '') };
+  }
+
+  let sb;
+  try {
+    sb = createClient(config.url, config.anonKey, { auth: { persistSession: true } });
+  } catch {
+    return { passo: 4, titulo: 'O endereço ou a chave não servem',
+      detalhe: 'Confira se copiou o Project URL inteiro e a chave anon completa.' };
+  }
+
+  // Passo 3 — entrada sem senha.
+  const { error: erroEntrada } = await sb.auth.signInAnonymously();
+  if (erroEntrada) {
+    const texto = (erroEntrada.message || '').toLowerCase();
+    if (texto.includes('anonymous') || erroEntrada.code === 'anonymous_provider_disabled') {
+      return { passo: 3, titulo: 'Falta o passo 3',
+        detalhe: 'A entrada sem senha está desligada. Abra o passo 3, ligue ' +
+                 '"Allow anonymous sign-ins", salve e confira de novo.' };
+    }
+    if (texto.includes('invalid') && texto.includes('key')) {
+      return { passo: 4, titulo: 'A chave não confere',
+        detalhe: 'Parece que a chave copiada não é a deste projeto. Copie de novo a chave anon.' };
+    }
+    return { passo: 4, titulo: 'Não consegui entrar no projeto',
+      detalhe: erroEntrada.message || '' };
+  }
+
+  // Passo 2 — as tabelas.
+  const { error: erroSalas } = await sb.from('salas').select('id').limit(1);
+  if (erroSalas) {
+    const codigo = erroSalas.code || '';
+    if (codigo === '42P01' || codigo === 'PGRST205' || codigo === 'PGRST202') {
+      return { passo: 2, titulo: 'Falta o passo 2',
+        detalhe: 'As tabelas ainda não existem. Copie o texto do passo 2, ' +
+                 'cole no Supabase e clique em Run.' };
+    }
+    return { passo: 2, titulo: 'As tabelas não responderam',
+      detalhe: erroSalas.message || '' };
+  }
+
+  return null;
+}
+
 function telaConfig() {
   mostrarTela('tela-config');
-  const erro = $('erro-config');
-  $('botao-config').addEventListener('click', () => {
+
+  // Passo 2: o texto a copiar é o próprio supabase.sql publicado ao lado.
+  $('botao-copiar-sql').addEventListener('click', async ev => {
+    const botao = ev.currentTarget;
+    const aviso = $('aviso-sql');
+    botao.disabled = true;
+    try {
+      const resp = await fetch('supabase.sql');
+      if (!resp.ok) throw new Error('não encontrei o arquivo');
+      const texto = await resp.text();
+      await navigator.clipboard.writeText(texto);
+      botao.textContent = 'Copiado ✓';
+      aviso.textContent = 'Agora clique em "Abrir onde colar", cole e clique em Run.';
+      aviso.hidden = false;
+      setTimeout(() => { botao.textContent = 'Copiar o texto'; botao.disabled = false; }, 2500);
+    } catch {
+      // Safari mais antigo recusa a área de transferência sem gesto direto.
+      botao.disabled = false;
+      aviso.textContent = 'Não consegui copiar sozinho. Abra o arquivo supabase.sql ' +
+                          'no GitHub, selecione tudo e copie na mão.';
+      aviso.hidden = false;
+    }
+  });
+
+  // Passo 4: confere tudo antes de guardar, para não travar na tela seguinte.
+  $('botao-config').addEventListener('click', async ev => {
+    const botao = ev.currentTarget;
     const url = $('campo-url').value.trim().replace(/\/+$/, '');
     const chave = $('campo-chave').value.trim();
+
     if (!/^https:\/\/[^\s/]+$/.test(url)) {
-      erro.textContent = 'A URL deve ser parecida com https://abcdefgh.supabase.co';
-      erro.hidden = false;
+      contarResultado('ruim', 'O endereço não parece certo',
+        'Tem que ser parecido com https://abcdefgh.supabase.co — sem barra no fim.', 4);
       return;
     }
     if (chave.length < 20) {
-      erro.textContent = 'A chave anon parece incompleta.';
-      erro.hidden = false;
+      contarResultado('ruim', 'A chave parece incompleta',
+        'Ela é bem longa. Copie o valor inteiro.', 4);
       return;
     }
+    if (chave.includes('service_role') || chave.startsWith('sb_secret_')) {
+      contarResultado('ruim', 'Essa é a chave errada',
+        'Você colou a service_role, que dá acesso total. Use a chave anon.', 4);
+      return;
+    }
+
+    botao.disabled = true;
+    botao.textContent = 'Conferindo…';
+    contarResultado('neutro', 'Conferindo os quatro passos…', '', 0);
+
+    const falha = await conferirInstalacao({ url, anonKey: chave });
+
+    botao.disabled = false;
+    botao.textContent = 'Conferir e ligar';
+
+    if (falha) {
+      contarResultado('ruim', falha.titulo, falha.detalhe, falha.passo);
+      return;
+    }
+
+    contarResultado('bom', 'Tudo certo — sua sala está de pé.', 'Abrindo…', 0);
     guardar(CHAVE_CONFIG, { url, anonKey: chave });
-    location.reload();
+    setTimeout(() => location.reload(), 900);
   });
 }
 

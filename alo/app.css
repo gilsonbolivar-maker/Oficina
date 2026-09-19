@@ -419,3 +419,115 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
     to   { opacity: 1; transform: none; }
   }
 }
+
+/* ——— Assistente de instalação ————————————————————————————— */
+
+.tela-larga { place-content: start center; padding: 32px 16px 64px; }
+
+.assistente {
+  width: min(620px, 100%);
+  display: grid;
+  gap: 20px;
+}
+
+.assistente-topo { display: grid; gap: 8px; }
+.assistente-topo h1 { margin: 0; font-size: 26px; letter-spacing: -0.01em; }
+
+.passos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+  counter-reset: passo;
+}
+
+.passo {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  padding: 20px;
+  background: var(--alto);
+  border: 1px solid var(--linha);
+  border-radius: 16px;
+}
+
+/* Acende só o passo que a conferência apontou. */
+.passo-pendente {
+  border-color: var(--destaque);
+  box-shadow: 0 0 0 1px var(--destaque);
+}
+
+.passo-numero {
+  display: grid;
+  place-content: center;
+  width: 32px; height: 32px;
+  background: var(--destaque);
+  color: #24170a;
+  border-radius: 50%;
+  font-weight: 700;
+}
+
+.passo-pendente .passo-numero { animation: pulsar 1.6s ease-in-out infinite; }
+
+@keyframes pulsar {
+  50% { box-shadow: 0 0 0 7px rgb(255 176 32 / 0.18); }
+}
+
+.passo-corpo { display: grid; gap: 10px; align-content: start; min-width: 0; }
+.passo-corpo h2 { margin: 0; font-size: 17px; }
+.passo-corpo p { margin: 0; font-size: 14px; color: var(--apagado); }
+.passo-corpo b { color: var(--texto); }
+.passo-corpo code {
+  padding: 1px 5px;
+  background: var(--fundo);
+  border-radius: 5px;
+  font-size: 13px;
+}
+
+.mini {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 14px;
+  color: var(--apagado);
+  display: grid;
+  gap: 3px;
+}
+
+.acoes { display: flex; flex-wrap: wrap; gap: 8px; }
+.acoes .principal { flex: none; }
+
+.botao-link {
+  display: inline-block;
+  padding: 11px 15px;
+  background: var(--fundo);
+  color: var(--texto);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  justify-self: start;
+}
+
+.botao-link:hover { border-color: var(--destaque); }
+
+.resultado {
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid var(--linha);
+  background: var(--alto);
+  display: grid;
+  gap: 5px;
+}
+
+.resultado-titulo { margin: 0; font-weight: 700; }
+.resultado-detalhe { margin: 0; font-size: 14px; color: var(--apagado); }
+
+.resultado.bom  { border-color: #34d399; background: #10291f; }
+.resultado.ruim { border-color: var(--perigo); background: #3b1d1d; }
+
+@media (max-width: 560px) {
+  .passo { padding: 16px; gap: 10px; }
+  .botao-link, .acoes .principal { width: 100%; text-align: center; }
+}
