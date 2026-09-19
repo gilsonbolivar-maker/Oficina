@@ -8,7 +8,7 @@ deste projeto: quem guarda as conversas e avisa quando chega mensagem nova é o
 
 ---
 
-## Ligar em 5 passos
+## Ligar em 4 passos
 
 Leva uns 10 minutos, uma vez só.
 
@@ -34,15 +34,7 @@ Em **Authentication → Sign In / Providers**, ligue **Allow anonymous sign-ins*
 É isso que dá a cada pessoa uma identidade verificada sem pedir e-mail nem
 senha. Sem esse passo o app abre, mas ninguém consegue entrar.
 
-**4. Autorize o endereço do site**
-
-Em **Authentication → URL Configuration**, no campo *Redirect URLs*, acrescente:
-
-```
-https://gilsonbolivar-maker.github.io/Oficina/alo/
-```
-
-**5. Cole as chaves**
+**4. Cole as chaves**
 
 Em **Project Settings → Data API**, copie a **Project URL** e a chave
 **anon / publishable**. Abra [`config.js`](config.js) neste repositório e
@@ -126,6 +118,27 @@ assistente saiu. Dá para trazer de volta depois com uma Edge Function do
 Supabase, que guarda a chave do lado de lá.
 
 ---
+
+## Quando a sala encher
+
+**Entradas anônimas têm teto.** O Supabase limita criações de conta anônima
+por IP e por hora (o padrão fica perto de 30). Numa sala pequena isso não
+aparece; num link que viralizou, aparece — e quem chegar depois vê a mensagem
+de erro da sessão. O teto fica em **Authentication → Rate Limits**.
+
+**Contas anônimas não somem sozinhas.** Cada pessoa que entra deixa uma conta
+em `auth.users` para sempre. Não atrapalha o funcionamento, mas com o tempo
+enche a cota do plano gratuito. Para limpar as que nunca falaram:
+
+```sql
+delete from auth.users
+where is_anonymous
+  and created_at < now() - interval '90 days'
+  and id not in (select autor_id from public.mensagens);
+```
+
+Note o `not in`: contas que deixaram mensagem ficam. Apagar uma delas levaria
+junto o que a pessoa disse, por causa do `on delete cascade`.
 
 ## Limites que valem conhecer
 
