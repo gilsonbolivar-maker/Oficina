@@ -31,18 +31,29 @@ function builder(resolver) {
   return b;
 }
 
+// window.__falha diz qual passo do Supabase está faltando, para testar
+// o diagnóstico do assistente sem um projeto real.
 export function createClient(url, key) {
   if (!url || !key) throw new Error('faltou config');
   return {
     auth: {
       getSession: async () => ({ data: { session: null } }),
-      signInAnonymously: async () => ({ data: {}, error: null }),
+      signInAnonymously: async () => (window.__falha === 'anonimo'
+        ? { data: null, error: { code: 'anonymous_provider_disabled',
+            message: 'Anonymous sign-ins are disabled' } }
+        : { data: {}, error: null }),
       getUser: async () => ({ data: { user: { id: 'eu-123' } } }),
       signOut: async () => ({}),
     },
     from(tabela) {
       return builder((b, modo) => {
-        if (tabela === 'salas') return { data: salas, error: null };
+        if (tabela === 'salas') {
+          if (window.__falha === 'tabelas') {
+            return { data: null, error: { code: '42P01',
+              message: 'relation "public.salas" does not exist' } };
+          }
+          return { data: salas, error: null };
+        }
         if (tabela === 'perfis') {
           if (b._insert) {
             const { id, apelido } = b._insert[0];

@@ -1,9 +1,9 @@
 # Testes do Alô
 
-Abrem o app num Chromium de verdade e conferem 38 comportamentos: entrada,
-envio, tempo real, não lidas, troca de apelido, telefone e — o mais
-importante — que o HTML escrito por outra pessoa aparece como texto, nunca
-como marcação.
+Abrem o app num Chromium de verdade e conferem 47 comportamentos: o assistente
+de instalação (inclusive cada passo do Supabase faltando), entrada, envio,
+tempo real, não lidas, troca de apelido, telefone e — o mais importante — que
+o HTML escrito por outra pessoa aparece como texto, nunca como marcação.
 
 Não precisam de projeto no Supabase: `mock-supabase.js` responde no lugar
 dele, o que também deixa testar os casos ruins (apelido repetido, banco

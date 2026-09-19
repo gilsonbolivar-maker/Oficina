@@ -17,27 +17,99 @@
 </head>
 <body>
 
-<!-- ——— Tela 1: configurar o banco (só aparece se faltar config) ——— -->
-<section id="tela-config" class="tela" hidden>
-  <div class="cartao">
-    <h1>Falta ligar o banco</h1>
-    <p class="ajuda">
-      O Alô guarda as conversas no seu projeto do Supabase. Cole abaixo os
-      dados que aparecem em <b>Project Settings → Data API</b>.
-      Ficam guardados só neste navegador.
-    </p>
-    <label for="campo-url">URL do projeto</label>
-    <input id="campo-url" type="url" inputmode="url" autocomplete="off"
-           spellcheck="false" placeholder="https://abcdefgh.supabase.co">
-    <label for="campo-chave">Chave anon (publishable)</label>
-    <input id="campo-chave" type="text" autocomplete="off" spellcheck="false"
-           placeholder="eyJhbGciOi...">
-    <button id="botao-config" type="button" class="principal">Ligar</button>
-    <p id="erro-config" class="erro" role="alert" hidden></p>
-    <p class="ajuda rodape">
-      Ainda não tem projeto? O passo a passo está no
-      <a href="https://github.com/gilsonbolivar-maker/Oficina/blob/main/alo/README.md">README do Alô</a>.
-    </p>
+<!-- ——— Tela 1: assistente de instalação ——— -->
+<section id="tela-config" class="tela tela-larga" hidden>
+  <div class="assistente">
+    <header class="assistente-topo">
+      <div class="marca" aria-hidden="true">Alô</div>
+      <h1>Vamos ligar sua sala</h1>
+      <p class="ajuda">
+        Quatro passos, uma vez só. O Alô guarda as conversas num banco seu,
+        no Supabase — de graça. Faça na ordem; eu confiro no fim.
+      </p>
+    </header>
+
+    <ol class="passos">
+
+      <li class="passo">
+        <div class="passo-numero">1</div>
+        <div class="passo-corpo">
+          <h2>Criar o projeto</h2>
+          <p>Entre com o GitHub — você já tem conta. Depois preencha:</p>
+          <ul class="mini">
+            <li><b>Name:</b> alo</li>
+            <li><b>Database Password:</b> clique em <i>Generate</i></li>
+            <li><b>Region:</b> South America (São Paulo)</li>
+          </ul>
+          <p class="ajuda">Leva uns 2 minutos criando. Espere ficar pronto.</p>
+          <a class="botao-link" href="https://supabase.com/dashboard/new" target="_blank" rel="noopener">
+            Abrir o Supabase ↗
+          </a>
+        </div>
+      </li>
+
+      <li class="passo">
+        <div class="passo-numero">2</div>
+        <div class="passo-corpo">
+          <h2>Criar as tabelas</h2>
+          <p>Copie o texto abaixo, cole na tela que abrir e clique em <b>Run</b>.</p>
+          <div class="acoes">
+            <button type="button" class="principal" id="botao-copiar-sql">Copiar o texto</button>
+            <a class="botao-link" href="https://supabase.com/dashboard/project/_/sql/new" target="_blank" rel="noopener">
+              Abrir onde colar ↗
+            </a>
+          </div>
+          <p class="ajuda" id="aviso-sql" hidden></p>
+        </div>
+      </li>
+
+      <li class="passo">
+        <div class="passo-numero">3</div>
+        <div class="passo-corpo">
+          <h2>Deixar as pessoas entrarem</h2>
+          <p>
+            Na tela que abrir, procure <b>Allow anonymous sign-ins</b> e
+            <b>ligue</b> a chavinha. Salve.
+          </p>
+          <p class="ajuda">É o passo que mais passa batido — sem ele ninguém entra.</p>
+          <a class="botao-link" href="https://supabase.com/dashboard/project/_/auth/providers" target="_blank" rel="noopener">
+            Abrir onde ligar ↗
+          </a>
+        </div>
+      </li>
+
+      <li class="passo">
+        <div class="passo-numero">4</div>
+        <div class="passo-corpo">
+          <h2>Trazer os dois endereços</h2>
+          <p>
+            Na tela que abrir, copie o <b>Project URL</b> e a chave
+            <b>anon</b> (ou <i>publishable</i>) e cole aqui.
+          </p>
+          <a class="botao-link" href="https://supabase.com/dashboard/project/_/settings/api" target="_blank" rel="noopener">
+            Abrir onde copiar ↗
+          </a>
+
+          <label for="campo-url">Project URL</label>
+          <input id="campo-url" type="url" inputmode="url" autocomplete="off"
+                 spellcheck="false" placeholder="https://abcdefgh.supabase.co">
+
+          <label for="campo-chave">Chave anon</label>
+          <input id="campo-chave" type="text" autocomplete="off" spellcheck="false"
+                 placeholder="eyJhbGciOi...">
+
+          <p class="ajuda">
+            Essa chave pode ser vista por qualquer pessoa — é assim mesmo.
+            A que <b>nunca</b> se cola aqui é a <code>service_role</code>.
+          </p>
+
+          <button type="button" class="principal" id="botao-config">Conferir e ligar</button>
+        </div>
+      </li>
+
+    </ol>
+
+    <div id="resultado-config" class="resultado" role="status" hidden></div>
   </div>
 </section>
 

@@ -41,22 +41,53 @@ await pagina.route('**/@supabase/supabase-js**', rota => rota.fulfill({
 const passos = [];
 const ok = (nome, cond) => { passos.push([cond ? 'PASSOU' : 'FALHOU', nome]); };
 
-// ——— 1. Sem config, aparece a tela de configuração ———
+// ——— 1. Sem config, aparece o assistente ———
 await pagina.goto('http://localhost:4173/');
 await pagina.waitForTimeout(400);
-ok('tela de config aparece sem chaves', await pagina.isVisible('#tela-config'));
+ok('assistente aparece sem chaves', await pagina.isVisible('#tela-config'));
+ok('os 4 passos aparecem', (await pagina.$$('.passo')).length === 4);
 
-// ——— 2. Validação da URL ———
+// ——— 2. Endereço malformado ———
 await pagina.fill('#campo-url', 'nao-e-url');
-await pagina.fill('#campo-chave', 'chave-curta');
-await pagina.click('#botao-config');
-ok('URL inválida é recusada', (await pagina.textContent('#erro-config')).includes('https://'));
-
-// ——— 3. Config válida leva à tela de apelido ———
-await pagina.fill('#campo-url', 'https://exemplo.supabase.co');
 await pagina.fill('#campo-chave', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.aaaa');
 await pagina.click('#botao-config');
-await pagina.waitForSelector('#tela-entrada:not([hidden])', { timeout: 5000 });
+await pagina.waitForTimeout(200);
+ok('endereço errado é apontado', (await pagina.textContent('#resultado-config')).includes('não parece certo'));
+ok('o passo 4 acende', await pagina.isVisible('.passo:nth-child(4).passo-pendente'));
+
+// ——— 3. Chave errada (service_role) ———
+await pagina.fill('#campo-url', 'https://exemplo.supabase.co');
+await pagina.fill('#campo-chave', 'sb_secret_abcdefghijklmnop');
+await pagina.click('#botao-config');
+await pagina.waitForTimeout(200);
+ok('service_role é recusada', (await pagina.textContent('#resultado-config')).includes('chave errada'));
+
+// ——— 4. Passo 3 esquecido: entrada anônima desligada ———
+await pagina.evaluate(() => { window.__falha = 'anonimo'; });
+await pagina.fill('#campo-chave', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.aaaa');
+await pagina.click('#botao-config');
+await pagina.waitForTimeout(600);
+ok('diz que falta o passo 3', (await pagina.textContent('#resultado-config')).includes('Falta o passo 3'));
+ok('o passo 3 acende', await pagina.isVisible('.passo:nth-child(3).passo-pendente'));
+
+// ——— 5. Passo 2 esquecido: tabelas não criadas ———
+await pagina.evaluate(() => { window.__falha = 'tabelas'; });
+await pagina.click('#botao-config');
+await pagina.waitForTimeout(600);
+ok('diz que falta o passo 2', (await pagina.textContent('#resultado-config')).includes('Falta o passo 2'));
+ok('o passo 2 acende', await pagina.isVisible('.passo:nth-child(2).passo-pendente'));
+
+// ——— 6. Botão de copiar o SQL ———
+await pagina.evaluate(() => { window.__falha = null; });
+await pagina.click('#botao-copiar-sql');
+await pagina.waitForTimeout(400);
+ok('copiar o SQL confirma na tela', (await pagina.textContent('#botao-copiar-sql')).includes('Copiado'));
+
+// ——— 7. Tudo certo: segue para o apelido ———
+await pagina.click('#botao-config');
+await pagina.waitForTimeout(500);
+ok('conferência aprova', (await pagina.textContent('#resultado-config')).includes('Tudo certo'));
+await pagina.waitForSelector('#tela-entrada:not([hidden])', { timeout: 6000 });
 ok('config válida leva ao apelido', await pagina.isVisible('#tela-entrada'));
 
 // ——— 4. Apelido curto é barrado no cliente ———

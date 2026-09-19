@@ -8,37 +8,26 @@ deste projeto: quem guarda as conversas e avisa quando chega mensagem nova é o
 
 ---
 
-## Ligar em 4 passos
+## Ligar a sala
 
-Leva uns 10 minutos, uma vez só.
+Abra o app. Ele mostra um assistente com os quatro passos, cada um com o
+botão que abre a tela certa do Supabase — não é preciso caçar nada no menu.
 
-**1. Crie o projeto**
+1. **Criar o projeto** — entrando com o GitHub, região São Paulo.
+2. **Criar as tabelas** — um botão copia o `supabase.sql` e outro abre o
+   SQL Editor; colar e clicar em *Run*.
+3. **Ligar a entrada sem senha** — *Allow anonymous sign-ins*.
+4. **Colar o Project URL e a chave anon** — e clicar em *Conferir e ligar*.
 
-Entre em [supabase.com](https://supabase.com), crie uma conta e clique em
-*New project*. Escolha a região **South America (São Paulo)** — fica mais
-rápido. Guarde a senha do banco num lugar seguro (o app não precisa dela,
-mas o Supabase sim, se um dia você quiser mexer direto no Postgres).
+O último passo não apenas guarda os dados: ele confere os anteriores um a
+um e, se algo faltou, diz qual foi e acende o cartão correspondente. Cada
+passo falha de um jeito reconhecível — tabela ausente é `42P01`, entrada
+anônima desligada é `anonymous_provider_disabled` — e é isso que permite
+apontar o passo certo em vez de um "deu erro" que faria recomeçar tudo.
 
-**2. Crie as tabelas**
-
-No menu lateral, abra **SQL Editor** → *New query*. Cole o conteúdo inteiro
-do arquivo [`supabase.sql`](supabase.sql) e clique em **Run**.
-
-Pode rodar de novo quantas vezes quiser — o arquivo é feito para não duplicar
-nada.
-
-**3. Ligue a entrada sem senha**
-
-Em **Authentication → Sign In / Providers**, ligue **Allow anonymous sign-ins**.
-
-É isso que dá a cada pessoa uma identidade verificada sem pedir e-mail nem
-senha. Sem esse passo o app abre, mas ninguém consegue entrar.
-
-**4. Cole as chaves**
-
-Em **Project Settings → Data API**, copie a **Project URL** e a chave
-**anon / publishable**. Abra [`config.js`](config.js) neste repositório e
-preencha:
+Enquanto o `config.js` estiver vazio, cada pessoa que abrir o app vê esse
+assistente e os dados ficam só no navegador dela. Para a sala valer para
+todo mundo, preencha [`config.js`](config.js) com os mesmos dois valores:
 
 ```js
 globalThis.ALO_CONFIG = {
@@ -46,14 +35,6 @@ globalThis.ALO_CONFIG = {
   anonKey: 'eyJhbGciOi...'
 };
 ```
-
-Pronto. Abra o app.
-
-> **Se preferir não mexer no arquivo agora:** abra o app assim mesmo. Ele mostra
-> uma tela pedindo a URL e a chave, e guarda as duas só no seu navegador. Bom
-> para testar; para todo mundo usar, preencha o `config.js`.
-
----
 
 ## As chaves podem ficar no GitHub?
 
@@ -166,7 +147,7 @@ vai acontecer — e é o comportamento desejado para um pedido de remoção.
 
 ## Rodar os testes
 
-Há 38 testes de ponta a ponta em [`teste/`](teste/), que rodam sem precisar
+Há 47 testes de ponta a ponta em [`teste/`](teste/), que rodam sem precisar
 de um projeto no Supabase. Veja o [README de lá](teste/README.md).
 
 ## Moderação
