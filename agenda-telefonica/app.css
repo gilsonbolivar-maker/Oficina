@@ -225,22 +225,29 @@ body {
 }
 .fundo[hidden] { display: none; }
 
+/* Caixa centralizada na tela, não colada no rodapé. */
 .ficha {
   position: fixed;
-  left: 0; right: 0; bottom: 0;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   z-index: 9;
-  max-height: 88dvh;
+  width: min(440px, calc(100vw - 32px));
+  max-height: min(80dvh, 640px);
   overflow-y: auto;
-  padding: 18px 18px calc(22px + var(--base));
+  padding: 20px;
   background: var(--cartao);
-  border-top: 1px solid var(--borda);
-  border-radius: 20px 20px 0 0;
-  animation: sobe 0.18s ease-out;
+  border: 1px solid var(--borda);
+  border-radius: 20px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  animation: aparece 0.16s ease-out;
 }
 .ficha[hidden] { display: none; }
-@keyframes sobe { from { transform: translateY(24px); opacity: 0; } }
+@keyframes aparece {
+  from { transform: translate(-50%, -50%) scale(0.95); opacity: 0; }
+}
 
-.ficha .alca { width: 40px; height: 4px; margin: 0 auto 14px; background: var(--borda); border-radius: 999px; }
+.ficha .alca { display: none; }
 .ficha h2 { margin: 0 0 4px; font-size: 21px; letter-spacing: -0.01em; }
 .ficha .meta { margin: 0 0 14px; font-size: 14px; color: var(--fraco); }
 .ficha .meta b { color: var(--texto); font-weight: 600; }
@@ -264,11 +271,6 @@ body {
 
 .acoes { display: flex; gap: 10px; margin-top: 14px; }
 .acoes .botao { flex: 1; text-align: center; }
-
-@media (min-width: 720px) {
-  .ficha { left: 50%; right: auto; bottom: 24px; width: 460px; transform: translateX(-50%); border-radius: 20px; border: 1px solid var(--borda); }
-  @keyframes sobe { from { transform: translate(-50%, 24px); opacity: 0; } }
-}
 
 /* ————— abas ————— */
 .abas {
