@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Agenda Telefônica</title>
+<meta name="description" content="Lista telefônica da INB para consultar e ligar offline.">
+<meta name="theme-color" content="#0b1220">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Agenda">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icones/icone-192.png" sizes="192x192">
+<link rel="apple-touch-icon" sizes="180x180" href="icones/icone-180.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<!-- ————————————————— sem base carregada ————————————————— -->
+<section class="tela vazio-tela" id="tela-vazio">
+  <div class="vazio-caixa">
+    <h1>Agenda Telefônica</h1>
+    <p class="fraco">O app está vazio. Carregue o arquivo com a lista de contatos
+      para buscar e ligar — tudo fica só neste aparelho, nada é enviado para
+      lugar nenhum.</p>
+    <label class="botao principal grande">
+      Escolher arquivo
+      <input type="file" id="arquivo-inicial" accept=".json,application/json" hidden>
+    </label>
+    <p class="fraco pequeno" id="estado-carga" role="status" aria-live="polite"></p>
+  </div>
+</section>
+
+<!-- ————————————————— contatos ————————————————— -->
+<section class="tela" id="tela-contatos" hidden>
+  <header class="topo">
+    <div class="linha-busca">
+      <input class="campo-busca" id="busca" type="search" inputmode="search"
+             placeholder="Nome, ramal, matrícula, área…" autocomplete="off"
+             enterkeyhint="search" aria-label="Buscar na agenda">
+      <button class="limpar" id="limpar-busca" type="button" hidden aria-label="Limpar busca">✕</button>
+    </div>
+    <div class="filtros" id="filtros-unidade"></div>
+  </header>
+
+  <p class="contagem" id="contagem" role="status" aria-live="polite"></p>
+
+  <div class="rolagem" id="lista-contatos"></div>
+  <nav class="indice" id="indice" aria-label="Índice alfabético"></nav>
+</section>
+
+<!-- ————————————————— favoritos ————————————————— -->
+<section class="tela" id="tela-favoritos" hidden>
+  <header class="topo"><h1 class="titulo-tela">Favoritos</h1></header>
+  <div class="rolagem" id="lista-favoritos"></div>
+</section>
+
+<!-- ————————————————— áreas ————————————————— -->
+<section class="tela" id="tela-areas" hidden>
+  <header class="topo">
+    <h1 class="titulo-tela">Áreas</h1>
+    <input class="campo-busca" id="busca-area" type="search" inputmode="search"
+           placeholder="Filtrar área ou sigla…" autocomplete="off" aria-label="Filtrar áreas">
+  </header>
+  <div class="rolagem" id="lista-areas"></div>
+</section>
+
+<!-- ————————————————— ajustes ————————————————— -->
+<section class="tela" id="tela-ajustes" hidden>
+  <header class="topo"><h1 class="titulo-tela">Ajustes</h1></header>
+  <div class="rolagem">
+    <div class="cartao">
+      <label class="opcao">
+        <span>
+          <b>Discar só o ramal</b>
+          <small>Ligue de um telefone interno da INB usando os 4 dígitos.
+            Desligado, o app monta o número completo com DDD.</small>
+        </span>
+        <input type="checkbox" id="op-interno">
+      </label>
+    </div>
+
+    <div class="cartao">
+      <h2>Levar para os Contatos do celular</h2>
+      <p class="fraco">Gera um arquivo <b>.vcf</b> para importar nos contatos do aparelho.
+        Assim os nomes aparecem quando alguém liga.</p>
+      <div class="botoes">
+        <button class="botao" id="vcf-favoritos" type="button">Exportar favoritos</button>
+        <button class="botao" id="vcf-tudo" type="button">Exportar tudo</button>
+      </div>
+    </div>
+
+    <div class="cartao">
+      <h2>A base deste aparelho</h2>
+      <p class="fraco" id="sobre-fonte"></p>
+      <p class="fraco">O app publicado vem vazio: esta lista foi carregada por você
+        e fica guardada só aqui. Nada é enviado para servidor nenhum.</p>
+      <div class="botoes">
+        <label class="botao">
+          Trocar por outra lista
+          <input type="file" id="arquivo-troca" accept=".json,application/json" hidden>
+        </label>
+        <button class="botao" id="apagar-base" type="button">Apagar do aparelho</button>
+      </div>
+      <p class="fraco pequeno" id="estado-troca" role="status" aria-live="polite"></p>
+    </div>
+
+    <div class="cartao" id="cartao-pabx">
+      <h2>Como o ramal vira telefone</h2>
+      <table class="tabela-pabx">
+        <thead><tr><th>Ramal</th><th>Número completo</th><th>Unidade</th></tr></thead>
+        <tbody>
+          <tr><td>8xxx</td><td>(24) 3321-8xxx</td><td>Resende</td></tr>
+          <tr><td>4xxx</td><td>(77) 3454-4xxx</td><td>Caetité</td></tr>
+          <tr><td>3xxx</td><td>(35) 2107-3xxx</td><td>Caldas</td></tr>
+          <tr><td>1xxx</td><td>(21) 3797-1xxx</td><td>Rio de Janeiro</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ————————————————— ficha do contato ————————————————— -->
+<div class="fundo" id="fundo" hidden></div>
+<aside class="ficha" id="ficha" hidden role="dialog" aria-modal="true" aria-label="Contato"></aside>
+
+<!-- ————————————————— abas ————————————————— -->
+<nav class="abas" id="abas" hidden>
+  <button class="aba ativa" data-tela="contatos" type="button"><span>Contatos</span></button>
+  <button class="aba" data-tela="favoritos" type="button"><span>Favoritos</span></button>
+  <button class="aba" data-tela="areas" type="button"><span>Áreas</span></button>
+  <button class="aba" data-tela="ajustes" type="button"><span>Ajustes</span></button>
+</nav>
+
+<p class="aviso" id="aviso" role="status" aria-live="polite" hidden></p>
+
+<script src="dados.js"></script>
+<script src="busca.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
