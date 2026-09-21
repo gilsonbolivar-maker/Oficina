@@ -5,7 +5,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.0.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.0.1';   // precisa casar com a VERSAO do sw.js
 const LOTE = 80;          // contatos desenhados por vez, para a rolagem não travar
 
 const $ = s => document.querySelector(s);

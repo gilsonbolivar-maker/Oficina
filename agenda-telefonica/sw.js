@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.0.0';   // precisa casar com a VERSAO do app.js
+const VERSAO = '1.0.1';   // precisa casar com a VERSAO do app.js
 const CACHE_APP = 'agenda-telefonica-' + VERSAO;
 
 const ARQUIVOS = [
