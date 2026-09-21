@@ -5,8 +5,12 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.0.1';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.0.2';   // precisa casar com a VERSAO do sw.js
 const LOTE = 80;          // contatos desenhados por vez, para a rolagem não travar
+
+// Guardado antes de tudo: diz se já havia uma versão no comando desta aba.
+const TINHA_CONTROLADOR = !!(navigator.serviceWorker && navigator.serviceWorker.controller);
+let registroSW = null;
 
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
@@ -485,6 +489,7 @@ function mostrarVazio() {
 function ligarEventosCarga() {
   $('#arquivo-inicial').addEventListener('change', ev => carregar(ev.target.files[0], false));
   $('#arquivo-troca').addEventListener('change', ev => carregar(ev.target.files[0], true));
+  $('#procurar-atualizacao').addEventListener('click', procurarAtualizacao);
   $('#apagar-base').addEventListener('click', async () => {
     if (!confirm('Apagar a lista de contatos deste aparelho? Os favoritos continuam guardados.')) return;
     await Dados.removerBase();
@@ -493,14 +498,52 @@ function ligarEventosCarga() {
   });
 }
 
+/* ————————————————— atualização do app ————————————————— */
+
+function registrarSW() {
+  if (!('serviceWorker' in navigator)) return;
+
+  // Quando a versão nova assume, a aba recarrega uma vez para pegar o
+  // visual novo. Na primeira instalação não recarrega: não há o que trocar.
+  let recarregando = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!TINHA_CONTROLADOR || recarregando) return;
+    recarregando = true;
+    location.reload();
+  });
+
+  window.addEventListener('load', () => {
+    // 'updateViaCache: none' obriga o navegador a buscar o sw.js na rede:
+    // sem isso ele pode servir o antigo do cache e a atualização nunca chega.
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+      .then(reg => { registroSW = reg; return reg.update(); })
+      .catch(() => {});
+  });
+}
+
+async function procurarAtualizacao() {
+  if (!registroSW) { avisar('Atualização não disponível aqui.'); return; }
+  avisar('Procurando versão nova…');
+  try {
+    await registroSW.update();
+    const nova = registroSW.waiting || registroSW.installing;
+    if (nova) {
+      nova.postMessage({ tipo: 'assumir' });
+      avisar('Versão nova encontrada. Recarregando…');
+    } else {
+      avisar('Você já está na versão ' + VERSAO + '.');
+    }
+  } catch (e) {
+    avisar('Não deu para verificar agora.');
+  }
+}
+
 async function iniciar() {
   carregarPreferencias();
   ligarEventos();
   ligarEventosCarga();
-
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
-  }
+  registrarSW();
+  $('#versao-app').textContent = 'Versão ' + VERSAO + '.';
 
   let base = null;
   try { base = await Dados.lerBase(); } catch (e) { /* IndexedDB bloqueado */ }

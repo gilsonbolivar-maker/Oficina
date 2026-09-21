@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.0.1';   // precisa casar com a VERSAO do app.js
+const VERSAO = '1.0.2';   // precisa casar com a VERSAO do app.js
 const CACHE_APP = 'agenda-telefonica-' + VERSAO;
 
 const ARQUIVOS = [
@@ -41,12 +41,32 @@ self.addEventListener('activate', ev => {
   );
 });
 
+// A tela de Ajustes pede para a versão nova assumir sem esperar.
+self.addEventListener('message', ev => {
+  if (ev.data && ev.data.tipo === 'assumir') self.skipWaiting();
+});
+
 self.addEventListener('fetch', ev => {
   const req = ev.request;
   if (req.method !== 'GET') return;
   if (new URL(req.url).origin !== self.location.origin) return;
 
-  // Responde do cache e atualiza por trás.
+  // A página em si vem da rede quando dá: é o que traz a versão nova.
+  // Sem rede, cai no que está guardado e o app abre igual.
+  if (req.mode === 'navigate') {
+    ev.respondWith(
+      fetch(req)
+        .then(resp => {
+          const copia = resp.clone();
+          caches.open(CACHE_APP).then(c => c.put(req, copia));
+          return resp;
+        })
+        .catch(() => caches.match(req).then(g => g || caches.match('index.html')))
+    );
+    return;
+  }
+
+  // O resto responde do cache e atualiza por trás.
   ev.respondWith(
     caches.match(req).then(guardado => {
       const rede = fetch(req).then(resp => {
