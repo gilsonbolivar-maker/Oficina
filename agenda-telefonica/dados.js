@@ -71,12 +71,13 @@ const Dados = (() => {
      Fica numa chave separada da base: trocar ou apagar a lista importada
      não leva junto os contatos e números que você mesmo criou. */
 
-  const EXTRAS_VAZIO = { novos: [], numeros: {} };
+  const EXTRAS_VAZIO = { novos: [], numeros: {}, edicoes: {} };
 
   function lerExtras() {
     return ler('extras').then(e => ({
       novos: (e && e.novos) || [],
-      numeros: (e && e.numeros) || {}
+      numeros: (e && e.numeros) || {},
+      edicoes: (e && e.edicoes) || {}
     })).catch(() => EXTRAS_VAZIO);
   }
 

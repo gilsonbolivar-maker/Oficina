@@ -5,7 +5,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.1.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.2.0';   // precisa casar com a VERSAO do sw.js
 const LOTE = 80;          // contatos desenhados por vez, para a rolagem não travar
 
 // Guardado antes de tudo: diz se já havia uma versão no comando desta aba.
@@ -17,7 +17,7 @@ const $$ = s => Array.from(document.querySelectorAll(s));
 
 const estado = {
   base: null,        // a lista carregada pelo usuário, vinda do IndexedDB
-  extras: { novos: [], numeros: {} },   // o que você acrescentou à mão
+  extras: { novos: [], numeros: {}, edicoes: {} },   // o que você acrescentou ou mudou
   formulario: null,  // o que o formulário está editando no momento
   termo: '',
   unidade: null,     // índice em UNIDADES, ou null para todas
@@ -231,7 +231,8 @@ function abrirFicha(i) {
     telefones +
     '<div class="acoes">' +
       '<button class="botao" id="mais-numero" type="button">+ Número</button>' +
-      (reg.manual ? '<button class="botao" id="editar" type="button">Editar</button>' : '') +
+      '<button class="botao" id="editar" type="button">Editar</button>' +
+      (reg.editado ? '<button class="botao" id="restaurar" type="button">Restaurar</button>' : '') +
       '<button class="botao" id="fav" type="button">' + (favorito ? '★ Favorito' : '☆ Favoritar') + '</button>' +
       '<button class="botao" id="copiar" type="button">Copiar</button>' +
       (reg.manual ? '<button class="botao" id="apagar-contato" type="button">Apagar</button>' : '') +
@@ -239,10 +240,13 @@ function abrirFicha(i) {
     '</div>';
 
   ficha.querySelector('h2').textContent = reg.nome;
+  const cabeca = reg.sigla && reg.sigla !== '—'
+    ? '<b>' + reg.sigla + '</b>' + (reg.area ? ' — ' + reg.area : '')
+    : '<b>' + (reg.area || 'Sem área') + '</b>';
   ficha.querySelector('.meta').innerHTML = reg.manual
-    ? '<b>' + reg.area + '</b><br>' + (reg.unidade ? reg.unidade + ' · ' : '') + 'acrescentado por você'
-    : '<b>' + reg.sigla + '</b> — ' + reg.area + '<br>' +
-      reg.unidade + ' · matrícula ' + reg.matricula;
+    ? cabeca + '<br>' + (reg.unidade ? reg.unidade + ' · ' : '') + 'acrescentado por você'
+    : cabeca + '<br>' + reg.unidade + ' · matrícula ' + reg.matricula +
+      (reg.editado ? ' · <span class="marca-manual">alterado por você</span>' : '');
 
   ficha.querySelectorAll('[data-tirar]').forEach(b => {
     b.addEventListener('click', () => tirarNumero(reg, reg.numeros[Number(b.dataset.tirar)]));
@@ -253,11 +257,13 @@ function abrirFicha(i) {
     abrirFormulario({ tipo: 'numero', reg });
   });
 
-  const editar = ficha.querySelector('#editar');
-  if (editar) editar.addEventListener('click', () => {
+  ficha.querySelector('#editar').addEventListener('click', () => {
     fecharFicha();
     abrirFormulario({ tipo: 'editar', reg });
   });
+
+  const restaurar = ficha.querySelector('#restaurar');
+  if (restaurar) restaurar.addEventListener('click', () => restaurarContato(reg));
 
   const apagar = ficha.querySelector('#apagar-contato');
   if (apagar) apagar.addEventListener('click', () => apagarContato(reg));
@@ -339,6 +345,16 @@ async function tirarNumero(reg, num) {
   else fecharFicha();
 }
 
+async function restaurarContato(reg) {
+  if (!confirm('Voltar ' + reg.nome + ' para como veio na lista? As mudanças que você fez nele se perdem.')) return;
+  delete estado.extras.edicoes[reg.matricula];
+  delete estado.extras.numeros[reg.matricula];
+  await salvarExtras();
+  avisar('Contato restaurado.');
+  const atual = Busca.registros.find(r => r.matricula === reg.matricula);
+  if (atual) abrirFicha(atual.i); else fecharFicha();
+}
+
 async function apagarContato(reg) {
   if (!confirm('Apagar ' + reg.nome + ' da agenda? Só sai deste aparelho.')) return;
   estado.extras.novos = estado.extras.novos.filter(n => n.id !== reg.matricula);
@@ -397,14 +413,20 @@ function abrirFormulario(modo) {
     numeros.appendChild(linhaNumero(''));
   } else {
     pessoa.hidden = false;
-    const c = modo.tipo === 'editar'
-      ? estado.extras.novos.find(n => n.id === modo.reg.matricula)
-      : null;
-    $('#form-titulo').textContent = c ? 'Editar contato' : 'Novo contato';
-    $('#f-nome').value = c ? c.nome : '';
-    $('#f-area').value = c ? (c.sigla !== '—' ? c.sigla : c.area) : '';
-    if (c && c.unidade) sel.value = c.unidade;
-    ((c && c.numeros) || []).forEach(n => numeros.appendChild(linhaNumero(n[2])));
+    const editando = modo.tipo === 'editar';
+    const reg = editando ? modo.reg : null;
+    $('#form-titulo').textContent = editando ? 'Editar contato' : 'Novo contato';
+    $('#f-nome').value = reg ? reg.nome : '';
+    $('#f-area').value = reg ? (reg.sigla && reg.sigla !== '—' ? reg.sigla : reg.area) : '';
+    if (reg && reg.unidade) {
+      if (!Array.from(sel.options).some(o => o.value === reg.unidade)) {
+        const o = document.createElement('option');
+        o.value = reg.unidade; o.textContent = reg.unidade;
+        sel.appendChild(o);
+      }
+      sel.value = reg.unidade;
+    }
+    ((reg && reg.numeros) || []).forEach(n => numeros.appendChild(linhaNumero(n[2])));
     if (!numeros.children.length) numeros.appendChild(linhaNumero(''));
   }
 
@@ -466,19 +488,32 @@ async function salvarFormulario() {
   const sigla = conhecida ? conhecida[0] : '—';
   const area = conhecida ? conhecida[1] : (texto || 'Acrescentado por você');
 
-  if (modo.tipo === 'editar') {
-    const c = estado.extras.novos.find(n => n.id === modo.reg.matricula);
-    if (c) Object.assign(c, { nome, sigla, area, unidade, numeros });
-  } else {
+  // Dentro de um contato inteiro os números são a lista dele, não acréscimos
+  // soltos: cai o sinal de "acrescentado" que marcaria cada um com o ponto.
+  const limpos = numeros.map(n => n.slice(0, 3));
+
+  if (modo.tipo !== 'editar') {
     estado.extras.novos.push({
       id: 'n' + Date.now().toString(36),
-      nome, sigla, area, unidade, numeros
+      nome, sigla, area, unidade, numeros: limpos
     });
+  } else if (modo.reg.manual) {
+    const c = estado.extras.novos.find(n => n.id === modo.reg.matricula);
+    if (c) Object.assign(c, { nome, sigla, area, unidade, numeros: limpos });
+  } else {
+    // Contato da lista importada: guarda só a versão sua, por matrícula.
+    estado.extras.edicoes[modo.reg.matricula] = { nome, sigla, area, unidade, numeros: limpos };
+    delete estado.extras.numeros[modo.reg.matricula];   // já entraram na lista acima
   }
 
   fecharFormulario();
   await salvarExtras();
   avisar(modo.tipo === 'editar' ? 'Contato atualizado.' : 'Contato salvo.');
+
+  if (modo.tipo === 'editar') {
+    const atual = Busca.registros.find(r => r.matricula === modo.reg.matricula);
+    if (atual) abrirFicha(atual.i);
+  }
 }
 
 /* ————————————————— exportar vCard ————————————————— */

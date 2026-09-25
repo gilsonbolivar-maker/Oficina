@@ -43,7 +43,8 @@ const Busca = (() => {
    * `extras` traz { novos: [contatos criados], numeros: { matrícula: [telefones] } }.
    */
   function montar(base, extras) {
-    const ex = extras || { novos: [], numeros: {} };
+    const ex = extras || { novos: [], numeros: {}, edicoes: {} };
+    const edicoes = ex.edicoes || {};
     AREAS = base.areas.slice();
     UNIDADES = base.unidades.slice();
 
@@ -59,16 +60,24 @@ const Busca = (() => {
       const [mat, nome, ia, iu, bruto, nums] = c;
       const area = AREAS[ia] || ['?', 'Área não informada'];
       const acrescentados = (ex.numeros && ex.numeros[mat]) || [];
+      const ed = edicoes[mat];
+      const original = Array.isArray(nums) ? nums : [];
+
+      // O que você mudou vale por cima do que veio na lista.
+      const unidade = (ed && ed.unidade) || UNIDADES[iu] || 'Unidade não informada';
       return indexar({
         matricula: mat,
-        nome,
-        sigla: area[0],
-        area: area[1],
-        unidade: UNIDADES[iu] || 'Unidade não informada',
-        iu,
+        nome: (ed && ed.nome) || nome,
+        sigla: ed ? (ed.sigla || '—') : area[0],
+        area: ed ? (ed.area || '') : area[1],
+        unidade,
+        iu: ed && ed.unidade ? indiceUnidade(ed.unidade) : iu,
         bruto: bruto || '',
-        numeros: (Array.isArray(nums) ? nums : []).concat(acrescentados),
-        manual: false
+        numeros: ed && ed.numeros ? ed.numeros : original.concat(acrescentados),
+        manual: false,
+        editado: !!(ed || acrescentados.length),
+        // Guardado para o formulário e para o botão de restaurar.
+        origem: { nome, sigla: area[0], area: area[1], unidade: UNIDADES[iu] || '', numeros: original }
       });
     });
 

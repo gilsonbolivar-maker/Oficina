@@ -39,8 +39,14 @@ Nem tudo está na lista importada, então dá para completar:
 | ----- | ---- |
 | **Contato novo** | Botão **＋** ao lado da busca |
 | **Mais um número** em alguém que já existe | Abra a ficha → **+ Número** |
-| **Corrigir ou apagar** o que você criou | Abra a ficha → **Editar** ou **Apagar** |
-| **Tirar** um número que você acrescentou | O **✕** ao lado dele na ficha |
+| **Mudar nome, área, unidade ou telefones** de qualquer contato, inclusive os da lista importada | Abra a ficha → **Editar** |
+| **Voltar** um contato da lista para como ele veio | Abra a ficha → **Restaurar** |
+| **Apagar** um contato que você criou | Abra a ficha → **Apagar** |
+| **Tirar** um número acrescentado com o *+ Número* | O **✕** ao lado dele na ficha |
+
+Contato da lista que você mexeu aparece com **“alterado por você”** na ficha. A
+lista importada em si não é tocada: a sua versão fica guardada por matrícula e o
+**Restaurar** traz o original de volta a qualquer momento.
 
 O número digitado é interpretado sozinho: **4 dígitos** viram ramal com o número
 completo da faixa, celular e fixo valem com ou sem DDD. Os números que você
