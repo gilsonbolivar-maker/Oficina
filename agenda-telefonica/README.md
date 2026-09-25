@@ -25,11 +25,32 @@ Para trocar por uma lista mais nova ou apagar tudo do aparelho:
 | **Contatos** | Buscar por nome, ramal, matrícula, sigla da área ou unidade; filtrar por unidade; pular pelo índice A–Z. |
 | **Favoritos** | Os contatos que você marcou com ★, sempre à mão. |
 | **Áreas** | Ver as áreas com a quantidade de pessoas e abrir a lista de cada uma. |
-| **Ajustes** | Escolher como discar, trocar ou apagar a base e exportar para a agenda do aparelho. |
+| **Ajustes** | Escolher como discar, trocar ou apagar a base, exportar para a agenda do aparelho e procurar atualização. |
 
 Tocar em um contato abre a ficha com **nome, área, unidade, matrícula** e os
 telefones. Cada telefone é um botão de ligação (`tel:`), além de **Copiar** e
 **★ Favoritar**.
+
+## Acrescentar à mão
+
+Nem tudo está na lista importada, então dá para completar:
+
+| Quero | Onde |
+| ----- | ---- |
+| **Contato novo** | Botão **＋** ao lado da busca |
+| **Mais um número** em alguém que já existe | Abra a ficha → **+ Número** |
+| **Corrigir ou apagar** o que você criou | Abra a ficha → **Editar** ou **Apagar** |
+| **Tirar** um número que você acrescentou | O **✕** ao lado dele na ficha |
+
+O número digitado é interpretado sozinho: **4 dígitos** viram ramal com o número
+completo da faixa, celular e fixo valem com ou sem DDD. Os números que você
+acrescentou ficam marcados com um ponto âmbar (**•**).
+
+Tudo isso é guardado separado da lista importada — **trocar ou apagar a base não
+leva junto** os contatos e números que você criou. Também funciona sem internet.
+
+Quem não tem lista para importar pode tocar em **“comece uma agenda vazia”** na
+tela de partida e montar a agenda do zero.
 
 ## Ramal virando telefone
 
@@ -77,12 +98,12 @@ com o tipo sendo `r` (ramal), `c` (celular), `f` (fixo) ou `o` (outro).
 | ------- | --------- |
 | `index.html` | Tela de partida, as quatro telas e a ficha do contato. |
 | `app.css` | Visual escuro, alvos grandes para o toque. |
-| `dados.js` | Guarda e valida a base no IndexedDB do aparelho. |
-| `busca.js` | Índice de busca (ignora acento e caixa) e o agrupamento A–Z. |
+| `dados.js` | Guarda e valida a base no IndexedDB, e guarda à parte o que você acrescenta. |
+| `busca.js` | Índice de busca (ignora acento e caixa), agrupamento A–Z e leitura dos números digitados. |
 | `app.js` | Telas, ficha, favoritos, exportação e registro do service worker. |
 | `sw.js` | Guarda o app no aparelho para abrir offline. |
 
-**Privacidade:** o repositório guarda só o app. A lista de contatos, os favoritos
-e os ajustes ficam no aparelho de quem usa. O `.gitignore` desta pasta bloqueia
+**Privacidade:** o repositório guarda só o app. A lista de contatos, o que você
+acrescenta à mão, os favoritos e os ajustes ficam no aparelho de quem usa. O `.gitignore` desta pasta bloqueia
 `contatos.js` e arquivos `.json` de base, para nenhuma lista entrar no repositório
 por engano.

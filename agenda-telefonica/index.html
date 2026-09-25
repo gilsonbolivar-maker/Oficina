@@ -29,6 +29,8 @@
       <input type="file" id="arquivo-inicial" accept=".json,application/json" hidden>
     </label>
     <p class="fraco pequeno" id="estado-carga" role="status" aria-live="polite"></p>
+    <p class="fraco pequeno">Ou <button class="ligacao" id="comecar-vazio" type="button">comece
+      uma agenda vazia</button> e vá acrescentando os contatos à mão.</p>
   </div>
 </section>
 
@@ -40,6 +42,7 @@
              placeholder="Nome, ramal, matrícula, área…" autocomplete="off"
              enterkeyhint="search" aria-label="Buscar na agenda">
       <button class="limpar" id="limpar-busca" type="button" hidden aria-label="Limpar busca">✕</button>
+      <button class="novo" id="novo-contato" type="button" aria-label="Novo contato">＋</button>
     </div>
     <div class="filtros" id="filtros-unidade"></div>
   </header>
@@ -134,6 +137,37 @@
 <!-- ————————————————— ficha do contato ————————————————— -->
 <div class="fundo" id="fundo" hidden></div>
 <aside class="ficha" id="ficha" hidden role="dialog" aria-modal="true" aria-label="Contato"></aside>
+
+<!-- ————————————————— formulário ————————————————— -->
+<aside class="ficha" id="formulario" hidden role="dialog" aria-modal="true" aria-label="Contato">
+  <h2 id="form-titulo">Novo contato</h2>
+
+  <div id="form-pessoa">
+    <label class="campo">Nome
+      <input id="f-nome" type="text" autocomplete="name" enterkeyhint="next">
+    </label>
+    <label class="campo">Área ou setor
+      <input id="f-area" type="text" list="areas-conhecidas" placeholder="opcional">
+      <datalist id="areas-conhecidas"></datalist>
+    </label>
+    <label class="campo">Unidade
+      <select id="f-unidade"></select>
+    </label>
+  </div>
+
+  <p class="rotulo-grupo">Telefones</p>
+  <div id="f-numeros"></div>
+  <button class="botao" id="f-mais-numero" type="button">+ outro número</button>
+  <p class="fraco pequeno">Ramal de 4 dígitos vira o número completo sozinho.
+    Celular e fixo podem vir com ou sem DDD.</p>
+
+  <p class="erro" id="f-erro" role="status" aria-live="polite" hidden></p>
+
+  <div class="acoes">
+    <button class="botao principal" id="f-salvar" type="button">Salvar</button>
+    <button class="botao" id="f-cancelar" type="button">Cancelar</button>
+  </div>
+</aside>
 
 <!-- ————————————————— abas ————————————————— -->
 <nav class="abas" id="abas" hidden>
