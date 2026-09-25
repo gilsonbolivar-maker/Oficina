@@ -67,9 +67,33 @@ const Dados = (() => {
     return base;
   }
 
+  /* ——— o que você acrescenta à mão ———
+     Fica numa chave separada da base: trocar ou apagar a lista importada
+     não leva junto os contatos e números que você mesmo criou. */
+
+  const EXTRAS_VAZIO = { novos: [], numeros: {} };
+
+  function lerExtras() {
+    return ler('extras').then(e => ({
+      novos: (e && e.novos) || [],
+      numeros: (e && e.numeros) || {}
+    })).catch(() => EXTRAS_VAZIO);
+  }
+
   return {
     lerBase: () => ler('base'),
     importarArquivo,
-    removerBase: () => apagar('base')
+    removerBase: () => apagar('base'),
+    baseVazia: () => gravar('base', {
+      fonte: { titulo: 'Agenda própria', data: '', total: 0 },
+      unidades: ['Sem unidade'],
+      areas: [],
+      contatos: [],
+      importadoEm: new Date().toISOString(),
+      nomeArquivo: ''
+    }).then(() => ler('base')),
+    lerExtras,
+    gravarExtras: ex => gravar('extras', ex),
+    removerExtras: () => apagar('extras')
   };
 })();

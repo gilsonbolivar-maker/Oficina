@@ -5,7 +5,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.0.2';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.1.0';   // precisa casar com a VERSAO do sw.js
 const LOTE = 80;          // contatos desenhados por vez, para a rolagem não travar
 
 // Guardado antes de tudo: diz se já havia uma versão no comando desta aba.
@@ -17,6 +17,8 @@ const $$ = s => Array.from(document.querySelectorAll(s));
 
 const estado = {
   base: null,        // a lista carregada pelo usuário, vinda do IndexedDB
+  extras: { novos: [], numeros: {} },   // o que você acrescentou à mão
+  formulario: null,  // o que o formulário está editando no momento
   termo: '',
   unidade: null,     // índice em UNIDADES, ou null para todas
   interno: false,    // discar só os 4 dígitos do ramal
@@ -57,18 +59,11 @@ function rotuloTipo(tipo) {
   return { r: 'Ramal', c: 'Celular', f: 'Fixo', o: 'Contato' }[tipo] || 'Contato';
 }
 
-/** "2433218000" -> "(24) 3321-8000". */
-function formatar(d) {
-  if (d.length === 11) return '(' + d.slice(0, 2) + ') ' + d.slice(2, 7) + '-' + d.slice(7);
-  if (d.length === 10) return '(' + d.slice(0, 2) + ') ' + d.slice(2, 6) + '-' + d.slice(6);
-  return d;
-}
-
 /** Linha de apoio: diz o que o toque vai discar de verdade. */
 function detalheNumero(num) {
   if (num[0] !== 'r') return rotuloTipo(num[0]);
   if (estado.interno) return 'Ramal · disca só os 4 dígitos';
-  return 'Ramal · disca ' + formatar(num[1]);
+  return 'Ramal · disca ' + Busca.formatar(num[1]);
 }
 
 function cartaoContato(reg) {
@@ -90,7 +85,9 @@ function cartaoContato(reg) {
 
   b.querySelector('.avatar').textContent = iniciais(reg.nome);
   b.querySelector('.nome').textContent = reg.nome;
-  b.querySelector('.sub').textContent = reg.sigla + ' · ' + reg.unidade;
+  b.querySelector('.sub').textContent = reg.manual
+    ? [reg.area, reg.unidade].filter(Boolean).join(' · ')
+    : reg.sigla + ' · ' + reg.unidade;
   const cel = b.querySelector('.ramal');
   cel.textContent = primeiro ? primeiro[2] : '—';
   if (primeiro && primeiro[0] !== 'r') cel.classList.add('curto');
@@ -217,31 +214,53 @@ function abrirFicha(i) {
   const favorito = estado.favoritos.has(reg.matricula);
 
   const telefones = reg.numeros.length
-    ? reg.numeros.map(n =>
-        '<a class="telefone" href="tel:' + paraDiscar(n) + '">' +
-          '<span class="dupla">' +
-            '<span class="num">' + n[2] + '</span>' +
+    ? reg.numeros.map((n, k) =>
+        '<div class="telefone">' +
+          '<a class="dupla" href="tel:' + paraDiscar(n) + '">' +
+            '<span class="num">' + n[2] + (n[3] ? ' <span class="marca-manual">•</span>' : '') + '</span>' +
             '<span class="tipo">' + detalheNumero(n) + '</span>' +
-          '</span>' +
-          '<span class="ligar">📞</span>' +
-        '</a>').join('')
-    : '<p class="fraco pequeno">Sem telefone na lista original.</p>';
+          '</a>' +
+          '<a class="ligar" href="tel:' + paraDiscar(n) + '" aria-label="Ligar">📞</a>' +
+          (n[3] ? '<button class="tirar" type="button" data-tirar="' + k + '" aria-label="Tirar este número">✕</button>' : '') +
+        '</div>').join('')
+    : '<p class="fraco pequeno">Sem telefone ainda.</p>';
 
   ficha.innerHTML =
-    '<div class="alca"></div>' +
     '<h2></h2>' +
     '<p class="meta"></p>' +
     telefones +
     '<div class="acoes">' +
+      '<button class="botao" id="mais-numero" type="button">+ Número</button>' +
+      (reg.manual ? '<button class="botao" id="editar" type="button">Editar</button>' : '') +
       '<button class="botao" id="fav" type="button">' + (favorito ? '★ Favorito' : '☆ Favoritar') + '</button>' +
       '<button class="botao" id="copiar" type="button">Copiar</button>' +
+      (reg.manual ? '<button class="botao" id="apagar-contato" type="button">Apagar</button>' : '') +
       '<button class="botao principal" id="fechar" type="button">Fechar</button>' +
     '</div>';
 
   ficha.querySelector('h2').textContent = reg.nome;
-  ficha.querySelector('.meta').innerHTML =
-    '<b>' + reg.sigla + '</b> — ' + reg.area + '<br>' +
-    reg.unidade + ' · matrícula ' + reg.matricula;
+  ficha.querySelector('.meta').innerHTML = reg.manual
+    ? '<b>' + reg.area + '</b><br>' + (reg.unidade ? reg.unidade + ' · ' : '') + 'acrescentado por você'
+    : '<b>' + reg.sigla + '</b> — ' + reg.area + '<br>' +
+      reg.unidade + ' · matrícula ' + reg.matricula;
+
+  ficha.querySelectorAll('[data-tirar]').forEach(b => {
+    b.addEventListener('click', () => tirarNumero(reg, reg.numeros[Number(b.dataset.tirar)]));
+  });
+
+  ficha.querySelector('#mais-numero').addEventListener('click', () => {
+    fecharFicha();
+    abrirFormulario({ tipo: 'numero', reg });
+  });
+
+  const editar = ficha.querySelector('#editar');
+  if (editar) editar.addEventListener('click', () => {
+    fecharFicha();
+    abrirFormulario({ tipo: 'editar', reg });
+  });
+
+  const apagar = ficha.querySelector('#apagar-contato');
+  if (apagar) apagar.addEventListener('click', () => apagarContato(reg));
 
   ficha.querySelector('#fav').addEventListener('click', () => {
     if (estado.favoritos.has(reg.matricula)) estado.favoritos.delete(reg.matricula);
@@ -281,6 +300,187 @@ function copiar(reg) {
   }
 }
 
+/* ————————————————— o que você acrescenta à mão ————————————————— */
+
+/** Grava os acréscimos e refaz o índice sem perder busca nem filtro. */
+async function salvarExtras() {
+  try {
+    await Dados.gravarExtras(estado.extras);
+  } catch (e) {
+    avisar('Não deu para guardar neste navegador.');
+  }
+  Busca.montar(estado.base, estado.extras);
+  montarFiltros();
+  refazerLista();
+  refazerFavoritos();
+  refazerAreas($('#busca-area').value);
+}
+
+/** Lista onde os números daquele contato ficam guardados. */
+function listaDeNumeros(reg) {
+  if (reg.manual) {
+    const c = estado.extras.novos.find(n => n.id === reg.matricula);
+    return c ? c.numeros : null;
+  }
+  return estado.extras.numeros[reg.matricula] || null;
+}
+
+async function tirarNumero(reg, num) {
+  const lista = listaDeNumeros(reg);
+  if (!lista) return;
+  const k = lista.findIndex(n => n[1] === num[1]);
+  if (k < 0) return;
+  lista.splice(k, 1);
+  if (!reg.manual && !lista.length) delete estado.extras.numeros[reg.matricula];
+  await salvarExtras();
+  avisar('Número tirado.');
+  const atual = Busca.registros.find(r => r.matricula === reg.matricula);
+  if (atual) abrirFicha(atual.i);
+  else fecharFicha();
+}
+
+async function apagarContato(reg) {
+  if (!confirm('Apagar ' + reg.nome + ' da agenda? Só sai deste aparelho.')) return;
+  estado.extras.novos = estado.extras.novos.filter(n => n.id !== reg.matricula);
+  estado.favoritos.delete(reg.matricula);
+  salvarFavoritos();
+  fecharFicha();
+  await salvarExtras();
+  avisar('Contato apagado.');
+}
+
+/* ————————————————— formulário ————————————————— */
+
+function linhaNumero(valor) {
+  const div = document.createElement('div');
+  div.className = 'linha-numero';
+  div.innerHTML =
+    '<input type="tel" inputmode="tel" placeholder="Ramal, celular ou fixo" autocomplete="off">' +
+    '<button class="tirar" type="button" aria-label="Tirar esta linha">✕</button>';
+  div.querySelector('input').value = valor || '';
+  div.querySelector('.tirar').addEventListener('click', () => {
+    div.remove();
+    if (!$('#f-numeros').children.length) $('#f-numeros').appendChild(linhaNumero(''));
+  });
+  return div;
+}
+
+function abrirFormulario(modo) {
+  $('#ficha').hidden = true;
+  estado.formulario = modo;
+  const pessoa = $('#form-pessoa');
+  const numeros = $('#f-numeros');
+  numeros.innerHTML = '';
+  $('#f-erro').hidden = true;
+
+  // Unidades conhecidas, para o contato novo cair no mesmo filtro dos outros.
+  const sel = $('#f-unidade');
+  sel.innerHTML = '';
+  Busca.unidades.forEach(u => {
+    const o = document.createElement('option');
+    o.value = u; o.textContent = u || 'Sem unidade';
+    sel.appendChild(o);
+  });
+
+  // Siglas já existentes viram sugestão do campo de área.
+  const dl = $('#areas-conhecidas');
+  dl.innerHTML = '';
+  Busca.areas.forEach(a => {
+    const o = document.createElement('option');
+    o.value = a[0]; o.label = a[1];
+    dl.appendChild(o);
+  });
+
+  if (modo.tipo === 'numero') {
+    pessoa.hidden = true;
+    $('#form-titulo').textContent = 'Novo número · ' + modo.reg.nome;
+    numeros.appendChild(linhaNumero(''));
+  } else {
+    pessoa.hidden = false;
+    const c = modo.tipo === 'editar'
+      ? estado.extras.novos.find(n => n.id === modo.reg.matricula)
+      : null;
+    $('#form-titulo').textContent = c ? 'Editar contato' : 'Novo contato';
+    $('#f-nome').value = c ? c.nome : '';
+    $('#f-area').value = c ? (c.sigla !== '—' ? c.sigla : c.area) : '';
+    if (c && c.unidade) sel.value = c.unidade;
+    ((c && c.numeros) || []).forEach(n => numeros.appendChild(linhaNumero(n[2])));
+    if (!numeros.children.length) numeros.appendChild(linhaNumero(''));
+  }
+
+  $('#formulario').hidden = false;
+  $('#fundo').hidden = false;
+  if (modo.tipo === 'numero') numeros.querySelector('input').focus();
+  else $('#f-nome').focus();
+}
+
+function fecharFormulario() {
+  $('#formulario').hidden = true;
+  $('#fundo').hidden = true;
+  estado.formulario = null;
+}
+
+function erroFormulario(txt) {
+  const el = $('#f-erro');
+  el.textContent = txt;
+  el.hidden = false;
+}
+
+async function salvarFormulario() {
+  const modo = estado.formulario;
+  if (!modo) return;
+
+  const unidade = modo.tipo === 'numero' ? modo.reg.unidade : $('#f-unidade').value;
+  const digitados = Array.from($('#f-numeros').querySelectorAll('input'))
+    .map(i => i.value.trim()).filter(Boolean);
+  const numeros = digitados.map(t => Busca.interpretar(t, unidade)).filter(Boolean);
+
+  if (digitados.length && !numeros.length) {
+    erroFormulario('Não reconheci nenhum número no que foi digitado.');
+    return;
+  }
+
+  if (modo.tipo === 'numero') {
+    if (!numeros.length) { erroFormulario('Digite o número.'); return; }
+    const mat = modo.reg.matricula;
+    if (modo.reg.manual) {
+      const c = estado.extras.novos.find(n => n.id === mat);
+      if (c) c.numeros = c.numeros.concat(numeros);
+    } else {
+      estado.extras.numeros[mat] = (estado.extras.numeros[mat] || []).concat(numeros);
+    }
+    fecharFormulario();
+    await salvarExtras();
+    avisar(numeros.length > 1 ? 'Números acrescentados.' : 'Número acrescentado.');
+    const atual = Busca.registros.find(r => r.matricula === mat);
+    if (atual) abrirFicha(atual.i);
+    return;
+  }
+
+  const nome = $('#f-nome').value.trim();
+  if (!nome) { erroFormulario('O nome é obrigatório.'); return; }
+
+  // Se digitou uma sigla que já existe, o contato herda o nome completo da área.
+  const texto = $('#f-area').value.trim();
+  const conhecida = Busca.areas.find(a => a[0].toLowerCase() === texto.toLowerCase());
+  const sigla = conhecida ? conhecida[0] : '—';
+  const area = conhecida ? conhecida[1] : (texto || 'Acrescentado por você');
+
+  if (modo.tipo === 'editar') {
+    const c = estado.extras.novos.find(n => n.id === modo.reg.matricula);
+    if (c) Object.assign(c, { nome, sigla, area, unidade, numeros });
+  } else {
+    estado.extras.novos.push({
+      id: 'n' + Date.now().toString(36),
+      nome, sigla, area, unidade, numeros
+    });
+  }
+
+  fecharFormulario();
+  await salvarExtras();
+  avisar(modo.tipo === 'editar' ? 'Contato atualizado.' : 'Contato salvo.');
+}
+
 /* ————————————————— exportar vCard ————————————————— */
 
 function escaparVcf(t) {
@@ -298,7 +498,7 @@ function gerarVcf(regs) {
       const tipo = n[0] === 'c' ? 'CELL' : 'WORK';
       linhas.push('TEL;TYPE=' + tipo + ':' + n[1]);
     });
-    linhas.push('NOTE:Matrícula ' + r.matricula + ' · Ramal ' + escaparVcf(r.bruto));
+    if (!r.manual) linhas.push('NOTE:Matrícula ' + r.matricula + ' · Ramal ' + escaparVcf(r.bruto));
     linhas.push('END:VCARD');
   });
   return linhas.join('\r\n') + '\r\n';
@@ -423,8 +623,16 @@ function ligarEventos() {
   });
 
   $$('.aba').forEach(a => a.addEventListener('click', () => trocarTela(a.dataset.tela)));
-  $('#fundo').addEventListener('click', fecharFicha);
-  document.addEventListener('keydown', ev => { if (ev.key === 'Escape') fecharFicha(); });
+  $('#fundo').addEventListener('click', () => { fecharFicha(); fecharFormulario(); });
+  document.addEventListener('keydown', ev => {
+    if (ev.key === 'Escape') { fecharFicha(); fecharFormulario(); }
+  });
+
+  $('#novo-contato').addEventListener('click', () => abrirFormulario({ tipo: 'novo' }));
+  $('#f-mais-numero').addEventListener('click',
+    () => $('#f-numeros').appendChild(linhaNumero('')));
+  $('#f-salvar').addEventListener('click', salvarFormulario);
+  $('#f-cancelar').addEventListener('click', fecharFormulario);
 
   const op = $('#op-interno');
   op.checked = estado.interno;
@@ -460,7 +668,7 @@ function abrirApp(base) {
   estado.base = base;
   estado.termo = '';
   estado.unidade = null;
-  Busca.montar(base);
+  Busca.montar(base, estado.extras);
 
   $('#busca').value = '';
   $('#limpar-busca').hidden = true;
@@ -488,6 +696,10 @@ function mostrarVazio() {
 
 function ligarEventosCarga() {
   $('#arquivo-inicial').addEventListener('change', ev => carregar(ev.target.files[0], false));
+  $('#comecar-vazio').addEventListener('click', async () => {
+    abrirApp(await Dados.baseVazia());
+    avisar('Agenda vazia. Toque em ＋ para acrescentar.');
+  });
   $('#arquivo-troca').addEventListener('change', ev => carregar(ev.target.files[0], true));
   $('#procurar-atualizacao').addEventListener('click', procurarAtualizacao);
   $('#apagar-base').addEventListener('click', async () => {
@@ -546,7 +758,10 @@ async function iniciar() {
   $('#versao-app').textContent = 'Versão ' + VERSAO + '.';
 
   let base = null;
-  try { base = await Dados.lerBase(); } catch (e) { /* IndexedDB bloqueado */ }
+  try {
+    base = await Dados.lerBase();
+    estado.extras = await Dados.lerExtras();
+  } catch (e) { /* IndexedDB bloqueado */ }
   if (base) abrirApp(base);
   else mostrarVazio();
 }
