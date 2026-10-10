@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.0.2';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.1.0';   // precisa casar com a VERSAO do sw.js
 
 const EQUIPAMENTOS = ['AA140', 'Rebritagem', 'Primário'];
 const MOTIVOS = [
@@ -91,6 +91,25 @@ function dataBonita(data) {
 }
 
 const id = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+/* ————————————————— números ————————————————— */
+
+/**
+ * Lê o que foi digitado no campo decimal. O teclado do celular em
+ * português oferece vírgula, então ela vale tanto quanto o ponto.
+ * Devolve null para campo vazio e NaN para o que não é número.
+ */
+function lerNumero(texto) {
+  const t = String(texto == null ? '' : texto).trim().replace(/\s/g, '').replace(',', '.');
+  if (t === '') return null;
+  return Number(t);
+}
+
+/** 4193.1 -> "4193,1", para a tela sair na vírgula de sempre. */
+function mostrarNumero(v) {
+  if (v === null || v === undefined || Number.isNaN(v)) return '—';
+  return String(v).replace('.', ',');
+}
 
 /* ————————————————— guardar ————————————————— */
 
@@ -254,10 +273,10 @@ function desenharLeituras() {
       td[1].textContent = l.obs || 'Parada.';
       td[2].remove(); td[3].remove();
     } else {
-      td[1].innerHTML = (l.horimetro != null ? l.horimetro : '—') +
-        (delta != null ? ' <span class="delta">+' + delta.toFixed(2) + '</span>' : '');
-      td[2].textContent = l.balanca != null ? l.balanca : '—';
-      td[3].textContent = l.acido != null ? l.acido : '—';
+      td[1].innerHTML = mostrarNumero(l.horimetro) +
+        (delta != null ? ' <span class="delta">+' + mostrarNumero(+delta.toFixed(2)) + '</span>' : '');
+      td[2].textContent = mostrarNumero(l.balanca);
+      td[3].textContent = mostrarNumero(l.acido);
     }
     tr.querySelector('button').addEventListener('click', () => formLeitura(t, l));
     corpo.appendChild(tr);
@@ -335,9 +354,9 @@ function desenharResumo() {
     '<h2>Números do turno</h2>' +
     '<table class="tabela"><tbody>' +
       '<tr><td>Duração do turno</td><td>' + duracao(c.duracaoTurno) + '</td></tr>' +
-      '<tr><td>Horímetro rodado</td><td>' + (c.horimetro != null ? c.horimetro : '—') + '</td></tr>' +
-      '<tr><td>Ácido médio</td><td>' + (c.acidoMedio != null ? c.acidoMedio : '—') + '</td></tr>' +
-      '<tr><td>Produção</td><td>' + (t.producao != null ? t.producao + ' t' : '—') + '</td></tr>' +
+      '<tr><td>Horímetro rodado</td><td>' + mostrarNumero(c.horimetro) + '</td></tr>' +
+      '<tr><td>Ácido médio</td><td>' + mostrarNumero(c.acidoMedio) + '</td></tr>' +
+      '<tr><td>Produção</td><td>' + (t.producao != null ? mostrarNumero(t.producao) + ' t' : '—') + '</td></tr>' +
     '</tbody></table>' +
     '<div class="botoes"><button class="botao" id="editar-producao" type="button">Anotar produção</button></div>';
   alvo.appendChild(nums);
@@ -646,14 +665,14 @@ function formLeitura(t, l) {
     '</label>' +
     '<div id="campos-leitura">' +
       '<label class="campo">Horímetro' +
-        (ultima ? ' <span class="fraco">(última: ' + ultima.horimetro + ')</span>' : '') +
-        '<input id="f-horimetro" type="number" inputmode="decimal" step="0.01" value="' +
-        (l && l.horimetro != null ? l.horimetro : '') + '"></label>' +
+        (ultima ? ' <span class="fraco">(última: ' + mostrarNumero(ultima.horimetro) + ')</span>' : '') +
+        '<input id="f-horimetro" type="text" inputmode="decimal" enterkeyhint="next" value="' +
+        (l && l.horimetro != null ? mostrarNumero(l.horimetro) : '') + '"></label>' +
       '<div class="dupla-campo">' +
-        '<label class="campo">Balança<input id="f-balanca" type="number" inputmode="decimal" step="0.01" value="' +
-          (l && l.balanca != null ? l.balanca : '') + '"></label>' +
-        '<label class="campo">Ácido<input id="f-acido" type="number" inputmode="decimal" step="0.01" value="' +
-          (l && l.acido != null ? l.acido : '') + '"></label>' +
+        '<label class="campo">Balança<input id="f-balanca" type="text" inputmode="decimal" enterkeyhint="next" value="' +
+          (l && l.balanca != null ? mostrarNumero(l.balanca) : '') + '"></label>' +
+        '<label class="campo">Ácido<input id="f-acido" type="text" inputmode="decimal" enterkeyhint="done" value="' +
+          (l && l.acido != null ? mostrarNumero(l.acido) : '') + '"></label>' +
       '</div>' +
     '</div>' +
     '<label class="campo">Observação (opcional)<input id="f-obs" type="text" value="' +
@@ -663,17 +682,21 @@ function formLeitura(t, l) {
     const hora = doCampo($('#f-hora').value, t);
     if (!hora) { erro('Informe a hora da leitura.'); return; }
     const parada = $('#f-parada').checked;
-    const num = sel => {
-      const v = $(sel).value.trim();
-      return v === '' ? null : Number(v);
+    const campos = {
+      horimetro: ['#f-horimetro', 'horímetro'],
+      balanca: ['#f-balanca', 'balança'],
+      acido: ['#f-acido', 'ácido']
     };
-    const dados = {
-      hora, parada,
-      horimetro: parada ? null : num('#f-horimetro'),
-      balanca: parada ? null : num('#f-balanca'),
-      acido: parada ? null : num('#f-acido'),
-      obs: $('#f-obs').value.trim()
-    };
+    const lidos = {};
+    for (const nome in campos) {
+      const v = parada ? null : lerNumero($(campos[nome][0]).value);
+      if (Number.isNaN(v)) {
+        erro('O ' + campos[nome][1] + ' não é um número. Use só dígitos e vírgula.');
+        return;
+      }
+      lidos[nome] = v;
+    }
+    const dados = Object.assign({ hora, parada, obs: $('#f-obs').value.trim() }, lidos);
     if (l) Object.assign(l, dados);
     else t.leituras.push(Object.assign({ id: id() }, dados));
     fecharCaixa();
@@ -695,11 +718,12 @@ function formLeitura(t, l) {
 
 function formProducao(t) {
   const corpo = '<label class="campo">Produção do turno, em toneladas' +
-    '<input id="f-producao" type="number" inputmode="decimal" step="0.1" value="' +
-    (t.producao != null ? t.producao : '') + '"></label>';
+    '<input id="f-producao" type="text" inputmode="decimal" enterkeyhint="done" value="' +
+    (t.producao != null ? mostrarNumero(t.producao) : '') + '"></label>';
   abrirCaixa('Produção', corpo, async () => {
-    const v = $('#f-producao').value.trim();
-    t.producao = v === '' ? null : Number(v);
+    const v = lerNumero($('#f-producao').value);
+    if (Number.isNaN(v)) { erro('A produção não é um número. Use só dígitos e vírgula.'); return; }
+    t.producao = v;
     fecharCaixa();
     await salvar();
     avisar('Produção anotada.');
@@ -741,16 +765,16 @@ function relatorioTexto(t) {
     t.leituras.slice().sort((a, b) => new Date(a.hora) - new Date(b.hora)).forEach(l => {
       L.push(l.parada
         ? '· ' + hhmm(l.hora) + '  ' + (l.obs || 'Parada.')
-        : '· ' + hhmm(l.hora) + '  ' + (l.horimetro != null ? l.horimetro : '—') +
-          '  ·  ' + (l.balanca != null ? l.balanca : '—') +
-          '  ·  ' + (l.acido != null ? l.acido : '—') + (l.obs ? '  — ' + l.obs : ''));
+        : '· ' + hhmm(l.hora) + '  ' + mostrarNumero(l.horimetro) +
+          '  ·  ' + mostrarNumero(l.balanca) +
+          '  ·  ' + mostrarNumero(l.acido) + (l.obs ? '  — ' + l.obs : ''));
     });
     L.push('');
   }
 
-  if (t.producao != null) L.push('PRODUÇÃO: ' + t.producao + ' t');
-  if (c.horimetro != null) L.push('Horímetro rodado: ' + c.horimetro);
-  if (c.acidoMedio != null) L.push('Ácido médio: ' + c.acidoMedio);
+  if (t.producao != null) L.push('PRODUÇÃO: ' + mostrarNumero(t.producao) + ' t');
+  if (c.horimetro != null) L.push('Horímetro rodado: ' + mostrarNumero(c.horimetro));
+  if (c.acidoMedio != null) L.push('Ácido médio: ' + mostrarNumero(c.acidoMedio));
   return L.join('\n');
 }
 
@@ -767,7 +791,10 @@ function copiarRelatorio(t) {
 }
 
 function csvCampo(v) {
-  const s = v === null || v === undefined ? '' : String(v);
+  // Número sai com vírgula: com o ';' separando colunas, é assim que o
+  // Numbers e o Excel em português leem como número, não como texto.
+  const s = typeof v === 'number' ? String(v).replace('.', ',')
+    : (v === null || v === undefined ? '' : String(v));
   return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
 }
 
@@ -780,7 +807,7 @@ function baixarCsv(t) {
       minutos(d.inicio, d.fim), d.achou === true ? 'metal encontrado' : d.achou === false ? 'nao encontrado' : '', '', '', '', d.obs]));
   t.leituras.slice().sort((a, b) => new Date(a.hora) - new Date(b.hora)).forEach(l =>
     L.push(['leitura', '', hhmm(l.hora), '', '', l.parada ? 'parada' : '', l.horimetro, l.balanca, l.acido, l.obs]));
-  if (t.producao != null) L.push(['producao', '', '', '', '', '', '', '', '', t.producao + ' t']);
+  if (t.producao != null) L.push(['producao', '', '', '', '', '', '', '', t.producao, 'toneladas']);
 
   const texto = '﻿' + L.map(linha => linha.map(csvCampo).join(';')).join('\r\n');
   const blob = new Blob([texto], { type: 'text/csv;charset=utf-8' });

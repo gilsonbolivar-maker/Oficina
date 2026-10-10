@@ -31,7 +31,7 @@ adiante. Funciona **sem internet** e tudo fica neste aparelho.
 | -------- | ------ |
 | **Parada** | Equipamento (AA140, Rebritagem, Primário — ou **Outro…**, que abre o campo para digitar o nome), motivo, início e fim |
 | **Detector DT 1101** | Hora que acionou, hora que liberou, 👍 metal encontrado / 👎 não encontrado |
-| **Leitura** | Hora, horímetro, balança, ácido — ou a marca de **usina parada** |
+| **Leitura** | Hora, horímetro, balança, ácido — ou a marca de **usina parada**. Os campos abrem o **teclado numérico** e aceitam vírgula ou ponto. |
 | **Turno** | Data, turno (A a E), operador, produção em toneladas |
 
 A duração é **calculada sozinha** a partir do início e do fim, então não há
@@ -62,11 +62,11 @@ DETECTOR DE METAL (DT 1101)
 · 06h53 → 06h55  👍 metal encontrado
 
 LEITURAS  (hora · horímetro · balança · ácido)
-· 06h30  1000.0  ·  80  ·  0.60
+· 06h30  1000,0  ·  80  ·  0,60
 
 PRODUÇÃO: 500 t
-Horímetro rodado: 2.00
-Ácido médio: 0.60
+Horímetro rodado: 2,00
+Ácido médio: 0,60
 ```
 
 ## Instalar
