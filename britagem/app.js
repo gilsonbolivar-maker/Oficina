@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '3.0.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '3.1.0';   // precisa casar com a VERSAO do sw.js
 
 /* Área padrão, para quem ainda não carregou a configuração das áreas.
    Equipamento, motivo e medida de cada área real vêm do arquivo que fica
@@ -704,9 +704,11 @@ function desenharResumo() {
   acoes.className = 'cartao';
   acoes.innerHTML =
     '<h2>Passar adiante</h2>' +
-    '<p class="fraco">O relatório sai pronto para colar numa mensagem, ou como planilha.</p>' +
+    '<p class="fraco">O relatório sai pronto para colar numa mensagem, como PDF para' +
+    ' arquivar ou imprimir, ou como planilha.</p>' +
     '<div class="botoes">' +
       '<button class="botao principal" id="copiar-relatorio" type="button">Copiar relatório</button>' +
+      '<button class="botao" id="baixar-pdf" type="button">Baixar PDF</button>' +
       '<button class="botao" id="baixar-csv" type="button">Baixar CSV</button>' +
       '<button class="botao" id="fechar-turno" type="button">' +
         (t.fim ? 'Reabrir turno' : 'Encerrar turno') + '</button>' +
@@ -715,6 +717,7 @@ function desenharResumo() {
 
   $('#editar-producao').addEventListener('click', () => formProducao(t));
   $('#copiar-relatorio').addEventListener('click', () => copiarRelatorio(t));
+  $('#baixar-pdf').addEventListener('click', () => baixarPdf(t));
   $('#baixar-csv').addEventListener('click', () => baixarCsv(t));
   $('#fechar-turno').addEventListener('click', async () => {
     t.fim = t.fim ? null : agora();
@@ -1390,6 +1393,143 @@ function copiarRelatorio(t) {
   } else {
     avisar('O navegador não deixou copiar.');
   }
+}
+
+/** O mesmo relatório, em PDF, montado bloco a bloco. */
+function blocosDoRelatorio(t) {
+  const c = contasDoTurno(t);
+  const area = areaDe(t);
+  const soma = somatoria(t);
+  const B = [];
+
+  B.push({ tipo: 'titulo', texto: (area.codigo ? area.codigo + ' · ' : '') + area.nome });
+  B.push({ tipo: 'sub', texto:
+    dataBonita(t.data) + ' · ' + nomeTurno(t) +
+    (t.operador ? ' · ' + t.operador : '') +
+    ' · início ' + hhmm(t.inicio) +
+    (t.fim ? ' · fim ' + hhmm(t.fim) : ' · em andamento') +
+    (area.io ? '\n' + area.io : '') });
+  B.push({ tipo: 'linha' });
+
+  const comJanela = equipamentosDoTurno(t).filter(e => janela(t, e).propria);
+  if (comJanela.length) {
+    B.push({ tipo: 'h1', texto: 'Funcionamento' });
+    B.push({ tipo: 'tabela', colunas: [150, 110, 110, 129],
+      cabecalho: ['Equipamento', 'Entrou', 'Saiu', 'Em campo'],
+      linhas: comJanela.map(e => {
+        const j = janela(t, e);
+        return [e, j.iniciou ? hhmm(j.inicio) : 'não iniciou',
+          j.encerrou ? hhmm(j.fim) : (j.iniciou ? 'em andamento' : '—'),
+          duracao(minutos(j.inicio, j.fim))];
+      }) });
+  }
+
+  if (t.paradas.length) {
+    B.push({ tipo: 'h1', texto: 'Paradas' });
+    B.push({ tipo: 'tabela', colunas: [96, 58, 58, 62, 225],
+      cabecalho: ['Equipamento', 'Início', 'Fim', 'Duração', 'Motivo'],
+      linhas: t.paradas.slice().sort((a, b) => new Date(a.inicio) - new Date(b.inicio))
+        .map(p => [p.equip, hhmm(p.inicio), p.fim ? hhmm(p.fim) : '—',
+          duracao(minutos(p.inicio, p.fim || relogio(t))), p.motivo || '—']) });
+    B.push({ tipo: 'tabela', colunas: [250, 249],
+      cabecalho: ['Tempo parado', 'Total'],
+      linhas: Object.keys(c.porEquip).sort().map(e => [e, duracao(c.porEquip[e])])
+        .concat([['TOTAL PARADO', duracao(c.totalParado)]]) });
+
+    B.push({ tipo: 'h1', texto: 'Tempo rodando' });
+    Object.keys(c.porEquip).sort().forEach(e => {
+      const j = janela(t, e);
+      const faixas = intervalosRodando(t, e);
+      const total = faixas.reduce((acc, f) => acc + (minutos(f.inicio, f.fim) || 0), 0);
+      const emCampo = minutos(j.inicio, j.fim) || 0;
+      const disp = emCampo ? Math.round(100 * total / emCampo) : 0;
+      B.push({ tipo: 'h2', texto: e + ' — ' + duracao(total) + ' rodando de ' +
+        duracao(emCampo) + ' em campo (' + disp + '%)' });
+      B.push({ tipo: 'tabela', colunas: [250, 249],
+        cabecalho: ['Intervalo', 'Duração'],
+        linhas: faixas.length
+          ? faixas.map(f => [hhmm(f.inicio) + ' a ' + (f.correndo ? 'agora' : hhmm(f.fim)),
+              duracao(minutos(f.inicio, f.fim))])
+          : [['Não rodou em nenhum momento', '—']] });
+    });
+  }
+
+  if (t.detector.length) {
+    B.push({ tipo: 'h1', texto: 'Detector de metal (DT-1101)' });
+    B.push({ tipo: 'tabela', colunas: [90, 90, 150, 169],
+      cabecalho: ['Acionou', 'Liberou', 'Resultado', 'Observação'],
+      linhas: t.detector.slice().sort((a, b) => new Date(a.inicio) - new Date(b.inicio))
+        .map(d => [hhmm(d.inicio), d.fim ? hhmm(d.fim) : '—',
+          d.achou === true ? 'Metal encontrado' : d.achou === false ? 'Não encontrado' : 'Sem resultado',
+          d.obs || '']) });
+  }
+
+  const medidas = medidasDe(t);
+  if (temLeitura(t.inicial, t) || temLeitura(t.final, t) || t.leituras.length) {
+    B.push({ tipo: 'h1', texto: 'Leituras' });
+  }
+  if (temLeitura(t.inicial, t) || temLeitura(t.final, t)) {
+    const colLeitura = [80].concat(medidas.map(() => Math.floor(419 / medidas.length)));
+    const linhas = [];
+    [['inicial', 'Inicial'], ['final', 'Final']].forEach(([chave, rotulo]) => {
+      const o = t[chave];
+      if (!temLeitura(o, t)) return;
+      linhas.push([rotulo + (o.hora ? ' ' + hhmm(o.hora) : '')]
+        .concat(medidas.map(m => comUnidade(o[m.chave], m.unidade))));
+    });
+    if (temLeitura(t.inicial, t) && temLeitura(t.final, t)) {
+      linhas.push(['SOMATÓRIA'].concat(medidas.map(m => comUnidade(soma[m.chave], m.unidade))));
+    }
+    B.push({ tipo: 'tabela', colunas: colLeitura,
+      cabecalho: [''].concat(medidas.map(m => m.rotulo + (m.unidade ? ' (' + m.unidade + ')' : ''))),
+      linhas: linhas });
+  }
+  if (t.leituras.length) {
+    const colHora = [70].concat(medidas.map(() => Math.floor(339 / medidas.length))).concat([90]);
+    B.push({ tipo: 'h2', texto: 'Hora a hora' });
+    B.push({ tipo: 'tabela', colunas: colHora,
+      cabecalho: ['Hora'].concat(medidas.map(m => m.rotulo)).concat(['Observação']),
+      linhas: t.leituras.slice().sort((a, b) => new Date(a.hora) - new Date(b.hora))
+        .map(l => l.parada
+          ? [hhmm(l.hora)].concat(medidas.map(() => '—')).concat([l.obs || 'Parada.'])
+          : [hhmm(l.hora)].concat(medidas.map(m => mostrarNumero(l[m.chave]))).concat([l.obs || ''])) });
+  }
+
+  const linhasFim = [['Duração do turno', duracao(c.duracaoTurno)]];
+  const horimetroRodado = soma.horimetro != null ? soma.horimetro : c.horimetro;
+  if (horimetroRodado != null) linhasFim.push(['Horímetro rodado', comUnidade(horimetroRodado, 'h')]);
+  if (c.acidoMedio != null) linhasFim.push(['Ácido médio por hora', mostrarNumero(c.acidoMedio)]);
+  if (t.producao != null) linhasFim.push(['Produção', mostrarNumero(t.producao) + ' t']);
+  area.extras.forEach(e => {
+    const v = (t.extras || {})[e.chave];
+    if (v == null || v === '') return;
+    linhasFim.push([e.rotulo, e.tipo === 'numero' ? comUnidade(v, e.unidade || '') : String(v)]);
+  });
+  B.push({ tipo: 'h1', texto: 'Números do turno' });
+  B.push({ tipo: 'tabela', colunas: [250, 249], cabecalho: ['', ''], linhas: linhasFim });
+  B.push({ tipo: 'espaco', altura: 2 });
+
+  B.push({ tipo: 'espaco', altura: 6 });
+  B.push({ tipo: 'pequeno', texto:
+    'Gerado pelo app Britagem ' + VERSAO + ' em ' + dataBonita(hoje()) + ' às ' + hhmm(agora()) +
+    '. Registro de apoio: o lançamento oficial continua no Livro de Turno e no SCPC.' });
+  return B;
+}
+
+function baixarPdf(t) {
+  const area = areaDe(t);
+  const blob = PDF.gerar(blocosDoRelatorio(t),
+    (area.codigo ? area.codigo + ' ' : '') + area.nome + ' · ' +
+    dataBonita(t.data) + ' · ' + nomeTurno(t));
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'britagem-' + t.data + '-turno-' + t.nome.replace(/\W+/g, '') + '.pdf';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  avisar('PDF baixado.');
 }
 
 function csvCampo(v) {
