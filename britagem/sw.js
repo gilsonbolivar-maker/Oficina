@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.1.0';   // precisa casar com a VERSAO do app.js
+const VERSAO = '1.2.0';   // precisa casar com a VERSAO do app.js
 const CACHE_APP = 'britagem-' + VERSAO;
 
 const ARQUIVOS = [
@@ -40,7 +40,7 @@ self.addEventListener('activate', ev => {
   );
 });
 
-// A tela de Ajustes pede para a versão nova assumir sem esperar.
+// A tela de Turnos pede para a versão nova assumir sem esperar.
 self.addEventListener('message', ev => {
   if (ev.data && ev.data.tipo === 'assumir') self.skipWaiting();
 });

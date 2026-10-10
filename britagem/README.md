@@ -13,7 +13,7 @@ adiante. Funciona **sem internet** e tudo fica neste aparelho.
 | **Turno** | Os três botões de registro e a linha do tempo do que já aconteceu. |
 | **Leituras** | A tabela hora a hora de horímetro, balança e ácido, com a variação calculada. |
 | **Resumo** | Tempo parado por equipamento, números do turno e a saída do relatório. |
-| **Turnos** | Todos os turnos guardados; toque em um para voltar a ele. |
+| **Turnos** | Todos os turnos guardados; toque em um para voltar a ele. No fim da tela fica a **versão do app** e o botão de procurar atualização. |
 
 ## Como se usa no turno
 
@@ -68,6 +68,12 @@ PRODUÇÃO: 500 t
 Horímetro rodado: 2,00
 Ácido médio: 0,60
 ```
+
+## Saber em que versão você está
+
+A versão aparece em dois lugares: na tela de partida e no fim da aba
+**Turnos**, junto do botão **Procurar atualização** — que busca a versão nova e
+recarrega sozinho, sem precisar reinstalar.
 
 ## Instalar
 
