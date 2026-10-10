@@ -29,7 +29,7 @@ adiante. Funciona **sem internet** e tudo fica neste aparelho.
 
 | Registro | Campos |
 | -------- | ------ |
-| **Parada** | Equipamento (AA140, Rebritagem, Primário ou outro), motivo, início e fim |
+| **Parada** | Equipamento (AA140, Rebritagem, Primário — ou **Outro…**, que abre o campo para digitar o nome), motivo, início e fim |
 | **Detector DT 1101** | Hora que acionou, hora que liberou, 👍 metal encontrado / 👎 não encontrado |
 | **Leitura** | Hora, horímetro, balança, ácido — ou a marca de **usina parada** |
 | **Turno** | Data, turno, operador, produção em toneladas |

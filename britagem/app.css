@@ -250,6 +250,9 @@ body {
 
 /* ————— formulário ————— */
 .campo { display: block; margin-bottom: 12px; font-size: 13px; color: var(--fraco); }
+/* Sem isto o 'display: block' acima vence o atributo hidden e o campo
+   extra de "Outro…" aparece sempre. */
+.campo[hidden], #campos-leitura[hidden], #form-pessoa[hidden] { display: none; }
 .campo input, .campo select, .linha-numero input {
   display: block;
   width: 100%;
