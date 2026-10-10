@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.4.0';   // precisa casar com a VERSAO do app.js
+const VERSAO = '2.0.0';   // precisa casar com a VERSAO do app.js
 const CACHE_APP = 'britagem-' + VERSAO;
 
 const ARQUIVOS = [
