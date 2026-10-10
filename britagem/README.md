@@ -30,20 +30,20 @@ adiante. Funciona **sem internet** e tudo fica neste aparelho.
 | Registro | Campos |
 | -------- | ------ |
 | **Funcionamento** | Por equipamento: hora de entrar e de sair |
-| **Parada** | Equipamento (AA140, Britagem, Rebritagem — ou **Outro…**, que abre o campo para digitar o nome), motivo, início e fim |
+| **Parada** | Equipamento (AA140, Primário, Rebritagem — ou **Outro…**, que abre o campo para digitar o nome), motivo, início e fim |
 | **Detector DT 1101** | Hora que acionou, hora que liberou, 👍 metal encontrado / 👎 não encontrado |
 | **Leitura** | Hora, horímetro, balança, ácido — ou a marca de **usina parada**. Os campos abrem o **teclado numérico** e aceitam vírgula ou ponto. |
 | **Turno** | Data, turno (A a E), operador, produção em toneladas |
 
 ## Cada equipamento tem a sua hora
 
-**AA140, Britagem e Rebritagem entram e saem em horários próprios**, que não são
+**AA140, Primário e Rebritagem entram e saem em horários próprios**, que não são
 os do turno. O cartão **Funcionamento**, no alto da tela do turno, guarda isso:
 
 ```
 Funcionamento
 AA140          07h00 → 15h00       [Reabrir]
-Britagem       06h30 → 14h00       [Reabrir]
+Primário       06h30 → 14h00       [Reabrir]
 Rebritagem     desde 08h00 · 5h20  [Encerrar]
 ```
 

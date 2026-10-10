@@ -4,9 +4,9 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '2.0.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '2.1.0';   // precisa casar com a VERSAO do sw.js
 
-const EQUIPAMENTOS = ['AA140', 'Britagem', 'Rebritagem'];
+const EQUIPAMENTOS = ['AA140', 'Primário', 'Rebritagem'];
 const MOTIVOS = [
   'Moega baixa', 'Moega vazia', 'Moega cheia', 'Troca de turno', 'Jantar',
   'Afunilamento', 'Entupimento', 'Obstrução no chute', 'Elétrica',
@@ -1194,10 +1194,33 @@ async function procurarAtualizacao() {
   }
 }
 
+/**
+ * A versão 2.0.0 trouxe "Britagem" como equipamento, mas é o mesmo
+ * Primário. Renomeia o que foi gravado naquele intervalo, uma vez só.
+ */
+function renomearBritagem(turnos) {
+  let mexeu = false;
+  turnos.forEach(t => {
+    t.paradas.forEach(p => {
+      if (p.equip === 'Britagem') { p.equip = 'Primário'; mexeu = true; }
+    });
+    const eq = t.equipamentos;
+    if (eq && eq['Britagem']) {
+      eq['Primário'] = Object.assign({}, eq['Primário'], eq['Britagem']);
+      delete eq['Britagem'];
+      mexeu = true;
+    }
+  });
+  return mexeu;
+}
+
 async function iniciar() {
   ligarEventos();
   registrarSW();
   estado.turnos = await Dados.lerTurnos();
+  if (renomearBritagem(estado.turnos)) {
+    try { await Dados.gravarTurnos(estado.turnos); } catch (e) { /* segue assim mesmo */ }
+  }
   estado.prefs = await Dados.lerPreferencias();
   const guardado = estado.turnos.find(t => t.id === estado.prefs.atual);
   const emAberto = estado.turnos.filter(t => !t.fim).sort((a, b) => new Date(b.inicio) - new Date(a.inicio))[0];
