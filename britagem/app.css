@@ -443,6 +443,11 @@ body {
 .bloco-equip .tabela td { padding: 6px 4px; color: var(--fraco); }
 .bloco-equip .tabela td:last-child { color: var(--texto); font-weight: 600; }
 
+.cartao.somatoria { border-color: var(--acento); }
+.cartao.somatoria .total { font-size: 17px; font-weight: 700; color: var(--acento); }
+.cartao .cabeca { margin-bottom: 8px; }
+.cartao .cabeca h2 { margin: 0; }
+
 /* ————— números do resumo ————— */
 .placar { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; }
 .placar div {
