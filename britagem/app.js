@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.0.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.0.1';   // precisa casar com a VERSAO do sw.js
 
 const EQUIPAMENTOS = ['AA140', 'Rebritagem', 'Primário'];
 const MOTIVOS = [
@@ -488,7 +488,9 @@ function formTurno(t) {
     '</div>' +
     '<p class="rotulo-grupo">Turno</p>' +
     grupoEscolhas('g-turno', TURNOS, t ? t.nome : (estado.prefs.turno || TURNOS[0]), 'f-turno-livre') +
-    '<label class="campo" hidden>Qual<input id="f-turno-livre" type="text" value="' +
+    '<label class="campo"' + (t && !TURNOS.includes(t.nome) ? '' : ' hidden') + '>' +
+      'Nome do turno' +
+      '<input id="f-turno-livre" type="text" placeholder="como vocês chamam" value="' +
       (t && !TURNOS.includes(t.nome) ? t.nome : '') + '"></label>' +
     '<label class="campo">Operador (opcional)<input id="f-operador" type="text" value="' +
       (t ? (t.operador || '') : (estado.prefs.operador || '')) + '"></label>';
@@ -541,7 +543,9 @@ function formParada(t, p) {
   const corpo =
     '<p class="rotulo-grupo">Equipamento</p>' +
     grupoEscolhas('g-equip', EQUIPAMENTOS, p ? p.equip : EQUIPAMENTOS[0], 'f-equip-livre') +
-    '<label class="campo" hidden>Qual<input id="f-equip-livre" type="text" value="' +
+    '<label class="campo"' + (p && !EQUIPAMENTOS.includes(p.equip) ? '' : ' hidden') + '>' +
+      'Nome do equipamento' +
+      '<input id="f-equip-livre" type="text" placeholder="ex.: Peneira 02, Correia TP 1407" value="' +
       (p && !EQUIPAMENTOS.includes(p.equip) ? p.equip : '') + '"></label>' +
     '<label class="campo">Motivo' +
       '<input id="f-motivo" type="text" list="motivos-usados" value="' + (p ? (p.motivo || '') : '') + '">' +
