@@ -202,7 +202,13 @@ turno (ou em 16h), para não inventar um total de dias.
 | Botão | Resultado |
 | ----- | --------- |
 | **Copiar relatório** | Texto pronto para colar numa mensagem ou e-mail |
+| **Baixar PDF** | O turno inteiro em tabelas, para arquivar, imprimir ou anexar |
 | **Baixar CSV** | Planilha (`;` e acento certo) que abre no Numbers e no Excel |
+
+O PDF é montado pelo próprio app, sem biblioteca nenhuma (`pdf.js`, umas 220
+linhas): por isso sai **no modo avião também**. Usa Helvetica, que todo leitor
+de PDF já tem, e traz funcionamento, paradas, tempo rodando, detector, leituras
+com a somatória e os números do turno, com rodapé e numeração de página.
 
 Exemplo do texto copiado:
 
@@ -246,7 +252,8 @@ recarrega sozinho, sem precisar reinstalar.
 | ------- | --------- |
 | `index.html` | As quatro telas e a caixa de formulário. |
 | `app.css` | Visual escuro, alvos grandes para o toque com luva. |
-| `dados.js` | Guarda os turnos no IndexedDB do aparelho. |
+| `dados.js` | Guarda os turnos e as áreas no IndexedDB do aparelho. |
+| `pdf.js` | Gera o PDF do turno, sem depender de nada externo. |
 | `app.js` | Registros, contas de tempo, resumo e exportação. |
 | `sw.js` | Guarda o app no aparelho para abrir offline. |
 

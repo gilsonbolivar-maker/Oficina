@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '3.0.0';   // precisa casar com a VERSAO do app.js
+const VERSAO = '3.1.0';   // precisa casar com a VERSAO do app.js
 const CACHE_APP = 'britagem-' + VERSAO;
 
 const ARQUIVOS = [
@@ -13,6 +13,7 @@ const ARQUIVOS = [
   'app.css',
   'app.js',
   'dados.js',
+  'pdf.js',
   'manifest.webmanifest',
   'icones/icone-180.png',
   'icones/icone-192.png',
