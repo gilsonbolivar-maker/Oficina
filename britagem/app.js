@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.0.1';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.0.2';   // precisa casar com a VERSAO do sw.js
 
 const EQUIPAMENTOS = ['AA140', 'Rebritagem', 'Primário'];
 const MOTIVOS = [
@@ -12,7 +12,10 @@ const MOTIVOS = [
   'Afunilamento', 'Entupimento', 'Obstrução no chute', 'Elétrica',
   'Mecânica', 'Falha no detector de metal', 'Movimentar TP'
 ];
-const TURNOS = ['1º turno', '2º turno', '3º turno'];
+const TURNOS = ['A', 'B', 'C', 'D', 'E'];
+
+/** 'A' vira "Turno A"; um nome escrito por extenso fica como foi digitado. */
+const nomeTurno = t => (t && t.nome) ? (t.nome.length <= 2 ? 'Turno ' + t.nome : t.nome) : '';
 
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
@@ -178,7 +181,7 @@ function desenharTurno() {
   alvo.innerHTML = '';
   if (!t) return;
 
-  $('#turno-titulo').textContent = t.nome + ' · ' + dataBonita(t.data);
+  $('#turno-titulo').textContent = nomeTurno(t) + ' · ' + dataBonita(t.data);
   $('#turno-sub').textContent =
     'início ' + hhmm(t.inicio) +
     (t.fim ? ' · encerrado ' + hhmm(t.fim) : ' · em andamento') +
@@ -379,7 +382,7 @@ function desenharTurnos() {
     b.innerHTML =
       '<span class="dados"><span class="nome"></span><span class="sub"></span></span>' +
       '<span class="ramal"></span>';
-    b.querySelector('.nome').textContent = dataBonita(t.data) + ' · ' + t.nome;
+    b.querySelector('.nome').textContent = dataBonita(t.data) + ' · ' + nomeTurno(t);
     b.querySelector('.sub').textContent =
       c.paradas + ' paradas · ' + c.acionamentos + ' detector' +
       (t.fim ? '' : ' · em andamento');
@@ -708,7 +711,7 @@ function formProducao(t) {
 function relatorioTexto(t) {
   const c = contasDoTurno(t);
   const L = [];
-  L.push('BRITAGEM — ' + dataBonita(t.data) + ' · ' + t.nome + (t.operador ? ' · ' + t.operador : ''));
+  L.push('BRITAGEM — ' + dataBonita(t.data) + ' · ' + nomeTurno(t) + (t.operador ? ' · ' + t.operador : ''));
   L.push('Início ' + hhmm(t.inicio) + (t.fim ? ' · fim ' + hhmm(t.fim) : ' · em andamento'));
   L.push('');
 
@@ -784,7 +787,7 @@ function baixarCsv(t) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'britagem-' + t.data + '-' + t.nome.replace(/\W+/g, '') + '.csv';
+  a.download = 'britagem-' + t.data + '-turno-' + t.nome.replace(/\W+/g, '') + '.csv';
   document.body.appendChild(a);
   a.click();
   a.remove();

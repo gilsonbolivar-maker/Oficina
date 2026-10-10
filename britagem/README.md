@@ -17,7 +17,7 @@ adiante. Funciona **sem internet** e tudo fica neste aparelho.
 
 ## Como se usa no turno
 
-1. **Abrir turno** — data, qual turno, hora de início e o operador.
+1. **Abrir turno** — data, turno (**A, B, C, D, E** ou outro), hora de início e o operador.
 2. Conforme as coisas acontecem, toque em **⏸ Parada**, **🧲 Detector** ou
    **📋 Leitura**. Todo campo de hora tem o botão **agora**.
 3. Parada sem hora de fim fica **em andamento**, com o relógio correndo e o
@@ -32,7 +32,7 @@ adiante. Funciona **sem internet** e tudo fica neste aparelho.
 | **Parada** | Equipamento (AA140, Rebritagem, Primário — ou **Outro…**, que abre o campo para digitar o nome), motivo, início e fim |
 | **Detector DT 1101** | Hora que acionou, hora que liberou, 👍 metal encontrado / 👎 não encontrado |
 | **Leitura** | Hora, horímetro, balança, ácido — ou a marca de **usina parada** |
-| **Turno** | Data, turno, operador, produção em toneladas |
+| **Turno** | Data, turno (A a E), operador, produção em toneladas |
 
 A duração é **calculada sozinha** a partir do início e do fim, então não há
 mais conta de minuto na mão. Parada esquecida aberta para de contar no fim do
@@ -48,7 +48,7 @@ turno (ou em 16h), para não inventar um total de dias.
 Exemplo do texto copiado:
 
 ```
-BRITAGEM — 10/10/26 · 1º turno · OPERADOR
+BRITAGEM — 10/10/26 · Turno C · OPERADOR
 Início 06h00 · em andamento
 
 PARADAS
