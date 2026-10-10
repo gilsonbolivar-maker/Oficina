@@ -13,11 +13,11 @@ adiante. Funciona **sem internet** e tudo fica neste aparelho.
 | **Turno** | Os três botões de registro e a linha do tempo do que já aconteceu. |
 | **Leituras** | A leitura **inicial** e **final** dos totalizadores, a tabela hora a hora e a **somatória do turno**. |
 | **Resumo** | Tempo parado e **tempo rodando** por equipamento, números do turno e a saída do relatório. |
-| **Turnos** | Todos os turnos guardados; toque em um para voltar a ele. No fim da tela fica a **versão do app** e o botão de procurar atualização. |
+| **Turnos** | Todos os turnos guardados; toque em um para voltar a ele. No fim da tela ficam as **áreas carregadas** e a **versão do app**. |
 
 ## Como se usa no turno
 
-1. **Abrir turno** — data, turno (**A, B, C, D, E** ou outro), hora de início e o operador.
+1. **Abrir turno** — **área**, data, turno (**A, B, C, D, E** ou outro), hora de início e o operador.
 2. Conforme as coisas acontecem, toque em **⏸ Parada**, **🧲 Detector** ou
    **📋 Leitura**. Todo campo de hora tem o botão **agora**.
 3. Parada sem hora de fim fica **em andamento**, com o relógio correndo e o
@@ -35,6 +35,65 @@ adiante. Funciona **sem internet** e tudo fica neste aparelho.
 | **Leitura inicial / final** | Hora e o número cheio do totalizador: horímetro, balança e ácido |
 | **Leitura hora a hora** | Hora, horímetro, balança, ácido — ou a marca de **usina parada**. Os campos abrem o **teclado numérico** e aceitam vírgula ou ponto. |
 | **Turno** | Data, turno (A a E), operador, produção em toneladas |
+
+## As áreas
+
+O app trabalha por **área**: cada uma tem os seus equipamentos, os seus motivos
+de parada, as suas medidas e o seu relatório de turno. Ao abrir o turno você
+escolhe a área, e o resto da tela se ajusta a ela.
+
+```
+Área
+[AA-110 · Britagem Primária] [AA-110 · Rebritagem] [AA-140 · Pilhas]
+```
+
+### A configuração não fica aqui
+
+As IOs têm **controle de cópias**. Por isso o repositório **não traz** nenhum
+equipamento, parâmetro ou medida das áreas reais: você carrega um arquivo
+`.json` no aparelho, uma vez, e ele fica só ali.
+
+```
+   REPOSITÓRIO (público)          SEU APARELHO (privado)
+   ┌────────────────────┐         ┌──────────────────────┐
+   │  o app, genérico   │  ───►   │  você carrega as     │
+   │  contas e telas    │         │  áreas e elas ficam  │
+   └────────────────────┘         └──────────────────────┘
+```
+
+Sem o arquivo, o app funciona com uma **área padrão** genérica. Para carregar:
+tela de partida → *carregar as áreas*, ou **Turnos → Áreas**.
+
+### Formato do arquivo de áreas
+
+```json
+{
+  "fonte": { "titulo": "…", "data": "…" },
+  "areas": [{
+    "id": "area-exemplo",
+    "codigo": "AA-000",
+    "nome": "Nome da área",
+    "io": "IO-XXX-00 R00",
+    "equipamentos": ["EQ-0001", "EQ-0002"],
+    "motivos": ["Falta de energia", "Obstrução no chute"],
+    "medidas": [
+      { "chave": "horimetro", "rotulo": "Horímetro", "complemento": "rodado", "unidade": "h" }
+    ],
+    "extras": [
+      { "chave": "nota", "rotulo": "Observação do turno", "tipo": "texto" },
+      { "chave": "total", "rotulo": "Total", "tipo": "numero", "unidade": "t",
+        "dica": "texto de apoio, opcional" }
+    ]
+  }]
+}
+```
+
+| Campo | Para que serve |
+| ----- | -------------- |
+| `equipamentos` | Os botões do formulário de parada e as linhas do cartão Funcionamento |
+| `motivos` | As sugestões do campo de motivo |
+| `medidas` | As colunas da leitura inicial, da hora a hora, da final e da somatória |
+| `extras` | Campos próprios da área no resumo (número da pilha, condições do rádio…) |
 
 ## Cada equipamento tem a sua hora
 

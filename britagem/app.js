@@ -4,14 +4,30 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '2.3.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '3.0.0';   // precisa casar com a VERSAO do sw.js
 
-const EQUIPAMENTOS = ['AA140', 'Primário', 'Rebritagem'];
-const MOTIVOS = [
-  'Moega baixa', 'Moega vazia', 'Moega cheia', 'Troca de turno', 'Jantar',
-  'Afunilamento', 'Entupimento', 'Obstrução no chute', 'Elétrica',
-  'Mecânica', 'Falha no detector de metal', 'Movimentar TP'
-];
+/* Área padrão, para quem ainda não carregou a configuração das áreas.
+   Equipamento, motivo e medida de cada área real vêm do arquivo que fica
+   no aparelho — o repositório é público e as IOs têm controle de cópias. */
+const AREA_PADRAO = {
+  id: 'padrao',
+  nome: 'Turno',
+  codigo: '',
+  io: '',
+  equipamentos: ['AA140', 'Primário', 'Rebritagem'],
+  motivos: [
+    'Moega baixa', 'Moega vazia', 'Moega cheia', 'Troca de turno', 'Jantar',
+    'Afunilamento', 'Entupimento', 'Obstrução no chute', 'Elétrica',
+    'Mecânica', 'Falha no detector de metal', 'Movimentar TP'
+  ],
+  medidas: [
+    { chave: 'horimetro', rotulo: 'Horímetro', complemento: 'rodado', unidade: 'h' },
+    { chave: 'balanca', rotulo: 'Balança', complemento: 'no turno', unidade: 't' },
+    { chave: 'acido', rotulo: 'Ácido', complemento: 'consumido', unidade: '' }
+  ],
+  extras: []
+};
+
 const TURNOS = ['A', 'B', 'C', 'D', 'E'];
 
 /** 'A' vira "Turno A"; um nome escrito por extenso fica como foi digitado. */
@@ -21,6 +37,7 @@ const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 
 const estado = {
+  config: null,    // as áreas carregadas no aparelho
   turnos: [],
   atual: null,     // id do turno aberto na tela
   prefs: {},
@@ -124,6 +141,23 @@ async function salvar() {
 
 const turnoAtual = () => estado.turnos.find(t => t.id === estado.atual) || null;
 
+/** Todas as áreas disponíveis: as do arquivo, ou a padrão. */
+const areasDisponiveis = () =>
+  (estado.config && estado.config.areas.length) ? estado.config.areas : [AREA_PADRAO];
+
+/** A área daquele turno, caindo na padrão quando não encontra. */
+function areaDe(t) {
+  if (!t) return AREA_PADRAO;
+  const achada = areasDisponiveis().find(a => a.id === t.areaId);
+  if (achada) return achada;
+  // Turno antigo, sem área: fica com a padrão, mas guarda o nome gravado.
+  return t.areaNome ? Object.assign({}, AREA_PADRAO, { nome: t.areaNome }) : AREA_PADRAO;
+}
+
+const equipamentosDaArea = t => areaDe(t).equipamentos.slice();
+const motivosDaArea = t => areaDe(t).motivos.slice();
+const medidasDe = t => areaDe(t).medidas;
+
 let avisoTimer = null;
 function avisar(txt) {
   const el = $('#aviso');
@@ -164,7 +198,7 @@ function minutosNaJanela(a, b, j) {
 
 /** Lista para a tela: os três de sempre, mais o que apareceu no turno. */
 function equipamentosDoTurno(t) {
-  const nomes = EQUIPAMENTOS.slice();
+  const nomes = equipamentosDaArea(t);
   t.paradas.forEach(p => { if (!nomes.includes(p.equip)) nomes.push(p.equip); });
   Object.keys(t.equipamentos || {}).forEach(n => { if (!nomes.includes(n)) nomes.push(n); });
   return nomes;
@@ -349,7 +383,8 @@ function desenharTurno() {
   alvo.innerHTML = '';
   if (!t) return;
 
-  $('#turno-titulo').textContent = nomeTurno(t) + ' · ' + dataBonita(t.data);
+  const a = areaDe(t);
+  $('#turno-titulo').textContent = a.nome + ' · ' + nomeTurno(t) + ' · ' + dataBonita(t.data);
   $('#turno-sub').textContent =
     'início ' + hhmm(t.inicio) +
     (t.fim ? ' · encerrado ' + hhmm(t.fim) : ' · em andamento') +
@@ -408,12 +443,12 @@ function cartaoExtremo(t, qual) {
   c.className = 'cartao';
   c.innerHTML =
     '<div class="cabeca"><h2></h2>' +
-      '<button class="botao pequeno" type="button">' + (temLeitura(o) ? 'Editar' : 'Anotar') + '</button>' +
+      '<button class="botao pequeno" type="button">' + (temLeitura(o, t) ? 'Editar' : 'Anotar') + '</button>' +
     '</div>' +
     (o.hora ? '<p class="fraco pequeno">às ' + hhmm(o.hora) + '</p>' : '') +
     '<table class="tabela"><tbody>' +
-      MEDIDAS.map(([chave, rotulo, , unidade]) =>
-        '<tr><td>' + rotulo + '</td><td>' + comUnidade(o[chave], unidade) + '</td></tr>').join('') +
+      medidasDe(t).map(m =>
+        '<tr><td>' + m.rotulo + '</td><td>' + comUnidade(o[m.chave], m.unidade) + '</td></tr>').join('') +
     '</tbody></table>';
   c.querySelector('h2').textContent = qual === 'inicial' ? 'Leitura inicial' : 'Leitura final';
   c.querySelector('button').addEventListener('click', () => formExtremo(t, qual));
@@ -426,16 +461,16 @@ function cartaoSomatoria(t) {
   c.className = 'cartao somatoria';
   c.innerHTML = '<h2>Somatória do turno</h2>';
 
-  if (!temLeitura(t.inicial) || !temLeitura(t.final)) {
+  if (!temLeitura(t.inicial, t) || !temLeitura(t.final, t)) {
     c.innerHTML += '<p class="fraco">Anote a leitura inicial e a final para o app' +
       ' fazer a conta — é a diferença entre as duas.</p>';
     return c;
   }
   const tb = document.createElement('table');
   tb.className = 'tabela';
-  tb.innerHTML = '<tbody>' + MEDIDAS.map(([chave, rotulo, complemento, unidade]) =>
-    '<tr><td>' + rotulo + ' ' + complemento + '</td>' +
-    '<td class="total">' + comUnidade(soma[chave], unidade) + '</td></tr>').join('') + '</tbody>';
+  tb.innerHTML = '<tbody>' + medidasDe(t).map(m =>
+    '<tr><td>' + m.rotulo + ' ' + (m.complemento || '') + '</td>' +
+    '<td class="total">' + comUnidade(soma[m.chave], m.unidade) + '</td></tr>').join('') + '</tbody>';
   c.appendChild(tb);
 
   const conta = document.createElement('p');
@@ -464,8 +499,9 @@ function desenharLeituras() {
     const ordenadas = t.leituras.slice().sort((a, b) => new Date(a.hora) - new Date(b.hora));
     const tab = document.createElement('table');
     tab.className = 'tabela';
-    tab.innerHTML = '<thead><tr><th>Hora</th><th>Horímetro (h)</th>' +
-      '<th>Balança (t)</th><th>Ácido</th><th></th></tr></thead>';
+    tab.innerHTML = '<thead><tr><th>Hora</th>' + medidasDe(t)
+      .map(m => '<th>' + m.rotulo + (m.unidade ? ' (' + m.unidade + ')' : '') + '</th>').join('') +
+      '<th></th></tr></thead>';
     const corpo = document.createElement('tbody');
 
     let anterior = null;
@@ -505,12 +541,6 @@ function desenharLeituras() {
 
 /* ————————————————— leitura inicial e final ————————————————— */
 
-const MEDIDAS = [
-  ['horimetro', 'Horímetro', 'rodado', 'h'],
-  ['balanca', 'Balança', 'no turno', 't'],
-  ['acido', 'Ácido', 'consumido', '']
-];
-
 /** Número com a unidade colada, quando a medida tem uma. */
 function comUnidade(v, unidade) {
   const n = mostrarNumero(v);
@@ -522,15 +552,15 @@ function somatoria(t) {
   const ini = t.inicial || {};
   const fim = t.final || {};
   const out = {};
-  MEDIDAS.forEach(([chave]) => {
-    out[chave] = (ini[chave] != null && fim[chave] != null)
-      ? +(fim[chave] - ini[chave]).toFixed(2)
+  medidasDe(t).forEach(m => {
+    out[m.chave] = (ini[m.chave] != null && fim[m.chave] != null)
+      ? +(fim[m.chave] - ini[m.chave]).toFixed(2)
       : null;
   });
   return out;
 }
 
-const temLeitura = o => !!o && MEDIDAS.some(([c]) => o[c] != null);
+const temLeitura = (o, t) => !!o && medidasDe(t).some(m => o[m.chave] != null);
 
 /* ————————————————— resumo ————————————————— */
 
@@ -632,7 +662,7 @@ function desenharResumo() {
   }
 
   const soma = somatoria(t);
-  const completa = temLeitura(t.inicial) && temLeitura(t.final);
+  const completa = temLeitura(t.inicial, t) && temLeitura(t.final, t);
   const nums = document.createElement('div');
   nums.className = 'cartao';
   nums.innerHTML =
@@ -650,6 +680,25 @@ function desenharResumo() {
       ' na aba Leituras, para o app somar o turno inteiro.</p>') +
     '<div class="botoes"><button class="botao" id="editar-producao" type="button">Anotar produção</button></div>';
   alvo.appendChild(nums);
+
+  const extras = areaDe(t).extras;
+  if (extras.length) {
+    const ce = document.createElement('div');
+    ce.className = 'cartao';
+    ce.innerHTML = '<h2>' + areaDe(t).nome + ' — dados do turno</h2>' +
+      '<table class="tabela"><tbody>' +
+        extras.map(e => {
+          const v = (t.extras || {})[e.chave];
+          const mostrado = e.tipo === 'numero'
+            ? comUnidade(v == null ? null : v, e.unidade || '')
+            : (v || '—');
+          return '<tr><td>' + e.rotulo + '</td><td>' + mostrado + '</td></tr>';
+        }).join('') +
+      '</tbody></table>' +
+      '<div class="botoes"><button class="botao" id="editar-extras" type="button">Anotar</button></div>';
+    alvo.appendChild(ce);
+    $('#editar-extras').addEventListener('click', () => formExtras(t));
+  }
 
   const acoes = document.createElement('div');
   acoes.className = 'cartao';
@@ -676,6 +725,39 @@ function desenharResumo() {
 
 /* ————————————————— lista de turnos ————————————————— */
 
+/** Cartão das áreas carregadas, na aba Turnos. */
+function cartaoAreas() {
+  const c = document.createElement('div');
+  c.className = 'cartao';
+  const cfg = estado.config;
+  c.innerHTML =
+    '<h2>Áreas</h2>' +
+    '<p class="fraco" id="sobre-areas"></p>' +
+    '<div class="botoes">' +
+      '<label class="botao">' + (cfg ? 'Trocar arquivo' : 'Carregar áreas') +
+        '<input type="file" id="arquivo-areas-2" accept=".json,application/json" hidden></label>' +
+      (cfg ? '<button class="botao" id="apagar-areas" type="button">Apagar</button>' : '') +
+    '</div>' +
+    '<p class="fraco pequeno" id="estado-areas-2" role="status" aria-live="polite"></p>';
+
+  c.querySelector('#sobre-areas').textContent = cfg
+    ? cfg.areas.map(a => (a.codigo ? a.codigo + ' ' : '') + a.nome).join(' · ') +
+      (cfg.nomeArquivo ? ' — arquivo ' + cfg.nomeArquivo : '')
+    : 'Nenhuma área carregada. O app está usando a lista padrão.';
+
+  c.querySelector('#arquivo-areas-2').addEventListener('change',
+    ev => carregarAreas(ev.target.files[0], '#estado-areas-2'));
+  const apagar = c.querySelector('#apagar-areas');
+  if (apagar) apagar.addEventListener('click', async () => {
+    if (!confirm('Apagar as áreas deste aparelho? Os turnos continuam guardados.')) return;
+    await Dados.removerConfig();
+    estado.config = null;
+    desenhar();
+    avisar('Áreas apagadas.');
+  });
+  return c;
+}
+
 /** Versão à mostra, para dar para conferir se a atualização chegou. */
 function cartaoVersao() {
   const c = document.createElement('div');
@@ -697,6 +779,7 @@ function desenharTurnos() {
   alvo.innerHTML = '';
   if (!estado.turnos.length) {
     alvo.innerHTML = '<p class="vazio">Nenhum turno ainda.</p>';
+    alvo.appendChild(cartaoAreas());
     alvo.appendChild(cartaoVersao());
     return;
   }
@@ -708,7 +791,8 @@ function desenharTurnos() {
     b.innerHTML =
       '<span class="dados"><span class="nome"></span><span class="sub"></span></span>' +
       '<span class="ramal"></span>';
-    b.querySelector('.nome').textContent = dataBonita(t.data) + ' · ' + nomeTurno(t);
+    b.querySelector('.nome').textContent =
+      dataBonita(t.data) + ' · ' + nomeTurno(t) + ' · ' + areaDe(t).nome;
     b.querySelector('.sub').textContent =
       c.paradas + ' paradas · ' + c.acionamentos + ' detector' +
       (t.fim ? '' : ' · em andamento');
@@ -721,6 +805,7 @@ function desenharTurnos() {
     });
     alvo.appendChild(b);
   });
+  alvo.appendChild(cartaoAreas());
   alvo.appendChild(cartaoVersao());
 }
 
@@ -730,7 +815,9 @@ function desenhar() {
     $('#abas').hidden = true;
     $('#dica-vazio').textContent = (estado.turnos.length
       ? estado.turnos.length + ' turno(s) guardado(s) neste aparelho. '
-      : '') + 'Versão ' + VERSAO + '.';
+      : '') +
+      (estado.config ? estado.config.areas.length + ' área(s) carregada(s). ' : '') +
+      'Versão ' + VERSAO + '.';
     return;
   }
   $('#tela-vazio').hidden = true;
@@ -810,7 +897,19 @@ function grupoEscolhas(nome, valores, atual, campoLivre) {
 /* ——— turno ——— */
 
 function formTurno(t) {
+  const areas = areasDisponiveis();
+  const areaAtual = t ? t.areaId : (estado.prefs.areaId || areas[0].id);
+  const escolherArea = areas.length > 1 || (estado.config && estado.config.areas.length);
+
   const corpo =
+    (escolherArea
+      ? '<p class="rotulo-grupo">Área</p>' +
+        '<div class="escolhas" id="g-area">' +
+          areas.map(a => '<button type="button" data-valor="' + a.id + '"' +
+            (a.id === areaAtual ? ' class="ativo"' : '') + '>' +
+            (a.codigo ? a.codigo + ' · ' : '') + a.nome + '</button>').join('') +
+        '</div>'
+      : '') +
     '<div class="dupla-campo">' +
       '<label class="campo">Data<input id="f-data" type="date" value="' + (t ? t.data : hoje()) + '"></label>' +
       '<label class="campo">Início<input id="f-inicio" type="time" value="' +
@@ -838,12 +937,16 @@ function formTurno(t) {
     d.setHours(h, m, 0, 0);
     const operador = $('#f-operador').value.trim();
 
+    const areaId = escolherArea ? (escolhido('#g-area') || areas[0].id) : areas[0].id;
+    const areaNome = (areas.find(a => a.id === areaId) || areas[0]).nome;
+
     if (t) {
-      Object.assign(t, { data, nome, operador, inicio: d.toISOString() });
+      Object.assign(t, { data, nome, operador, areaId, areaNome, inicio: d.toISOString() });
     } else {
       const novo = {
-        id: id(), data, nome, operador, inicio: d.toISOString(), fim: null,
-        producao: null, paradas: [], detector: [], leituras: []
+        id: id(), data, nome, operador, areaId, areaNome,
+        inicio: d.toISOString(), fim: null,
+        producao: null, paradas: [], detector: [], leituras: [], equipamentos: {}
       };
       estado.turnos.push(novo);
       estado.atual = novo.id;
@@ -851,6 +954,7 @@ function formTurno(t) {
     }
     estado.prefs.turno = nome;
     estado.prefs.operador = operador;
+    estado.prefs.areaId = areaId;
     estado.prefs.atual = estado.atual;
     Dados.gravarPreferencias(estado.prefs);
     fecharCaixa();
@@ -906,15 +1010,18 @@ function formJanela(t, nome) {
 /* ——— parada ——— */
 
 function formParada(t, p) {
-  const usados = Array.from(new Set(estado.turnos.flatMap(x => x.paradas.map(y => y.motivo)).filter(Boolean)));
-  const sugestoes = Array.from(new Set(MOTIVOS.concat(usados)));
+  const usados = Array.from(new Set(estado.turnos
+    .filter(x => x.areaId === t.areaId)
+    .flatMap(x => x.paradas.map(y => y.motivo)).filter(Boolean)));
+  const sugestoes = Array.from(new Set(motivosDaArea(t).concat(usados)));
   const corpo =
     '<p class="rotulo-grupo">Equipamento</p>' +
-    grupoEscolhas('g-equip', EQUIPAMENTOS, p ? p.equip : EQUIPAMENTOS[0], 'f-equip-livre') +
-    '<label class="campo"' + (p && !EQUIPAMENTOS.includes(p.equip) ? '' : ' hidden') + '>' +
+    grupoEscolhas('g-equip', equipamentosDaArea(t),
+      p ? p.equip : equipamentosDaArea(t)[0], 'f-equip-livre') +
+    '<label class="campo"' + (p && !equipamentosDaArea(t).includes(p.equip) ? '' : ' hidden') + '>' +
       'Nome do equipamento' +
       '<input id="f-equip-livre" type="text" placeholder="ex.: Peneira 02, Correia TP 1407" value="' +
-      (p && !EQUIPAMENTOS.includes(p.equip) ? p.equip : '') + '"></label>' +
+      (p && !equipamentosDaArea(t).includes(p.equip) ? p.equip : '') + '"></label>' +
     '<label class="campo">Motivo' +
       '<input id="f-motivo" type="text" list="motivos-usados" value="' + (p ? (p.motivo || '') : '') + '">' +
       '<datalist id="motivos-usados">' +
@@ -1069,33 +1176,71 @@ function formExtremo(t, qual) {
     '<label class="campo">Hora<input id="f-hora" type="time" value="' +
       (o.hora ? paraCampo(o.hora) : paraCampo(qual === 'inicial' ? t.inicio : agora())) + '">' +
       '<button class="agora" type="button" data-agora="f-hora">agora</button></label>' +
-    MEDIDAS.map(([chave, rotulo, , unidade]) =>
-      '<label class="campo">' + rotulo + (unidade ? ' (' + unidade + ')' : '') +
-      '<input id="f-' + chave + '" type="text" inputmode="decimal" value="' +
-      (o[chave] != null ? mostrarNumero(o[chave]) : '') + '"></label>').join('') +
+    medidasDe(t).map(m =>
+      '<label class="campo">' + m.rotulo + (m.unidade ? ' (' + m.unidade + ')' : '') +
+      '<input id="f-' + m.chave + '" type="text" inputmode="decimal" value="' +
+      (o[m.chave] != null ? mostrarNumero(o[m.chave]) : '') + '"></label>').join('') +
     '<p class="fraco pequeno">É o número cheio do totalizador. A somatória do' +
     ' turno sai da diferença entre a final e a inicial.</p>';
 
   abrirCaixa(titulo, corpo, async () => {
     const dados = { hora: doCampo($('#f-hora').value, t) };
-    for (const [chave, rotulo] of MEDIDAS) {
-      const v = lerNumero($('#f-' + chave).value);
+    for (const m of medidasDe(t)) {
+      const v = lerNumero($('#f-' + m.chave).value);
       if (Number.isNaN(v)) {
-        erro('O valor de ' + rotulo.toLowerCase() + ' não é um número. Use só dígitos e vírgula.');
+        erro('O valor de ' + m.rotulo.toLowerCase() + ' não é um número. Use só dígitos e vírgula.');
         return;
       }
-      dados[chave] = v;
+      dados[m.chave] = v;
     }
     t[qual] = dados;
     fecharCaixa();
     await salvar();
     avisar(titulo + ' guardada.');
-  }, temLeitura(o) ? async () => {
+  }, temLeitura(o, t) ? async () => {
     delete t[qual];
     fecharCaixa();
     await salvar();
     avisar(titulo + ' apagada.');
   } : null);
+}
+
+/* ——— campos próprios da área ——— */
+
+function formExtras(t) {
+  const extras = areaDe(t).extras;
+  const atual = t.extras || {};
+  const corpo = extras.map(e =>
+    '<label class="campo">' + e.rotulo + (e.unidade ? ' (' + e.unidade + ')' : '') +
+    '<input id="x-' + e.chave + '" type="text"' +
+    (e.tipo === 'numero' ? ' inputmode="decimal"' : '') + ' value="' +
+    (atual[e.chave] != null
+      ? String(e.tipo === 'numero' ? mostrarNumero(atual[e.chave]) : atual[e.chave])
+        .replace(/"/g, '&quot;')
+      : '') + '">' +
+    (e.dica ? '<small>' + e.dica + '</small>' : '') +
+    '</label>').join('');
+
+  abrirCaixa(areaDe(t).nome + ' — dados do turno', corpo, async () => {
+    const dados = {};
+    for (const e of extras) {
+      const bruto = $('#x-' + e.chave).value.trim();
+      if (e.tipo === 'numero') {
+        const v = lerNumero(bruto);
+        if (Number.isNaN(v)) {
+          erro('O valor de ' + e.rotulo.toLowerCase() + ' não é um número.');
+          return;
+        }
+        dados[e.chave] = v;
+      } else {
+        dados[e.chave] = bruto || null;
+      }
+    }
+    t.extras = dados;
+    fecharCaixa();
+    await salvar();
+    avisar('Dados do turno guardados.');
+  });
 }
 
 /* ——— produção ——— */
@@ -1135,7 +1280,10 @@ function formProducao(t) {
 function relatorioTexto(t) {
   const c = contasDoTurno(t);
   const L = [];
-  L.push('BRITAGEM — ' + dataBonita(t.data) + ' · ' + nomeTurno(t) + (t.operador ? ' · ' + t.operador : ''));
+  const area = areaDe(t);
+  L.push((area.codigo ? area.codigo + ' ' : '') + area.nome.toUpperCase() +
+    ' — ' + dataBonita(t.data) + ' · ' + nomeTurno(t) + (t.operador ? ' · ' + t.operador : '') +
+    (area.io ? '\n' + area.io : ''));
   L.push('Início ' + hhmm(t.inicio) + (t.fim ? ' · fim ' + hhmm(t.fim) : ' · em andamento'));
   L.push('');
 
@@ -1187,40 +1335,42 @@ function relatorioTexto(t) {
   }
 
   if (t.leituras.length) {
-    L.push('LEITURAS  (hora · horímetro h · balança t · ácido)');
-    equipamentosDoTurno(t).filter(e => janela(t, e).propria).forEach(e => {
-    const j = janela(t, e);
-    L.push(['funcionamento', e, j.iniciou ? hhmm(j.inicio) : '', j.encerrou ? hhmm(j.fim) : '',
-      minutos(j.inicio, j.fim), '', '', '', '', '', '', j.correndo ? 'em andamento' : '']);
-  });
-  Object.keys(contasDoTurno(t).porEquip).sort().forEach(e =>
-    intervalosRodando(t, e).forEach(f =>
-      L.push(['rodando', e, hhmm(f.inicio), f.correndo ? '' : hhmm(f.fim),
-        minutos(f.inicio, f.fim), '', '', '', '', '', '', f.correndo ? 'em andamento' : ''])));
-  t.leituras.slice().sort((a, b) => new Date(a.hora) - new Date(b.hora)).forEach(l => {
+    L.push('LEITURAS  (hora · ' + medidasDe(t)
+      .map(m => m.rotulo + (m.unidade ? ' ' + m.unidade : '')).join(' · ') + ')');
+    t.leituras.slice().sort((a, b) => new Date(a.hora) - new Date(b.hora)).forEach(l => {
       L.push(l.parada
         ? '· ' + hhmm(l.hora) + '  ' + (l.obs || 'Parada.')
-        : '· ' + hhmm(l.hora) + '  ' + mostrarNumero(l.horimetro) +
-          '  ·  ' + mostrarNumero(l.balanca) +
-          '  ·  ' + mostrarNumero(l.acido) + (l.obs ? '  — ' + l.obs : ''));
+        : '· ' + hhmm(l.hora) + '  ' +
+          medidasDe(t).map(m => mostrarNumero(l[m.chave])).join('  ·  ') +
+          (l.obs ? '  — ' + l.obs : ''));
     });
     L.push('');
   }
 
   const soma = somatoria(t);
-  if (temLeitura(t.inicial) || temLeitura(t.final)) {
-    L.push('INICIAL E FINAL  (horímetro h · balança t · ácido)');
+  if (temLeitura(t.inicial, t) || temLeitura(t.final, t)) {
+    L.push('INICIAL E FINAL  (' + medidasDe(t)
+      .map(m => m.rotulo + (m.unidade ? ' ' + m.unidade : '')).join(' · ') + ')');
     [['inicial', 'Inicial'], ['final', 'Final  ']].forEach(([chave, rotulo]) => {
       const o = t[chave];
-      if (!temLeitura(o)) return;
+      if (!temLeitura(o, t)) return;
       L.push('· ' + rotulo + (o.hora ? ' ' + hhmm(o.hora) : '') + '   ' +
-        MEDIDAS.map(([m, , , u]) => comUnidade(o[m], u)).join('  ·  '));
+        medidasDe(t).map(m => comUnidade(o[m.chave], m.unidade)).join('  ·  '));
     });
-    if (temLeitura(t.inicial) && temLeitura(t.final)) {
-      L.push('  SOMATÓRIA: ' + MEDIDAS.map(([m, rotulo, compl, u]) =>
-        rotulo.toLowerCase() + ' ' + compl + ' ' + comUnidade(soma[m], u)).join(' · '));
+    if (temLeitura(t.inicial, t) && temLeitura(t.final, t)) {
+      L.push('  SOMATÓRIA: ' + medidasDe(t).map(m =>
+        m.rotulo + ' ' + (m.complemento || '') + ' ' +
+        comUnidade(soma[m.chave], m.unidade)).join(' · '));
     }
     L.push('');
+  }
+
+  const extrasArea = areaDe(t).extras.filter(e => (t.extras || {})[e.chave] != null);
+  if (extrasArea.length) {
+    extrasArea.forEach(e => {
+      const v = t.extras[e.chave];
+      L.push(e.rotulo + ': ' + (e.tipo === 'numero' ? comUnidade(v, e.unidade || '') : v));
+    });
   }
 
   if (t.producao != null) L.push('PRODUÇÃO: ' + mostrarNumero(t.producao) + ' t');
@@ -1275,16 +1425,22 @@ function baixarCsv(t) {
       l.horimetro, l.balanca, l.acido, l.obs]));
   [['inicial', 'leitura inicial'], ['final', 'leitura final']].forEach(([chave, rotulo]) => {
     const o = t[chave];
-    if (!temLeitura(o)) return;
+    if (!temLeitura(o, t)) return;
     L.push([chave, '', o.hora ? hhmm(o.hora) : '', '', '', '', '', rotulo,
       o.horimetro, o.balanca, o.acido, '']);
   });
-  if (temLeitura(t.inicial) && temLeitura(t.final)) {
+  if (temLeitura(t.inicial, t) && temLeitura(t.final, t)) {
     const soma = somatoria(t);
     L.push(['somatoria', '', '', '', '', '', '', 'final menos inicial',
       soma.horimetro, soma.balanca, soma.acido, '']);
   }
   // A produção vai na coluna da balança, que é de onde ela sai.
+  areaDe(t).extras.forEach(e => {
+    const v = (t.extras || {})[e.chave];
+    if (v == null || v === '') return;
+    L.push(['dado_do_turno', '', '', '', '', '', '', e.rotulo,
+      '', '', '', e.tipo === 'numero' ? comUnidade(v, e.unidade || '') : v]);
+  });
   if (t.producao != null) {
     L.push(['producao', '', '', '', '', '', '', 'informada por quem fez o turno',
       '', t.producao, '', 'toneladas']);
@@ -1310,7 +1466,23 @@ function trocarTela(nome) {
   $$('.aba').forEach(a => a.classList.toggle('ativa', a.dataset.tela === nome));
 }
 
+async function carregarAreas(arquivo, onde) {
+  if (!arquivo) return;
+  const el = $(onde);
+  el.textContent = 'Lendo o arquivo…';
+  try {
+    estado.config = await Dados.importarConfig(arquivo);
+    el.textContent = '';
+    desenhar();
+    avisar(estado.config.areas.length + ' área(s) carregada(s).');
+  } catch (e) {
+    el.textContent = e.message;
+  }
+}
+
 function ligarEventos() {
+  $('#arquivo-areas').addEventListener('change',
+    ev => carregarAreas(ev.target.files[0], '#estado-areas'));
   $('#abrir-turno').addEventListener('click', () => formTurno(null));
   $('#abrir-turno-2').addEventListener('click', () => formTurno(null));
   $('#editar-turno').addEventListener('click', () => formTurno(turnoAtual()));
@@ -1387,6 +1559,7 @@ function renomearBritagem(turnos) {
 async function iniciar() {
   ligarEventos();
   registrarSW();
+  estado.config = await Dados.lerConfig();
   estado.turnos = await Dados.lerTurnos();
   if (renomearBritagem(estado.turnos)) {
     try { await Dados.gravarTurnos(estado.turnos); } catch (e) { /* segue assim mesmo */ }

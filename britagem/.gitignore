@@ -1,0 +1,5 @@
+# A configuração das áreas vem das IOs, que têm controle de cópias.
+# Ela fica no aparelho de quem usa, nunca no repositório.
+areas*.json
+*.json
+!manifest.webmanifest
