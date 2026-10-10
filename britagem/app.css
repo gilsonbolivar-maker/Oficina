@@ -352,6 +352,11 @@ body {
 .registro .equip { font-weight: 700; }
 .registro .horas { font-variant-numeric: tabular-nums; color: var(--fraco); font-size: 14px; }
 .registro .motivo { display: block; margin-top: 2px; font-size: 14px; color: var(--fraco); }
+.registro .rodou {
+  display: block; margin-top: 4px;
+  font-size: 13px; color: var(--verde);
+  font-variant-numeric: tabular-nums;
+}
 .registro .dur {
   flex: 0 0 auto; font-variant-numeric: tabular-nums; font-weight: 700; color: var(--acento);
 }
@@ -380,6 +385,18 @@ body {
   color: var(--fraco); background: var(--cartao-alto);
   border: 1px solid var(--borda); border-radius: 9px; cursor: pointer;
 }
+
+/* ————— tempo rodando, por equipamento ————— */
+.bloco-equip { margin-top: 12px; }
+.bloco-equip:first-of-type { margin-top: 4px; }
+.linha-equip {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  padding-bottom: 4px;
+}
+.linha-equip b { font-size: 15px; }
+.linha-equip span { font-size: 13px; color: var(--verde); font-variant-numeric: tabular-nums; }
+.bloco-equip .tabela td { padding: 6px 4px; color: var(--fraco); }
+.bloco-equip .tabela td:last-child { color: var(--texto); font-weight: 600; }
 
 /* ————— números do resumo ————— */
 .placar { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; }
