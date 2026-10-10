@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.3.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.4.0';   // precisa casar com a VERSAO do sw.js
 
 const EQUIPAMENTOS = ['AA140', 'Rebritagem', 'Primário'];
 const MOTIVOS = [
@@ -160,6 +160,17 @@ function intervalosRodando(t, equip) {
   return saida;
 }
 
+/**
+ * Tempo parado somado até esta parada, contando as que começaram antes
+ * dela e ela mesma. Com `equip`, só daquele equipamento; sem, o turno todo.
+ */
+function acumuladoAte(t, p, equip) {
+  return t.paradas
+    .filter(x => (!equip || x.equip === equip) &&
+      new Date(x.inicio) <= new Date(p.inicio))
+    .reduce((soma, x) => soma + (minutos(x.inicio, x.fim || relogio(t)) || 0), 0);
+}
+
 /** Quanto aquele equipamento rodou antes desta parada começar. */
 function rodouAntes(t, p) {
   const anteriores = t.paradas.filter(x => x.equip === p.equip && x !== p &&
@@ -189,6 +200,7 @@ function fichaParada(p, t) {
       '</div>' +
       '<span class="motivo"></span>' +
       '<span class="rodou"></span>' +
+      '<span class="acumulado"></span>' +
       '<div class="acoes-linha">' +
         (aberta ? '<button class="botao principal" data-encerrar="1" type="button">Encerrar agora</button>' : '') +
         '<button class="botao" data-editar="1" type="button">Editar</button>' +
@@ -203,6 +215,13 @@ function fichaParada(p, t) {
   const campoRodou = div.querySelector('.rodou');
   if (antes) campoRodou.textContent = '▶ rodou ' + duracao(antes) + ' antes desta parada';
   else campoRodou.remove();
+
+  const noEquip = acumuladoAte(t, p, p.equip);
+  const noTurno = acumuladoAte(t, p);
+  div.querySelector('.acumulado').textContent =
+    'Σ parado até aqui: ' + p.equip + ' ' + duracao(noEquip) +
+    (noTurno !== noEquip ? ' · turno ' + duracao(noTurno) : '');
+
   div.querySelector('.dur').textContent = duracao(min);
 
   const enc = div.querySelector('[data-encerrar]');
@@ -250,6 +269,20 @@ function desenharTurno() {
     'início ' + hhmm(t.inicio) +
     (t.fim ? ' · encerrado ' + hhmm(t.fim) : ' · em andamento') +
     (t.operador ? ' · ' + t.operador : '');
+
+  // Quanto já parou, somado, sem precisar ir ao resumo.
+  const c = contasDoTurno(t);
+  const faixa = $('#acumulo');
+  if (!t.paradas.length) {
+    faixa.textContent = 'Nada parado até agora.';
+    faixa.classList.remove('tem-parada');
+  } else {
+    faixa.classList.add('tem-parada');
+    faixa.innerHTML =
+      '<b>⏸ ' + duracao(c.totalParado) + ' parado</b>' +
+      Object.keys(c.porEquip).sort()
+        .map(e => '<span>' + e + ' ' + duracao(c.porEquip[e]) + '</span>').join('');
+  }
 
   const abertas = t.paradas.filter(p => !p.fim);
   if (abertas.length) {
@@ -836,7 +869,8 @@ function relatorioTexto(t) {
     L.push('PARADAS');
     t.paradas.slice().sort((a, b) => new Date(a.inicio) - new Date(b.inicio)).forEach(p => {
       L.push('· ' + p.equip + '  ' + hhmm(p.inicio) + ' → ' + (p.fim ? hhmm(p.fim) : 'em andamento') +
-        '  (' + duracao(minutos(p.inicio, p.fim || relogio(t))) + ')' + (p.motivo ? ' — ' + p.motivo : ''));
+        '  (' + duracao(minutos(p.inicio, p.fim || relogio(t))) + ')' + (p.motivo ? ' — ' + p.motivo : '') +
+        '  [Σ ' + duracao(acumuladoAte(t, p)) + ']');
     });
     Object.keys(c.porEquip).sort().forEach(e => L.push('  ' + e + ': ' + duracao(c.porEquip[e])));
     L.push('  TOTAL PARADO: ' + duracao(c.totalParado));
@@ -869,7 +903,7 @@ function relatorioTexto(t) {
     Object.keys(contasDoTurno(t).porEquip).sort().forEach(e =>
     intervalosRodando(t, e).forEach(f =>
       L.push(['rodando', e, hhmm(f.inicio), f.correndo ? '' : hhmm(f.fim),
-        minutos(f.inicio, f.fim), '', '', '', '', f.correndo ? 'em andamento' : ''])));
+        minutos(f.inicio, f.fim), '', '', '', '', '', '', f.correndo ? 'em andamento' : ''])));
   t.leituras.slice().sort((a, b) => new Date(a.hora) - new Date(b.hora)).forEach(l => {
       L.push(l.parada
         ? '· ' + hhmm(l.hora) + '  ' + (l.obs || 'Parada.')
@@ -907,18 +941,23 @@ function csvCampo(v) {
 }
 
 function baixarCsv(t) {
-  const L = [['tipo', 'equipamento', 'inicio', 'fim', 'minutos', 'motivo', 'horimetro', 'balanca', 'acido', 'observacao']];
+  const L = [['tipo', 'equipamento', 'inicio', 'fim', 'minutos', 'acumulado_equip', 'acumulado_turno',
+    'motivo', 'horimetro', 'balanca', 'acido', 'observacao']];
   t.paradas.slice().sort((a, b) => new Date(a.inicio) - new Date(b.inicio)).forEach(p =>
-    L.push(['parada', p.equip, hhmm(p.inicio), p.fim ? hhmm(p.fim) : '', minutos(p.inicio, p.fim || relogio(t)), p.motivo, '', '', '', '']));
+    L.push(['parada', p.equip, hhmm(p.inicio), p.fim ? hhmm(p.fim) : '',
+      minutos(p.inicio, p.fim || relogio(t)),
+      acumuladoAte(t, p, p.equip), acumuladoAte(t, p), p.motivo, '', '', '', '']));
   t.detector.slice().sort((a, b) => new Date(a.inicio) - new Date(b.inicio)).forEach(d =>
     L.push(['detector', 'DT 1101', hhmm(d.inicio), d.fim ? hhmm(d.fim) : '',
-      minutos(d.inicio, d.fim), d.achou === true ? 'metal encontrado' : d.achou === false ? 'nao encontrado' : '', '', '', '', d.obs]));
+      minutos(d.inicio, d.fim), '', '',
+      d.achou === true ? 'metal encontrado' : d.achou === false ? 'nao encontrado' : '', '', '', '', d.obs]));
   Object.keys(contasDoTurno(t).porEquip).sort().forEach(e =>
     intervalosRodando(t, e).forEach(f =>
       L.push(['rodando', e, hhmm(f.inicio), f.correndo ? '' : hhmm(f.fim),
-        minutos(f.inicio, f.fim), '', '', '', '', f.correndo ? 'em andamento' : ''])));
+        minutos(f.inicio, f.fim), '', '', '', '', '', '', f.correndo ? 'em andamento' : ''])));
   t.leituras.slice().sort((a, b) => new Date(a.hora) - new Date(b.hora)).forEach(l =>
-    L.push(['leitura', '', hhmm(l.hora), '', '', l.parada ? 'parada' : '', l.horimetro, l.balanca, l.acido, l.obs]));
+    L.push(['leitura', '', hhmm(l.hora), '', '', '', '', l.parada ? 'parada' : '',
+      l.horimetro, l.balanca, l.acido, l.obs]));
   if (t.producao != null) L.push(['producao', '', '', '', '', '', '', '', t.producao, 'toneladas']);
 
   const texto = '﻿' + L.map(linha => linha.map(csvCampo).join(';')).join('\r\n');

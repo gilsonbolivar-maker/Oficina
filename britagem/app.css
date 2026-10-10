@@ -339,6 +339,25 @@ body {
 .topo .botoes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .topo .botoes .botao { padding: 13px 6px; font-size: 15px; }
 
+/* ————— faixa de acúmulo no cabeçalho ————— */
+.faixa-acumulo {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0; overflow-x: auto; scrollbar-width: none;
+  font-size: 13px; color: var(--fraco);
+  font-variant-numeric: tabular-nums;
+}
+.faixa-acumulo::-webkit-scrollbar { display: none; }
+.faixa-acumulo b {
+  flex: 0 0 auto;
+  padding: 5px 11px; border-radius: 999px;
+  color: #10192a; background: var(--acento);
+}
+.faixa-acumulo span {
+  flex: 0 0 auto;
+  padding: 5px 10px; border-radius: 999px;
+  border: 1px solid var(--borda); background: var(--cartao);
+}
+
 /* ————— linha do tempo e fichas ————— */
 .grupo { margin: 16px 0 8px; font-size: 13px; font-weight: 700; letter-spacing: 0.06em; color: var(--acento); }
 .registro {
@@ -355,6 +374,11 @@ body {
 .registro .rodou {
   display: block; margin-top: 4px;
   font-size: 13px; color: var(--verde);
+  font-variant-numeric: tabular-nums;
+}
+.registro .acumulado {
+  display: block; margin-top: 3px;
+  font-size: 13px; color: var(--acento);
   font-variant-numeric: tabular-nums;
 }
 .registro .dur {
