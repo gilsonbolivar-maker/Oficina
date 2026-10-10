@@ -12,7 +12,7 @@ adiante. Funciona **sem internet** e tudo fica neste aparelho.
 | ---- | ---------- |
 | **Turno** | Os três botões de registro e a linha do tempo do que já aconteceu. |
 | **Leituras** | A tabela hora a hora de horímetro, balança e ácido, com a variação calculada. |
-| **Resumo** | Tempo parado por equipamento, números do turno e a saída do relatório. |
+| **Resumo** | Tempo parado e **tempo rodando** por equipamento, números do turno e a saída do relatório. |
 | **Turnos** | Todos os turnos guardados; toque em um para voltar a ele. No fim da tela fica a **versão do app** e o botão de procurar atualização. |
 
 ## Como se usa no turno
@@ -33,6 +33,25 @@ adiante. Funciona **sem internet** e tudo fica neste aparelho.
 | **Detector DT 1101** | Hora que acionou, hora que liberou, 👍 metal encontrado / 👎 não encontrado |
 | **Leitura** | Hora, horímetro, balança, ácido — ou a marca de **usina parada**. Os campos abrem o **teclado numérico** e aceitam vírgula ou ponto. |
 | **Turno** | Data, turno (A a E), operador, produção em toneladas |
+
+## Tempo rodando
+
+O avesso das paradas também é calculado: para cada equipamento, o app mostra
+**cada intervalo em que ele esteve funcionando** — do começo do turno até a
+primeira parada, entre uma parada e a seguinte, e da última até o fim do turno —
+com o total e a porcentagem do turno.
+
+```
+AA140                 13h47 rodando · 92% do turno
+  06h00 → 07h00                               1h
+  07h30 → 09h00                             1h30
+  09h45 → 21h01                            11h17
+```
+
+Na linha do tempo, cada parada traz embaixo **▶ rodou 1h30 antes desta parada**.
+Paradas do mesmo equipamento que se sobrepõem contam como uma só.
+
+## Contas de tempo
 
 A duração é **calculada sozinha** a partir do início e do fim, então não há
 mais conta de minuto na mão. Parada esquecida aberta para de contar no fim do

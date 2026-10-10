@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.2.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.3.0';   // precisa casar com a VERSAO do sw.js
 
 const EQUIPAMENTOS = ['AA140', 'Rebritagem', 'Primário'];
 const MOTIVOS = [
@@ -133,6 +133,46 @@ function avisar(txt) {
   avisoTimer = setTimeout(() => { el.hidden = true; }, 2200);
 }
 
+/* ————————————————— tempo rodando ————————————————— */
+
+/**
+ * Os intervalos em que aquele equipamento esteve funcionando: do começo do
+ * turno até a primeira parada, entre uma parada e a seguinte, e da última
+ * até o fim do turno. Paradas que se sobrepõem contam como uma só.
+ */
+function intervalosRodando(t, equip) {
+  const fimTurno = relogio(t);
+  const ps = t.paradas.filter(p => p.equip === equip)
+    .slice().sort((a, b) => new Date(a.inicio) - new Date(b.inicio));
+
+  const saida = [];
+  let ponteiro = t.inicio;
+  ps.forEach(p => {
+    if (new Date(p.inicio) > new Date(ponteiro)) {
+      saida.push({ inicio: ponteiro, fim: p.inicio });
+    }
+    const fim = p.fim || fimTurno;
+    if (new Date(fim) > new Date(ponteiro)) ponteiro = fim;
+  });
+  if (new Date(fimTurno) > new Date(ponteiro)) {
+    saida.push({ inicio: ponteiro, fim: fimTurno, correndo: !t.fim });
+  }
+  return saida;
+}
+
+/** Quanto aquele equipamento rodou antes desta parada começar. */
+function rodouAntes(t, p) {
+  const anteriores = t.paradas.filter(x => x.equip === p.equip && x !== p &&
+    new Date(x.inicio) < new Date(p.inicio));
+  let ponteiro = t.inicio;
+  anteriores.forEach(x => {
+    const fim = x.fim || relogio(t);
+    if (new Date(fim) > new Date(ponteiro)) ponteiro = fim;
+  });
+  const m = minutos(ponteiro, p.inicio);
+  return m && m > 0 ? m : null;
+}
+
 /* ————————————————— linha do tempo ————————————————— */
 
 function fichaParada(p, t) {
@@ -148,6 +188,7 @@ function fichaParada(p, t) {
         (aberta ? '<span class="etiqueta aberta">em andamento</span>' : '') +
       '</div>' +
       '<span class="motivo"></span>' +
+      '<span class="rodou"></span>' +
       '<div class="acoes-linha">' +
         (aberta ? '<button class="botao principal" data-encerrar="1" type="button">Encerrar agora</button>' : '') +
         '<button class="botao" data-editar="1" type="button">Editar</button>' +
@@ -158,6 +199,10 @@ function fichaParada(p, t) {
   div.querySelector('.equip').textContent = p.equip;
   div.querySelector('.horas').textContent = hhmm(p.inicio) + ' → ' + (p.fim ? hhmm(p.fim) : '…');
   div.querySelector('.motivo').textContent = p.motivo || 'sem motivo anotado';
+  const antes = rodouAntes(t, p);
+  const campoRodou = div.querySelector('.rodou');
+  if (antes) campoRodou.textContent = '▶ rodou ' + duracao(antes) + ' antes desta parada';
+  else campoRodou.remove();
   div.querySelector('.dur').textContent = duracao(min);
 
   const enc = div.querySelector('[data-encerrar]');
@@ -347,6 +392,36 @@ function desenharResumo() {
     cartao.appendChild(tb);
   }
   alvo.appendChild(cartao);
+
+  // Tempo rodando: o avesso das paradas, equipamento por equipamento.
+  const equipamentos = Object.keys(c.porEquip).sort();
+  if (equipamentos.length) {
+    const rod = document.createElement('div');
+    rod.className = 'cartao';
+    rod.innerHTML = '<h2>Tempo rodando</h2>';
+    equipamentos.forEach(e => {
+      const faixas = intervalosRodando(t, e);
+      const total = faixas.reduce((soma, f) => soma + (minutos(f.inicio, f.fim) || 0), 0);
+      const disp = c.duracaoTurno ? Math.round(100 * total / c.duracaoTurno) : 0;
+
+      const bloco = document.createElement('div');
+      bloco.className = 'bloco-equip';
+      bloco.innerHTML =
+        '<div class="linha-equip"><b></b><span></span></div>' +
+        '<table class="tabela"><tbody>' +
+          (faixas.length
+            ? faixas.map(f =>
+                '<tr><td>' + hhmm(f.inicio) + ' → ' + (f.correndo ? 'agora' : hhmm(f.fim)) + '</td>' +
+                '<td>' + duracao(minutos(f.inicio, f.fim)) + '</td></tr>').join('')
+            : '<tr><td colspan="2" class="fraco">Não rodou em nenhum momento.</td></tr>') +
+        '</tbody></table>';
+      bloco.querySelector('b').textContent = e;
+      bloco.querySelector('span').textContent =
+        duracao(total) + ' rodando · ' + disp + '% do turno';
+      rod.appendChild(bloco);
+    });
+    alvo.appendChild(rod);
+  }
 
   const nums = document.createElement('div');
   nums.className = 'cartao';
@@ -766,6 +841,17 @@ function relatorioTexto(t) {
     Object.keys(c.porEquip).sort().forEach(e => L.push('  ' + e + ': ' + duracao(c.porEquip[e])));
     L.push('  TOTAL PARADO: ' + duracao(c.totalParado));
     L.push('');
+
+    L.push('TEMPO RODANDO');
+    Object.keys(c.porEquip).sort().forEach(e => {
+      const faixas = intervalosRodando(t, e);
+      const total = faixas.reduce((soma, f) => soma + (minutos(f.inicio, f.fim) || 0), 0);
+      const disp = c.duracaoTurno ? Math.round(100 * total / c.duracaoTurno) : 0;
+      L.push('· ' + e + ': ' + duracao(total) + ' (' + disp + '% do turno)');
+      faixas.forEach(f => L.push('    ' + hhmm(f.inicio) + ' → ' +
+        (f.correndo ? 'agora' : hhmm(f.fim)) + '  (' + duracao(minutos(f.inicio, f.fim)) + ')'));
+    });
+    L.push('');
   }
 
   if (t.detector.length) {
@@ -780,7 +866,11 @@ function relatorioTexto(t) {
 
   if (t.leituras.length) {
     L.push('LEITURAS  (hora · horímetro · balança · ácido)');
-    t.leituras.slice().sort((a, b) => new Date(a.hora) - new Date(b.hora)).forEach(l => {
+    Object.keys(contasDoTurno(t).porEquip).sort().forEach(e =>
+    intervalosRodando(t, e).forEach(f =>
+      L.push(['rodando', e, hhmm(f.inicio), f.correndo ? '' : hhmm(f.fim),
+        minutos(f.inicio, f.fim), '', '', '', '', f.correndo ? 'em andamento' : ''])));
+  t.leituras.slice().sort((a, b) => new Date(a.hora) - new Date(b.hora)).forEach(l => {
       L.push(l.parada
         ? '· ' + hhmm(l.hora) + '  ' + (l.obs || 'Parada.')
         : '· ' + hhmm(l.hora) + '  ' + mostrarNumero(l.horimetro) +
@@ -823,6 +913,10 @@ function baixarCsv(t) {
   t.detector.slice().sort((a, b) => new Date(a.inicio) - new Date(b.inicio)).forEach(d =>
     L.push(['detector', 'DT 1101', hhmm(d.inicio), d.fim ? hhmm(d.fim) : '',
       minutos(d.inicio, d.fim), d.achou === true ? 'metal encontrado' : d.achou === false ? 'nao encontrado' : '', '', '', '', d.obs]));
+  Object.keys(contasDoTurno(t).porEquip).sort().forEach(e =>
+    intervalosRodando(t, e).forEach(f =>
+      L.push(['rodando', e, hhmm(f.inicio), f.correndo ? '' : hhmm(f.fim),
+        minutos(f.inicio, f.fim), '', '', '', '', f.correndo ? 'em andamento' : ''])));
   t.leituras.slice().sort((a, b) => new Date(a.hora) - new Date(b.hora)).forEach(l =>
     L.push(['leitura', '', hhmm(l.hora), '', '', l.parada ? 'parada' : '', l.horimetro, l.balanca, l.acido, l.obs]));
   if (t.producao != null) L.push(['producao', '', '', '', '', '', '', '', t.producao, 'toneladas']);
