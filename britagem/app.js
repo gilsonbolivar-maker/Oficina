@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '2.2.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '2.3.0';   // precisa casar com a VERSAO do sw.js
 
 const EQUIPAMENTOS = ['AA140', 'Primário', 'Rebritagem'];
 const MOTIVOS = [
@@ -412,8 +412,8 @@ function cartaoExtremo(t, qual) {
     '</div>' +
     (o.hora ? '<p class="fraco pequeno">às ' + hhmm(o.hora) + '</p>' : '') +
     '<table class="tabela"><tbody>' +
-      MEDIDAS.map(([chave, rotulo]) =>
-        '<tr><td>' + rotulo + '</td><td>' + mostrarNumero(o[chave]) + '</td></tr>').join('') +
+      MEDIDAS.map(([chave, rotulo, , unidade]) =>
+        '<tr><td>' + rotulo + '</td><td>' + comUnidade(o[chave], unidade) + '</td></tr>').join('') +
     '</tbody></table>';
   c.querySelector('h2').textContent = qual === 'inicial' ? 'Leitura inicial' : 'Leitura final';
   c.querySelector('button').addEventListener('click', () => formExtremo(t, qual));
@@ -433,9 +433,9 @@ function cartaoSomatoria(t) {
   }
   const tb = document.createElement('table');
   tb.className = 'tabela';
-  tb.innerHTML = '<tbody>' + MEDIDAS.map(([chave, rotulo, complemento]) =>
+  tb.innerHTML = '<tbody>' + MEDIDAS.map(([chave, rotulo, complemento, unidade]) =>
     '<tr><td>' + rotulo + ' ' + complemento + '</td>' +
-    '<td class="total">' + mostrarNumero(soma[chave]) + '</td></tr>').join('') + '</tbody>';
+    '<td class="total">' + comUnidade(soma[chave], unidade) + '</td></tr>').join('') + '</tbody>';
   c.appendChild(tb);
 
   const conta = document.createElement('p');
@@ -464,7 +464,8 @@ function desenharLeituras() {
     const ordenadas = t.leituras.slice().sort((a, b) => new Date(a.hora) - new Date(b.hora));
     const tab = document.createElement('table');
     tab.className = 'tabela';
-    tab.innerHTML = '<thead><tr><th>Hora</th><th>Horímetro</th><th>Balança</th><th>Ácido</th><th></th></tr></thead>';
+    tab.innerHTML = '<thead><tr><th>Hora</th><th>Horímetro (h)</th>' +
+      '<th>Balança (t)</th><th>Ácido</th><th></th></tr></thead>';
     const corpo = document.createElement('tbody');
 
     let anterior = null;
@@ -505,10 +506,16 @@ function desenharLeituras() {
 /* ————————————————— leitura inicial e final ————————————————— */
 
 const MEDIDAS = [
-  ['horimetro', 'Horímetro', 'rodado'],
-  ['balanca', 'Balança', 'no turno'],
-  ['acido', 'Ácido', 'consumido']
+  ['horimetro', 'Horímetro', 'rodado', 'h'],
+  ['balanca', 'Balança', 'no turno', 't'],
+  ['acido', 'Ácido', 'consumido', '']
 ];
+
+/** Número com a unidade colada, quando a medida tem uma. */
+function comUnidade(v, unidade) {
+  const n = mostrarNumero(v);
+  return (n === '—' || !unidade) ? n : n + ' ' + unidade;
+}
 
 /** Diferença entre o que o totalizador marcava no fim e no começo. */
 function somatoria(t) {
@@ -633,8 +640,8 @@ function desenharResumo() {
     '<table class="tabela"><tbody>' +
       '<tr><td>Duração do turno</td><td>' + duracao(c.duracaoTurno) + '</td></tr>' +
       '<tr><td>Horímetro rodado</td><td>' +
-        mostrarNumero(soma.horimetro != null ? soma.horimetro : c.horimetro) + '</td></tr>' +
-      (completa ? '<tr><td>Balança no turno</td><td>' + mostrarNumero(soma.balanca) + '</td></tr>' : '') +
+        comUnidade(soma.horimetro != null ? soma.horimetro : c.horimetro, 'h') + '</td></tr>' +
+      (completa ? '<tr><td>Balança no turno</td><td>' + comUnidade(soma.balanca, 't') + '</td></tr>' : '') +
       (completa ? '<tr><td>Ácido consumido</td><td>' + mostrarNumero(soma.acido) + '</td></tr>' : '') +
       '<tr><td>Ácido médio por hora</td><td>' + mostrarNumero(c.acidoMedio) + '</td></tr>' +
       '<tr><td>Produção</td><td>' + (t.producao != null ? mostrarNumero(t.producao) + ' t' : '—') + '</td></tr>' +
@@ -1003,12 +1010,12 @@ function formLeitura(t, l) {
       'A usina estava parada nesta hora' +
     '</label>' +
     '<div id="campos-leitura">' +
-      '<label class="campo">Horímetro' +
+      '<label class="campo">Horímetro (h)' +
         (ultima ? ' <span class="fraco">(última: ' + mostrarNumero(ultima.horimetro) + ')</span>' : '') +
         '<input id="f-horimetro" type="text" inputmode="decimal" enterkeyhint="next" value="' +
         (l && l.horimetro != null ? mostrarNumero(l.horimetro) : '') + '"></label>' +
       '<div class="dupla-campo">' +
-        '<label class="campo">Balança<input id="f-balanca" type="text" inputmode="decimal" enterkeyhint="next" value="' +
+        '<label class="campo">Balança (t)<input id="f-balanca" type="text" inputmode="decimal" enterkeyhint="next" value="' +
           (l && l.balanca != null ? mostrarNumero(l.balanca) : '') + '"></label>' +
         '<label class="campo">Ácido<input id="f-acido" type="text" inputmode="decimal" enterkeyhint="done" value="' +
           (l && l.acido != null ? mostrarNumero(l.acido) : '') + '"></label>' +
@@ -1062,8 +1069,8 @@ function formExtremo(t, qual) {
     '<label class="campo">Hora<input id="f-hora" type="time" value="' +
       (o.hora ? paraCampo(o.hora) : paraCampo(qual === 'inicial' ? t.inicio : agora())) + '">' +
       '<button class="agora" type="button" data-agora="f-hora">agora</button></label>' +
-    MEDIDAS.map(([chave, rotulo]) =>
-      '<label class="campo">' + rotulo +
+    MEDIDAS.map(([chave, rotulo, , unidade]) =>
+      '<label class="campo">' + rotulo + (unidade ? ' (' + unidade + ')' : '') +
       '<input id="f-' + chave + '" type="text" inputmode="decimal" value="' +
       (o[chave] != null ? mostrarNumero(o[chave]) : '') + '"></label>').join('') +
     '<p class="fraco pequeno">É o número cheio do totalizador. A somatória do' +
@@ -1094,9 +1101,20 @@ function formExtremo(t, qual) {
 /* ——— produção ——— */
 
 function formProducao(t) {
-  const corpo = '<label class="campo">Produção do turno, em toneladas' +
+  // A balança já pesa em tonelada: a diferença dela é a própria produção.
+  const daBalanca = somatoria(t).balanca;
+  const corpo =
+    '<label class="campo">Produção do turno, em toneladas' +
     '<input id="f-producao" type="text" inputmode="decimal" enterkeyhint="done" value="' +
-    (t.producao != null ? mostrarNumero(t.producao) : '') + '"></label>';
+    (t.producao != null ? mostrarNumero(t.producao) : '') + '"></label>' +
+    (daBalanca != null
+      ? '<p class="fraco pequeno">A balança marcou <b>' + mostrarNumero(daBalanca) +
+        ' t</b> entre a leitura inicial e a final.</p>' +
+        '<div class="botoes"><button class="botao" id="f-usar-balanca" type="button">' +
+        'Usar ' + mostrarNumero(daBalanca) + ' t</button></div>'
+      : '<p class="fraco pequeno">Anotando a leitura inicial e a final da balança,' +
+        ' o app sugere a produção sozinho.</p>');
+
   abrirCaixa('Produção', corpo, async () => {
     const v = lerNumero($('#f-producao').value);
     if (Number.isNaN(v)) { erro('A produção não é um número. Use só dígitos e vírgula.'); return; }
@@ -1104,6 +1122,11 @@ function formProducao(t) {
     fecharCaixa();
     await salvar();
     avisar('Produção anotada.');
+  });
+
+  const usar = $('#f-usar-balanca');
+  if (usar) usar.addEventListener('click', () => {
+    $('#f-producao').value = mostrarNumero(daBalanca);
   });
 }
 
@@ -1164,7 +1187,7 @@ function relatorioTexto(t) {
   }
 
   if (t.leituras.length) {
-    L.push('LEITURAS  (hora · horímetro · balança · ácido)');
+    L.push('LEITURAS  (hora · horímetro h · balança t · ácido)');
     equipamentosDoTurno(t).filter(e => janela(t, e).propria).forEach(e => {
     const j = janela(t, e);
     L.push(['funcionamento', e, j.iniciou ? hhmm(j.inicio) : '', j.encerrou ? hhmm(j.fim) : '',
@@ -1186,23 +1209,23 @@ function relatorioTexto(t) {
 
   const soma = somatoria(t);
   if (temLeitura(t.inicial) || temLeitura(t.final)) {
-    L.push('INICIAL E FINAL  (horímetro · balança · ácido)');
+    L.push('INICIAL E FINAL  (horímetro h · balança t · ácido)');
     [['inicial', 'Inicial'], ['final', 'Final  ']].forEach(([chave, rotulo]) => {
       const o = t[chave];
       if (!temLeitura(o)) return;
       L.push('· ' + rotulo + (o.hora ? ' ' + hhmm(o.hora) : '') + '   ' +
-        MEDIDAS.map(([m]) => mostrarNumero(o[m])).join('  ·  '));
+        MEDIDAS.map(([m, , , u]) => comUnidade(o[m], u)).join('  ·  '));
     });
     if (temLeitura(t.inicial) && temLeitura(t.final)) {
-      L.push('  SOMATÓRIA: ' + MEDIDAS.map(([m, rotulo, compl]) =>
-        rotulo.toLowerCase() + ' ' + compl + ' ' + mostrarNumero(soma[m])).join(' · '));
+      L.push('  SOMATÓRIA: ' + MEDIDAS.map(([m, rotulo, compl, u]) =>
+        rotulo.toLowerCase() + ' ' + compl + ' ' + comUnidade(soma[m], u)).join(' · '));
     }
     L.push('');
   }
 
   if (t.producao != null) L.push('PRODUÇÃO: ' + mostrarNumero(t.producao) + ' t');
   const horimetroRodado = soma.horimetro != null ? soma.horimetro : c.horimetro;
-  if (horimetroRodado != null) L.push('Horímetro rodado: ' + mostrarNumero(horimetroRodado));
+  if (horimetroRodado != null) L.push('Horímetro rodado: ' + comUnidade(horimetroRodado, 'h'));
   if (c.acidoMedio != null) L.push('Ácido médio por hora: ' + mostrarNumero(c.acidoMedio));
   return L.join('\n');
 }
@@ -1229,7 +1252,7 @@ function csvCampo(v) {
 
 function baixarCsv(t) {
   const L = [['tipo', 'equipamento', 'inicio', 'fim', 'minutos', 'acumulado_equip', 'acumulado_turno',
-    'motivo', 'horimetro', 'balanca', 'acido', 'observacao']];
+    'motivo', 'horimetro_h', 'balanca_t', 'acido', 'observacao']];
   t.paradas.slice().sort((a, b) => new Date(a.inicio) - new Date(b.inicio)).forEach(p =>
     L.push(['parada', p.equip, hhmm(p.inicio), p.fim ? hhmm(p.fim) : '',
       minutos(p.inicio, p.fim || relogio(t)),

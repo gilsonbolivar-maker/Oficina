@@ -63,19 +63,19 @@ A aba **Leituras** segue a ordem do turno:
 
 ```
 ┌ Leitura inicial ──────── às 00h30 ┐
-│ Horímetro              4150,28    │
-│ Balança              355781,15    │
+│ Horímetro            4150,28 h    │
+│ Balança            355781,15 t    │
 │ Ácido                     1388    │
 ├ Hora a hora ──────────────────────┤
 │ 01h30   4151,33   83   0,68       │
 │ 02h30   4152,20   84   0,69       │
 ├ Leitura final ────────── às 07h30 ┐
-│ Horímetro              4156,68    │
-│ Balança              356310,20    │
+│ Horímetro            4156,68 h    │
+│ Balança            356310,20 t    │
 │ Ácido                     1392    │
 ├ Somatória do turno ───────────────┤
-│ Horímetro rodado           6,40   │
-│ Balança no turno         529,05   │
+│ Horímetro rodado         6,40 h   │
+│ Balança no turno       529,05 t   │
 │ Ácido consumido               4   │
 └───────────────────────────────────┘
 ```
@@ -84,6 +84,12 @@ A **somatória é a diferença entre a final e a inicial**, medida por medida �
 conta que antes era feita de cabeça no fim do turno. Ela também entra nos
 **Números do turno**, no relatório copiado e no CSV (linhas `inicial`, `final`
 e `somatoria`).
+
+**Unidades:** o horímetro marca **horas (h)** e a balança, **toneladas (t)** —
+as duas aparecem com a unidade na tela, no relatório e no cabeçalho do CSV
+(`horimetro_h`, `balanca_t`). Como a balança já pesa em tonelada, a produção do
+turno pode sair dela: o campo **Produção** sugere o valor e enche sozinho ao
+toque de um botão.
 
 As leituras **hora a hora** continuam como estavam: ali a balança e o ácido são
 a marcação do momento, não o totalizador.
