@@ -4,9 +4,9 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.4.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '2.0.0';   // precisa casar com a VERSAO do sw.js
 
-const EQUIPAMENTOS = ['AA140', 'Rebritagem', 'Primário'];
+const EQUIPAMENTOS = ['AA140', 'Britagem', 'Rebritagem'];
 const MOTIVOS = [
   'Moega baixa', 'Moega vazia', 'Moega cheia', 'Troca de turno', 'Jantar',
   'Afunilamento', 'Entupimento', 'Obstrução no chute', 'Elétrica',
@@ -133,6 +133,43 @@ function avisar(txt) {
   avisoTimer = setTimeout(() => { el.hidden = true; }, 2200);
 }
 
+/* ————————————————— janela de cada equipamento ————————————————— */
+
+/**
+ * AA140, Britagem e Rebritagem entram e saem em horas próprias, que não são
+ * as do turno. A janela é esse horário de início e término; quando não foi
+ * informada, vale a do turno, para o que já estava registrado continuar certo.
+ */
+function janela(t, equip) {
+  const e = (t.equipamentos || {})[equip] || {};
+  const inicio = e.inicio || t.inicio;
+  const fimTurno = relogio(t);
+  const fim = e.fim || fimTurno;
+  return {
+    inicio,
+    fim: new Date(fim) < new Date(inicio) ? inicio : fim,
+    propria: !!(e.inicio || e.fim),
+    iniciou: !!e.inicio,
+    encerrou: !!e.fim,
+    correndo: !e.fim && !t.fim
+  };
+}
+
+/** Minutos de [a,b] que caem dentro da janela — nada conta fora dela. */
+function minutosNaJanela(a, b, j) {
+  const ini = new Date(a) < new Date(j.inicio) ? j.inicio : a;
+  const fim = new Date(b) > new Date(j.fim) ? j.fim : b;
+  return new Date(fim) > new Date(ini) ? minutos(ini, fim) : 0;
+}
+
+/** Lista para a tela: os três de sempre, mais o que apareceu no turno. */
+function equipamentosDoTurno(t) {
+  const nomes = EQUIPAMENTOS.slice();
+  t.paradas.forEach(p => { if (!nomes.includes(p.equip)) nomes.push(p.equip); });
+  Object.keys(t.equipamentos || {}).forEach(n => { if (!nomes.includes(n)) nomes.push(n); });
+  return nomes;
+}
+
 /* ————————————————— tempo rodando ————————————————— */
 
 /**
@@ -141,21 +178,22 @@ function avisar(txt) {
  * até o fim do turno. Paradas que se sobrepõem contam como uma só.
  */
 function intervalosRodando(t, equip) {
-  const fimTurno = relogio(t);
+  const j = janela(t, equip);
   const ps = t.paradas.filter(p => p.equip === equip)
     .slice().sort((a, b) => new Date(a.inicio) - new Date(b.inicio));
 
   const saida = [];
-  let ponteiro = t.inicio;
+  let ponteiro = j.inicio;
   ps.forEach(p => {
-    if (new Date(p.inicio) > new Date(ponteiro)) {
-      saida.push({ inicio: ponteiro, fim: p.inicio });
+    const ini = new Date(p.inicio) < new Date(j.inicio) ? j.inicio : p.inicio;
+    if (new Date(ini) > new Date(ponteiro)) {
+      saida.push({ inicio: ponteiro, fim: ini });
     }
-    const fim = p.fim || fimTurno;
-    if (new Date(fim) > new Date(ponteiro)) ponteiro = fim;
+    const fim = p.fim || j.fim;
+    if (new Date(fim) > new Date(ponteiro)) ponteiro = new Date(fim) > new Date(j.fim) ? j.fim : fim;
   });
-  if (new Date(fimTurno) > new Date(ponteiro)) {
-    saida.push({ inicio: ponteiro, fim: fimTurno, correndo: !t.fim });
+  if (new Date(j.fim) > new Date(ponteiro)) {
+    saida.push({ inicio: ponteiro, fim: j.fim, correndo: j.correndo });
   }
   return saida;
 }
@@ -168,20 +206,24 @@ function acumuladoAte(t, p, equip) {
   return t.paradas
     .filter(x => (!equip || x.equip === equip) &&
       new Date(x.inicio) <= new Date(p.inicio))
-    .reduce((soma, x) => soma + (minutos(x.inicio, x.fim || relogio(t)) || 0), 0);
+    .reduce((soma, x) => {
+      const j = janela(t, x.equip);
+      return soma + minutosNaJanela(x.inicio, x.fim || j.fim, j);
+    }, 0);
 }
 
 /** Quanto aquele equipamento rodou antes desta parada começar. */
 function rodouAntes(t, p) {
+  const j = janela(t, p.equip);
   const anteriores = t.paradas.filter(x => x.equip === p.equip && x !== p &&
     new Date(x.inicio) < new Date(p.inicio));
-  let ponteiro = t.inicio;
+  let ponteiro = j.inicio;
   anteriores.forEach(x => {
-    const fim = x.fim || relogio(t);
+    const fim = x.fim || j.fim;
     if (new Date(fim) > new Date(ponteiro)) ponteiro = fim;
   });
-  const m = minutos(ponteiro, p.inicio);
-  return m && m > 0 ? m : null;
+  const m = minutosNaJanela(ponteiro, p.inicio, j);
+  return m > 0 ? m : null;
 }
 
 /* ————————————————— linha do tempo ————————————————— */
@@ -258,6 +300,49 @@ function fichaDetector(d, t) {
   return div;
 }
 
+/** Cartão com a janela de cada equipamento, no alto da tela do turno. */
+function cartaoEquipamentos(t) {
+  const c = document.createElement('div');
+  c.className = 'cartao equipamentos';
+  c.innerHTML = '<h2>Funcionamento</h2>';
+
+  equipamentosDoTurno(t).forEach(nome => {
+    const j = janela(t, nome);
+    const linha = document.createElement('div');
+    linha.className = 'linha-janela' + (j.correndo && j.iniciou ? ' rodando' : '');
+    linha.innerHTML =
+      '<button class="nome-equip" type="button"></button>' +
+      '<span class="quando"></span>' +
+      '<button class="botao pequeno" data-acao="1" type="button"></button>';
+
+    linha.querySelector('.nome-equip').textContent = nome;
+    linha.querySelector('.quando').textContent =
+      !j.iniciou ? 'não iniciou'
+      : j.encerrou ? hhmm(j.inicio) + ' → ' + hhmm(j.fim)
+      : 'desde ' + hhmm(j.inicio) + ' · ' + duracao(minutos(j.inicio, j.fim));
+
+    const acao = linha.querySelector('[data-acao]');
+    acao.textContent = !j.iniciou ? 'Iniciar' : j.encerrou ? 'Reabrir' : 'Encerrar';
+    acao.addEventListener('click', async () => {
+      const eq = (t.equipamentos = t.equipamentos || {});
+      const atual = (eq[nome] = eq[nome] || {});
+      if (!j.iniciou) { atual.inicio = agora(); avisar(nome + ' iniciou às ' + hhmm(atual.inicio) + '.'); }
+      else if (j.encerrou) { atual.fim = null; avisar(nome + ' reaberto.'); }
+      else { atual.fim = agora(); avisar(nome + ' encerrado às ' + hhmm(atual.fim) + '.'); }
+      await salvar();
+    });
+    linha.querySelector('.nome-equip').addEventListener('click', () => formJanela(t, nome));
+    c.appendChild(linha);
+  });
+
+  const dica = document.createElement('p');
+  dica.className = 'fraco pequeno';
+  dica.textContent = 'Cada equipamento tem a sua hora de entrar e sair. ' +
+    'Toque no nome para corrigir os horários.';
+  c.appendChild(dica);
+  return c;
+}
+
 function desenharTurno() {
   const t = turnoAtual();
   const alvo = $('#linha-tempo');
@@ -284,6 +369,8 @@ function desenharTurno() {
         .map(e => '<span>' + e + ' ' + duracao(c.porEquip[e]) + '</span>').join('');
   }
 
+  alvo.appendChild(cartaoEquipamentos(t));
+
   const abertas = t.paradas.filter(p => !p.fim);
   if (abertas.length) {
     const h = document.createElement('div');
@@ -298,8 +385,11 @@ function desenharTurno() {
     .sort((a, b) => new Date(a.hora) - new Date(b.hora));
 
   if (!eventos.length && !abertas.length) {
-    alvo.innerHTML = '<p class="vazio">Nada registrado ainda.<br>' +
-      'Use os botões acima conforme as coisas forem acontecendo.</p>';
+    const vazio = document.createElement('p');
+    vazio.className = 'vazio';
+    vazio.innerHTML = 'Nenhuma parada registrada.<br>' +
+      'Use os botões acima conforme as coisas forem acontecendo.';
+    alvo.appendChild(vazio);
     return;
   }
 
@@ -371,7 +461,8 @@ function contasDoTurno(t) {
   const porEquip = {};
   let totalParado = 0;
   t.paradas.forEach(p => {
-    const m = minutos(p.inicio, p.fim || relogio(t)) || 0;
+    const j = janela(t, p.equip);
+    const m = minutosNaJanela(p.inicio, p.fim || j.fim, j);
     porEquip[p.equip] = (porEquip[p.equip] || 0) + m;
     totalParado += m;
   });
@@ -433,14 +524,21 @@ function desenharResumo() {
     rod.className = 'cartao';
     rod.innerHTML = '<h2>Tempo rodando</h2>';
     equipamentos.forEach(e => {
+      const j = janela(t, e);
       const faixas = intervalosRodando(t, e);
       const total = faixas.reduce((soma, f) => soma + (minutos(f.inicio, f.fim) || 0), 0);
-      const disp = c.duracaoTurno ? Math.round(100 * total / c.duracaoTurno) : 0;
+      const emCampo = minutos(j.inicio, j.fim) || 0;
+      const disp = emCampo ? Math.round(100 * total / emCampo) : 0;
 
       const bloco = document.createElement('div');
       bloco.className = 'bloco-equip';
       bloco.innerHTML =
         '<div class="linha-equip"><b></b><span></span></div>' +
+        '<p class="fraco pequeno janela-equip">' +
+          hhmm(j.inicio) + ' → ' + (j.correndo ? 'agora' : hhmm(j.fim)) +
+          ' · ' + duracao(emCampo) + ' em campo' +
+          (j.propria ? '' : ' (horário do turno)') +
+        '</p>' +
         '<table class="tabela"><tbody>' +
           (faixas.length
             ? faixas.map(f =>
@@ -450,7 +548,7 @@ function desenharResumo() {
         '</tbody></table>';
       bloco.querySelector('b').textContent = e;
       bloco.querySelector('span').textContent =
-        duracao(total) + ' rodando · ' + disp + '% do turno';
+        duracao(total) + ' rodando · ' + disp + '%';
       rod.appendChild(bloco);
     });
     alvo.appendChild(rod);
@@ -683,6 +781,44 @@ function formTurno(t) {
   } : null);
 }
 
+/* ——— janela do equipamento ——— */
+
+function formJanela(t, nome) {
+  const j = janela(t, nome);
+  const e = (t.equipamentos || {})[nome] || {};
+  const corpo =
+    '<div class="dupla-campo">' +
+      '<label class="campo">Início<input id="f-ini" type="time" value="' +
+        (e.inicio ? paraCampo(e.inicio) : '') + '">' +
+        '<button class="agora" type="button" data-agora="f-ini">agora</button></label>' +
+      '<label class="campo">Término<input id="f-fim" type="time" value="' +
+        (e.fim ? paraCampo(e.fim) : '') + '">' +
+        '<button class="agora" type="button" data-agora="f-fim">agora</button></label>' +
+    '</div>' +
+    '<p class="fraco pequeno">Deixe em branco enquanto não começou ou enquanto' +
+    ' ainda está rodando. Sem horário, vale o do turno (' + hhmm(t.inicio) + ').</p>';
+
+  abrirCaixa('Funcionamento · ' + nome, corpo, async () => {
+    const inicio = doCampo($('#f-ini').value, t);
+    const fim = doCampo($('#f-fim').value, t);
+    if (inicio && fim && new Date(fim) < new Date(inicio)) {
+      erro('O término está antes do início.');
+      return;
+    }
+    const eq = (t.equipamentos = t.equipamentos || {});
+    if (!inicio && !fim) delete eq[nome];
+    else eq[nome] = { inicio, fim };
+    fecharCaixa();
+    await salvar();
+    avisar('Horário de ' + nome + ' guardado.');
+  }, (e.inicio || e.fim) ? async () => {
+    delete t.equipamentos[nome];
+    fecharCaixa();
+    await salvar();
+    avisar('Horário de ' + nome + ' limpo.');
+  } : null);
+}
+
 /* ——— parada ——— */
 
 function formParada(t, p) {
@@ -865,6 +1001,17 @@ function relatorioTexto(t) {
   L.push('Início ' + hhmm(t.inicio) + (t.fim ? ' · fim ' + hhmm(t.fim) : ' · em andamento'));
   L.push('');
 
+  const comJanela = equipamentosDoTurno(t).filter(e => janela(t, e).propria);
+  if (comJanela.length) {
+    L.push('FUNCIONAMENTO');
+    comJanela.forEach(e => {
+      const j = janela(t, e);
+      L.push('· ' + e + '  ' + (j.iniciou ? hhmm(j.inicio) : 'não iniciou') +
+        (j.encerrou ? ' → ' + hhmm(j.fim) : j.iniciou ? ' → em andamento' : ''));
+    });
+    L.push('');
+  }
+
   if (t.paradas.length) {
     L.push('PARADAS');
     t.paradas.slice().sort((a, b) => new Date(a.inicio) - new Date(b.inicio)).forEach(p => {
@@ -878,10 +1025,13 @@ function relatorioTexto(t) {
 
     L.push('TEMPO RODANDO');
     Object.keys(c.porEquip).sort().forEach(e => {
+      const j = janela(t, e);
       const faixas = intervalosRodando(t, e);
       const total = faixas.reduce((soma, f) => soma + (minutos(f.inicio, f.fim) || 0), 0);
-      const disp = c.duracaoTurno ? Math.round(100 * total / c.duracaoTurno) : 0;
-      L.push('· ' + e + ': ' + duracao(total) + ' (' + disp + '% do turno)');
+      const emCampo = minutos(j.inicio, j.fim) || 0;
+      const disp = emCampo ? Math.round(100 * total / emCampo) : 0;
+      L.push('· ' + e + '  ' + hhmm(j.inicio) + ' → ' + (j.correndo ? 'agora' : hhmm(j.fim)) +
+        ':  ' + duracao(total) + ' rodando de ' + duracao(emCampo) + ' (' + disp + '%)');
       faixas.forEach(f => L.push('    ' + hhmm(f.inicio) + ' → ' +
         (f.correndo ? 'agora' : hhmm(f.fim)) + '  (' + duracao(minutos(f.inicio, f.fim)) + ')'));
     });
@@ -900,7 +1050,12 @@ function relatorioTexto(t) {
 
   if (t.leituras.length) {
     L.push('LEITURAS  (hora · horímetro · balança · ácido)');
-    Object.keys(contasDoTurno(t).porEquip).sort().forEach(e =>
+    equipamentosDoTurno(t).filter(e => janela(t, e).propria).forEach(e => {
+    const j = janela(t, e);
+    L.push(['funcionamento', e, j.iniciou ? hhmm(j.inicio) : '', j.encerrou ? hhmm(j.fim) : '',
+      minutos(j.inicio, j.fim), '', '', '', '', '', '', j.correndo ? 'em andamento' : '']);
+  });
+  Object.keys(contasDoTurno(t).porEquip).sort().forEach(e =>
     intervalosRodando(t, e).forEach(f =>
       L.push(['rodando', e, hhmm(f.inicio), f.correndo ? '' : hhmm(f.fim),
         minutos(f.inicio, f.fim), '', '', '', '', '', '', f.correndo ? 'em andamento' : ''])));
@@ -951,6 +1106,11 @@ function baixarCsv(t) {
     L.push(['detector', 'DT 1101', hhmm(d.inicio), d.fim ? hhmm(d.fim) : '',
       minutos(d.inicio, d.fim), '', '',
       d.achou === true ? 'metal encontrado' : d.achou === false ? 'nao encontrado' : '', '', '', '', d.obs]));
+  equipamentosDoTurno(t).filter(e => janela(t, e).propria).forEach(e => {
+    const j = janela(t, e);
+    L.push(['funcionamento', e, j.iniciou ? hhmm(j.inicio) : '', j.encerrou ? hhmm(j.fim) : '',
+      minutos(j.inicio, j.fim), '', '', '', '', '', '', j.correndo ? 'em andamento' : '']);
+  });
   Object.keys(contasDoTurno(t).porEquip).sort().forEach(e =>
     intervalosRodando(t, e).forEach(f =>
       L.push(['rodando', e, hhmm(f.inicio), f.correndo ? '' : hhmm(f.fim),

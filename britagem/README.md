@@ -29,10 +29,32 @@ adiante. Funciona **sem internet** e tudo fica neste aparelho.
 
 | Registro | Campos |
 | -------- | ------ |
-| **Parada** | Equipamento (AA140, Rebritagem, Primário — ou **Outro…**, que abre o campo para digitar o nome), motivo, início e fim |
+| **Funcionamento** | Por equipamento: hora de entrar e de sair |
+| **Parada** | Equipamento (AA140, Britagem, Rebritagem — ou **Outro…**, que abre o campo para digitar o nome), motivo, início e fim |
 | **Detector DT 1101** | Hora que acionou, hora que liberou, 👍 metal encontrado / 👎 não encontrado |
 | **Leitura** | Hora, horímetro, balança, ácido — ou a marca de **usina parada**. Os campos abrem o **teclado numérico** e aceitam vírgula ou ponto. |
 | **Turno** | Data, turno (A a E), operador, produção em toneladas |
+
+## Cada equipamento tem a sua hora
+
+**AA140, Britagem e Rebritagem entram e saem em horários próprios**, que não são
+os do turno. O cartão **Funcionamento**, no alto da tela do turno, guarda isso:
+
+```
+Funcionamento
+AA140          07h00 → 15h00       [Reabrir]
+Britagem       06h30 → 14h00       [Reabrir]
+Rebritagem     desde 08h00 · 5h20  [Encerrar]
+```
+
+- **Iniciar** / **Encerrar** marcam a hora na mesma batida;
+- toque no **nome** para corrigir ou limpar os horários;
+- sem horário informado, vale o do turno — o que já estava registrado
+  continua valendo.
+
+É essa janela que manda nas contas: o tempo rodando e a porcentagem saem
+**sobre o tempo em que aquele equipamento esteve em campo**, não sobre o turno
+inteiro. Parada fora da janela não entra na conta.
 
 ## Acúmulo de tempo parado
 
@@ -63,10 +85,10 @@ primeira parada, entre uma parada e a seguinte, e da última até o fim do turno
 com o total e a porcentagem do turno.
 
 ```
-AA140                 13h47 rodando · 92% do turno
-  06h00 → 07h00                               1h
-  07h30 → 09h00                             1h30
-  09h45 → 21h01                            11h17
+AA140                            7h30 rodando · 94%
+07h00 → 15h00 · 8h em campo
+  07h00 → 09h00                               2h
+  09h30 → 15h00                             5h30
 ```
 
 Na linha do tempo, cada parada traz embaixo **▶ rodou 1h30 antes desta parada**.
