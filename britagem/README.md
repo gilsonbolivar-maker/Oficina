@@ -11,7 +11,7 @@ adiante. Funciona **sem internet** e tudo fica neste aparelho.
 | Tela | Serve para |
 | ---- | ---------- |
 | **Turno** | Os três botões de registro e a linha do tempo do que já aconteceu. |
-| **Leituras** | A tabela hora a hora de horímetro, balança e ácido, com a variação calculada. |
+| **Leituras** | A leitura **inicial** e **final** dos totalizadores, a tabela hora a hora e a **somatória do turno**. |
 | **Resumo** | Tempo parado e **tempo rodando** por equipamento, números do turno e a saída do relatório. |
 | **Turnos** | Todos os turnos guardados; toque em um para voltar a ele. No fim da tela fica a **versão do app** e o botão de procurar atualização. |
 
@@ -32,7 +32,8 @@ adiante. Funciona **sem internet** e tudo fica neste aparelho.
 | **Funcionamento** | Por equipamento: hora de entrar e de sair |
 | **Parada** | Equipamento (AA140, Primário, Rebritagem — ou **Outro…**, que abre o campo para digitar o nome), motivo, início e fim |
 | **Detector DT 1101** | Hora que acionou, hora que liberou, 👍 metal encontrado / 👎 não encontrado |
-| **Leitura** | Hora, horímetro, balança, ácido — ou a marca de **usina parada**. Os campos abrem o **teclado numérico** e aceitam vírgula ou ponto. |
+| **Leitura inicial / final** | Hora e o número cheio do totalizador: horímetro, balança e ácido |
+| **Leitura hora a hora** | Hora, horímetro, balança, ácido — ou a marca de **usina parada**. Os campos abrem o **teclado numérico** e aceitam vírgula ou ponto. |
 | **Turno** | Data, turno (A a E), operador, produção em toneladas |
 
 ## Cada equipamento tem a sua hora
@@ -55,6 +56,37 @@ Rebritagem     desde 08h00 · 5h20  [Encerrar]
 É essa janela que manda nas contas: o tempo rodando e a porcentagem saem
 **sobre o tempo em que aquele equipamento esteve em campo**, não sobre o turno
 inteiro. Parada fora da janela não entra na conta.
+
+## Leitura inicial, final e somatória
+
+A aba **Leituras** segue a ordem do turno:
+
+```
+┌ Leitura inicial ──────── às 00h30 ┐
+│ Horímetro              4150,28    │
+│ Balança              355781,15    │
+│ Ácido                     1388    │
+├ Hora a hora ──────────────────────┤
+│ 01h30   4151,33   83   0,68       │
+│ 02h30   4152,20   84   0,69       │
+├ Leitura final ────────── às 07h30 ┐
+│ Horímetro              4156,68    │
+│ Balança              356310,20    │
+│ Ácido                     1392    │
+├ Somatória do turno ───────────────┤
+│ Horímetro rodado           6,40   │
+│ Balança no turno         529,05   │
+│ Ácido consumido               4   │
+└───────────────────────────────────┘
+```
+
+A **somatória é a diferença entre a final e a inicial**, medida por medida — a
+conta que antes era feita de cabeça no fim do turno. Ela também entra nos
+**Números do turno**, no relatório copiado e no CSV (linhas `inicial`, `final`
+e `somatoria`).
+
+As leituras **hora a hora** continuam como estavam: ali a balança e o ácido são
+a marcação do momento, não o totalizador.
 
 ## Acúmulo de tempo parado
 

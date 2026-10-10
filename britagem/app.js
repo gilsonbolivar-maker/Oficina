@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '2.1.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '2.2.0';   // precisa casar com a VERSAO do sw.js
 
 const EQUIPAMENTOS = ['AA140', 'Primário', 'Rebritagem'];
 const MOTIVOS = [
@@ -402,58 +402,128 @@ function desenharTurno() {
 
 /* ————————————————— leituras ————————————————— */
 
+function cartaoExtremo(t, qual) {
+  const o = t[qual] || {};
+  const c = document.createElement('div');
+  c.className = 'cartao';
+  c.innerHTML =
+    '<div class="cabeca"><h2></h2>' +
+      '<button class="botao pequeno" type="button">' + (temLeitura(o) ? 'Editar' : 'Anotar') + '</button>' +
+    '</div>' +
+    (o.hora ? '<p class="fraco pequeno">às ' + hhmm(o.hora) + '</p>' : '') +
+    '<table class="tabela"><tbody>' +
+      MEDIDAS.map(([chave, rotulo]) =>
+        '<tr><td>' + rotulo + '</td><td>' + mostrarNumero(o[chave]) + '</td></tr>').join('') +
+    '</tbody></table>';
+  c.querySelector('h2').textContent = qual === 'inicial' ? 'Leitura inicial' : 'Leitura final';
+  c.querySelector('button').addEventListener('click', () => formExtremo(t, qual));
+  return c;
+}
+
+function cartaoSomatoria(t) {
+  const soma = somatoria(t);
+  const c = document.createElement('div');
+  c.className = 'cartao somatoria';
+  c.innerHTML = '<h2>Somatória do turno</h2>';
+
+  if (!temLeitura(t.inicial) || !temLeitura(t.final)) {
+    c.innerHTML += '<p class="fraco">Anote a leitura inicial e a final para o app' +
+      ' fazer a conta — é a diferença entre as duas.</p>';
+    return c;
+  }
+  const tb = document.createElement('table');
+  tb.className = 'tabela';
+  tb.innerHTML = '<tbody>' + MEDIDAS.map(([chave, rotulo, complemento]) =>
+    '<tr><td>' + rotulo + ' ' + complemento + '</td>' +
+    '<td class="total">' + mostrarNumero(soma[chave]) + '</td></tr>').join('') + '</tbody>';
+  c.appendChild(tb);
+
+  const conta = document.createElement('p');
+  conta.className = 'fraco pequeno';
+  conta.textContent = 'final − inicial, medida por medida.';
+  c.appendChild(conta);
+  return c;
+}
+
 function desenharLeituras() {
   const t = turnoAtual();
   const alvo = $('#lista-leituras');
   alvo.innerHTML = '';
   if (!t) return;
 
+  alvo.appendChild(cartaoExtremo(t, 'inicial'));
+
+  const horarias = document.createElement('div');
+  horarias.className = 'cartao';
+  horarias.innerHTML = '<h2>Hora a hora</h2>';
+
   if (!t.leituras.length) {
-    alvo.innerHTML = '<p class="vazio">Sem leituras ainda.<br>' +
-      'Toque em <b>+ Leitura</b> para anotar horímetro, balança e ácido.</p>';
-    return;
+    horarias.innerHTML += '<p class="fraco">Sem leituras ainda. Toque em' +
+      ' <b>+ Leitura</b> para anotar horímetro, balança e ácido.</p>';
+  } else {
+    const ordenadas = t.leituras.slice().sort((a, b) => new Date(a.hora) - new Date(b.hora));
+    const tab = document.createElement('table');
+    tab.className = 'tabela';
+    tab.innerHTML = '<thead><tr><th>Hora</th><th>Horímetro</th><th>Balança</th><th>Ácido</th><th></th></tr></thead>';
+    const corpo = document.createElement('tbody');
+
+    let anterior = null;
+    ordenadas.forEach(l => {
+      const tr = document.createElement('tr');
+      if (l.parada) tr.className = 'parada';
+      const delta = (anterior && !l.parada && !anterior.parada && l.horimetro != null && anterior.horimetro != null)
+        ? (l.horimetro - anterior.horimetro)
+        : null;
+
+      tr.innerHTML = '<td></td><td></td><td></td><td></td>' +
+        '<td><button type="button">editar</button></td>';
+      const td = tr.querySelectorAll('td');
+      td[0].textContent = hhmm(l.hora);
+      if (l.parada) {
+        td[1].colSpan = 3;
+        td[1].textContent = l.obs || 'Parada.';
+        td[2].remove(); td[3].remove();
+      } else {
+        td[1].innerHTML = mostrarNumero(l.horimetro) +
+          (delta != null ? ' <span class="delta">+' + mostrarNumero(+delta.toFixed(2)) + '</span>' : '');
+        td[2].textContent = mostrarNumero(l.balanca);
+        td[3].textContent = mostrarNumero(l.acido);
+      }
+      tr.querySelector('button').addEventListener('click', () => formLeitura(t, l));
+      corpo.appendChild(tr);
+      if (!l.parada) anterior = l;
+    });
+    tab.appendChild(corpo);
+    horarias.appendChild(tab);
   }
+  alvo.appendChild(horarias);
 
-  const ordenadas = t.leituras.slice().sort((a, b) => new Date(a.hora) - new Date(b.hora));
-  const tab = document.createElement('table');
-  tab.className = 'tabela';
-  tab.innerHTML = '<thead><tr><th>Hora</th><th>Horímetro</th><th>Balança</th><th>Ácido</th><th></th></tr></thead>';
-  const corpo = document.createElement('tbody');
-
-  let anterior = null;
-  ordenadas.forEach(l => {
-    const tr = document.createElement('tr');
-    if (l.parada) tr.className = 'parada';
-    const delta = (anterior && !l.parada && !anterior.parada && l.horimetro != null && anterior.horimetro != null)
-      ? (l.horimetro - anterior.horimetro)
-      : null;
-
-    tr.innerHTML =
-      '<td></td>' +
-      '<td></td>' +
-      '<td></td>' +
-      '<td></td>' +
-      '<td><button type="button">editar</button></td>';
-    const td = tr.querySelectorAll('td');
-    td[0].textContent = hhmm(l.hora);
-    if (l.parada) {
-      td[1].colSpan = 3;
-      td[1].textContent = l.obs || 'Parada.';
-      td[2].remove(); td[3].remove();
-    } else {
-      td[1].innerHTML = mostrarNumero(l.horimetro) +
-        (delta != null ? ' <span class="delta">+' + mostrarNumero(+delta.toFixed(2)) + '</span>' : '');
-      td[2].textContent = mostrarNumero(l.balanca);
-      td[3].textContent = mostrarNumero(l.acido);
-    }
-    tr.querySelector('button').addEventListener('click', () => formLeitura(t, l));
-    corpo.appendChild(tr);
-    if (!l.parada) anterior = l;
-  });
-
-  tab.appendChild(corpo);
-  alvo.appendChild(tab);
+  alvo.appendChild(cartaoExtremo(t, 'final'));
+  alvo.appendChild(cartaoSomatoria(t));
 }
+
+/* ————————————————— leitura inicial e final ————————————————— */
+
+const MEDIDAS = [
+  ['horimetro', 'Horímetro', 'rodado'],
+  ['balanca', 'Balança', 'no turno'],
+  ['acido', 'Ácido', 'consumido']
+];
+
+/** Diferença entre o que o totalizador marcava no fim e no começo. */
+function somatoria(t) {
+  const ini = t.inicial || {};
+  const fim = t.final || {};
+  const out = {};
+  MEDIDAS.forEach(([chave]) => {
+    out[chave] = (ini[chave] != null && fim[chave] != null)
+      ? +(fim[chave] - ini[chave]).toFixed(2)
+      : null;
+  });
+  return out;
+}
+
+const temLeitura = o => !!o && MEDIDAS.some(([c]) => o[c] != null);
 
 /* ————————————————— resumo ————————————————— */
 
@@ -554,16 +624,23 @@ function desenharResumo() {
     alvo.appendChild(rod);
   }
 
+  const soma = somatoria(t);
+  const completa = temLeitura(t.inicial) && temLeitura(t.final);
   const nums = document.createElement('div');
   nums.className = 'cartao';
   nums.innerHTML =
     '<h2>Números do turno</h2>' +
     '<table class="tabela"><tbody>' +
       '<tr><td>Duração do turno</td><td>' + duracao(c.duracaoTurno) + '</td></tr>' +
-      '<tr><td>Horímetro rodado</td><td>' + mostrarNumero(c.horimetro) + '</td></tr>' +
-      '<tr><td>Ácido médio</td><td>' + mostrarNumero(c.acidoMedio) + '</td></tr>' +
+      '<tr><td>Horímetro rodado</td><td>' +
+        mostrarNumero(soma.horimetro != null ? soma.horimetro : c.horimetro) + '</td></tr>' +
+      (completa ? '<tr><td>Balança no turno</td><td>' + mostrarNumero(soma.balanca) + '</td></tr>' : '') +
+      (completa ? '<tr><td>Ácido consumido</td><td>' + mostrarNumero(soma.acido) + '</td></tr>' : '') +
+      '<tr><td>Ácido médio por hora</td><td>' + mostrarNumero(c.acidoMedio) + '</td></tr>' +
       '<tr><td>Produção</td><td>' + (t.producao != null ? mostrarNumero(t.producao) + ' t' : '—') + '</td></tr>' +
     '</tbody></table>' +
+    (completa ? '' : '<p class="fraco pequeno">Anote a leitura inicial e a final,' +
+      ' na aba Leituras, para o app somar o turno inteiro.</p>') +
     '<div class="botoes"><button class="botao" id="editar-producao" type="button">Anotar produção</button></div>';
   alvo.appendChild(nums);
 
@@ -976,6 +1053,44 @@ function formLeitura(t, l) {
   alterna();
 }
 
+/* ——— leitura inicial e final ——— */
+
+function formExtremo(t, qual) {
+  const o = t[qual] || {};
+  const titulo = qual === 'inicial' ? 'Leitura inicial' : 'Leitura final';
+  const corpo =
+    '<label class="campo">Hora<input id="f-hora" type="time" value="' +
+      (o.hora ? paraCampo(o.hora) : paraCampo(qual === 'inicial' ? t.inicio : agora())) + '">' +
+      '<button class="agora" type="button" data-agora="f-hora">agora</button></label>' +
+    MEDIDAS.map(([chave, rotulo]) =>
+      '<label class="campo">' + rotulo +
+      '<input id="f-' + chave + '" type="text" inputmode="decimal" value="' +
+      (o[chave] != null ? mostrarNumero(o[chave]) : '') + '"></label>').join('') +
+    '<p class="fraco pequeno">É o número cheio do totalizador. A somatória do' +
+    ' turno sai da diferença entre a final e a inicial.</p>';
+
+  abrirCaixa(titulo, corpo, async () => {
+    const dados = { hora: doCampo($('#f-hora').value, t) };
+    for (const [chave, rotulo] of MEDIDAS) {
+      const v = lerNumero($('#f-' + chave).value);
+      if (Number.isNaN(v)) {
+        erro('O valor de ' + rotulo.toLowerCase() + ' não é um número. Use só dígitos e vírgula.');
+        return;
+      }
+      dados[chave] = v;
+    }
+    t[qual] = dados;
+    fecharCaixa();
+    await salvar();
+    avisar(titulo + ' guardada.');
+  }, temLeitura(o) ? async () => {
+    delete t[qual];
+    fecharCaixa();
+    await salvar();
+    avisar(titulo + ' apagada.');
+  } : null);
+}
+
 /* ——— produção ——— */
 
 function formProducao(t) {
@@ -1069,9 +1184,26 @@ function relatorioTexto(t) {
     L.push('');
   }
 
+  const soma = somatoria(t);
+  if (temLeitura(t.inicial) || temLeitura(t.final)) {
+    L.push('INICIAL E FINAL  (horímetro · balança · ácido)');
+    [['inicial', 'Inicial'], ['final', 'Final  ']].forEach(([chave, rotulo]) => {
+      const o = t[chave];
+      if (!temLeitura(o)) return;
+      L.push('· ' + rotulo + (o.hora ? ' ' + hhmm(o.hora) : '') + '   ' +
+        MEDIDAS.map(([m]) => mostrarNumero(o[m])).join('  ·  '));
+    });
+    if (temLeitura(t.inicial) && temLeitura(t.final)) {
+      L.push('  SOMATÓRIA: ' + MEDIDAS.map(([m, rotulo, compl]) =>
+        rotulo.toLowerCase() + ' ' + compl + ' ' + mostrarNumero(soma[m])).join(' · '));
+    }
+    L.push('');
+  }
+
   if (t.producao != null) L.push('PRODUÇÃO: ' + mostrarNumero(t.producao) + ' t');
-  if (c.horimetro != null) L.push('Horímetro rodado: ' + mostrarNumero(c.horimetro));
-  if (c.acidoMedio != null) L.push('Ácido médio: ' + mostrarNumero(c.acidoMedio));
+  const horimetroRodado = soma.horimetro != null ? soma.horimetro : c.horimetro;
+  if (horimetroRodado != null) L.push('Horímetro rodado: ' + mostrarNumero(horimetroRodado));
+  if (c.acidoMedio != null) L.push('Ácido médio por hora: ' + mostrarNumero(c.acidoMedio));
   return L.join('\n');
 }
 
@@ -1118,7 +1250,22 @@ function baixarCsv(t) {
   t.leituras.slice().sort((a, b) => new Date(a.hora) - new Date(b.hora)).forEach(l =>
     L.push(['leitura', '', hhmm(l.hora), '', '', '', '', l.parada ? 'parada' : '',
       l.horimetro, l.balanca, l.acido, l.obs]));
-  if (t.producao != null) L.push(['producao', '', '', '', '', '', '', '', t.producao, 'toneladas']);
+  [['inicial', 'leitura inicial'], ['final', 'leitura final']].forEach(([chave, rotulo]) => {
+    const o = t[chave];
+    if (!temLeitura(o)) return;
+    L.push([chave, '', o.hora ? hhmm(o.hora) : '', '', '', '', '', rotulo,
+      o.horimetro, o.balanca, o.acido, '']);
+  });
+  if (temLeitura(t.inicial) && temLeitura(t.final)) {
+    const soma = somatoria(t);
+    L.push(['somatoria', '', '', '', '', '', '', 'final menos inicial',
+      soma.horimetro, soma.balanca, soma.acido, '']);
+  }
+  // A produção vai na coluna da balança, que é de onde ela sai.
+  if (t.producao != null) {
+    L.push(['producao', '', '', '', '', '', '', 'informada por quem fez o turno',
+      '', t.producao, '', 'toneladas']);
+  }
 
   const texto = '﻿' + L.map(linha => linha.map(csvCampo).join(';')).join('\r\n');
   const blob = new Blob([texto], { type: 'text/csv;charset=utf-8' });
