@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.1.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.2.0';   // precisa casar com a VERSAO do sw.js
 
 const EQUIPAMENTOS = ['AA140', 'Rebritagem', 'Primário'];
 const MOTIVOS = [
@@ -386,11 +386,28 @@ function desenharResumo() {
 
 /* ————————————————— lista de turnos ————————————————— */
 
+/** Versão à mostra, para dar para conferir se a atualização chegou. */
+function cartaoVersao() {
+  const c = document.createElement('div');
+  c.className = 'cartao';
+  c.innerHTML =
+    '<h2>Versão do app</h2>' +
+    '<p class="fraco" id="versao-app"></p>' +
+    '<p class="fraco pequeno">Se uma melhoria foi publicada e o app continua igual,' +
+    ' toque aqui: ele busca a versão nova e recarrega sozinho.</p>' +
+    '<div class="botoes"><button class="botao" id="procurar-atualizacao" type="button">' +
+    'Procurar atualização</button></div>';
+  c.querySelector('#versao-app').textContent = 'Versão ' + VERSAO + '.';
+  c.querySelector('#procurar-atualizacao').addEventListener('click', procurarAtualizacao);
+  return c;
+}
+
 function desenharTurnos() {
   const alvo = $('#lista-turnos');
   alvo.innerHTML = '';
   if (!estado.turnos.length) {
     alvo.innerHTML = '<p class="vazio">Nenhum turno ainda.</p>';
+    alvo.appendChild(cartaoVersao());
     return;
   }
   estado.turnos.slice().sort((a, b) => new Date(b.inicio) - new Date(a.inicio)).forEach(t => {
@@ -414,15 +431,16 @@ function desenharTurnos() {
     });
     alvo.appendChild(b);
   });
+  alvo.appendChild(cartaoVersao());
 }
 
 function desenhar() {
   if (!turnoAtual()) {
     $$('.tela').forEach(s => { s.hidden = s.id !== 'tela-vazio'; });
     $('#abas').hidden = true;
-    $('#dica-vazio').textContent = estado.turnos.length
-      ? estado.turnos.length + ' turno(s) guardado(s) neste aparelho.'
-      : '';
+    $('#dica-vazio').textContent = (estado.turnos.length
+      ? estado.turnos.length + ' turno(s) guardado(s) neste aparelho. '
+      : '') + 'Versão ' + VERSAO + '.';
     return;
   }
   $('#tela-vazio').hidden = true;
@@ -843,20 +861,44 @@ function ligarEventos() {
 }
 
 const TINHA_CONTROLADOR = !!(navigator.serviceWorker && navigator.serviceWorker.controller);
+let registroSW = null;
 
 function registrarSW() {
   if (!('serviceWorker' in navigator)) return;
+
+  // Quando a versão nova assume, a aba recarrega uma vez para pegar o
+  // app novo. Na primeira instalação não recarrega: não há o que trocar.
   let recarregando = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (!TINHA_CONTROLADOR || recarregando) return;
     recarregando = true;
     location.reload();
   });
+
   window.addEventListener('load', () => {
+    // 'updateViaCache: none' obriga o navegador a buscar o sw.js na rede:
+    // sem isso ele serve o antigo do cache e a atualização nunca chega.
     navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
-      .then(reg => reg.update())
+      .then(reg => { registroSW = reg; return reg.update(); })
       .catch(() => {});
   });
+}
+
+async function procurarAtualizacao() {
+  if (!registroSW) { avisar('Atualização não disponível aqui.'); return; }
+  avisar('Procurando versão nova…');
+  try {
+    await registroSW.update();
+    const nova = registroSW.waiting || registroSW.installing;
+    if (nova) {
+      nova.postMessage({ tipo: 'assumir' });
+      avisar('Versão nova encontrada. Recarregando…');
+    } else {
+      avisar('Você já está na versão ' + VERSAO + '.');
+    }
+  } catch (e) {
+    avisar('Não deu para verificar agora.');
+  }
 }
 
 async function iniciar() {
