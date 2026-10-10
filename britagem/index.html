@@ -24,6 +24,14 @@
     <p class="fraco">Relatório de turno: paradas, detector de metal e leituras.
       Tudo fica neste aparelho e funciona sem internet.</p>
     <button class="botao principal grande" id="abrir-turno" type="button">Abrir turno</button>
+    <p class="fraco pequeno">
+      <label class="ligacao">
+        carregar as áreas
+        <input type="file" id="arquivo-areas" accept=".json,application/json" hidden>
+      </label>
+      — o arquivo com os equipamentos e as medidas de cada área.
+    </p>
+    <p class="fraco pequeno" id="estado-areas" role="status" aria-live="polite"></p>
     <p class="fraco pequeno" id="dica-vazio"></p>
   </div>
 </section>
