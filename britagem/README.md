@@ -34,6 +34,27 @@ adiante. Funciona **sem internet** e tudo fica neste aparelho.
 | **Leitura** | Hora, horímetro, balança, ácido — ou a marca de **usina parada**. Os campos abrem o **teclado numérico** e aceitam vírgula ou ponto. |
 | **Turno** | Data, turno (A a E), operador, produção em toneladas |
 
+## Acúmulo de tempo parado
+
+No alto da tela do turno fica a faixa com **quanto já parou**, somado, e a
+divisão por equipamento — sempre à vista, sem precisar ir ao resumo:
+
+```
+[⏸ 1h35 parado]  [AA140 1h15]  [Rebritagem 20min]
+```
+
+E cada parada na linha do tempo mostra o acumulado **até aquele ponto**:
+
+```
+AA140   09h00 → 09h45                      45min
+Entupimento
+▶ rodou 1h30 antes desta parada
+Σ parado até aqui: AA140 1h15 · turno 1h35
+```
+
+No relatório em texto, cada parada sai com `[Σ 1h35]` no fim da linha. No CSV
+são duas colunas, `acumulado_equip` e `acumulado_turno`, em minutos.
+
 ## Tempo rodando
 
 O avesso das paradas também é calculado: para cada equipamento, o app mostra
