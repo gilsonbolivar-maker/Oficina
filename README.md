@@ -5,6 +5,7 @@ Oficina de desenvolvimento — Projetos e soluções
 
 | Pasta | O que é |
 | ----- | ------- |
+| [`alo/`](alo/) | Sala de conversa aberta: entra com um apelido e fala em tempo real. Usa o Supabase. |
 | [`britagem/`](britagem/) | PWA de relatório de turno da britagem: paradas, detector de metal e leituras. |
 | [`agenda-telefonica/`](agenda-telefonica/) | PWA de agenda: busca, ficha e discagem offline. Vem vazio; a lista é carregada no aparelho. |
 | [`alarme-gps/`](alarme-gps/) | PWA que toca um alarme ao chegar perto de um ponto marcado no mapa. |
@@ -20,6 +21,7 @@ Todo push na `main` publica o repositório no GitHub Pages, pelo workflow em
 preciso configurar nada em Settings.
 
 - Oficina: <https://gilsonbolivar-maker.github.io/Oficina/>
+- Alô: <https://gilsonbolivar-maker.github.io/Oficina/alo/>
 - Britagem: <https://gilsonbolivar-maker.github.io/Oficina/britagem/>
 - Agenda Telefônica: <https://gilsonbolivar-maker.github.io/Oficina/agenda-telefonica/>
 - Alarme GPS: <https://gilsonbolivar-maker.github.io/Oficina/alarme-gps/>
