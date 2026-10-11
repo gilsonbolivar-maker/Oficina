@@ -165,6 +165,20 @@ aparelho, usar aba anônima ou apagar os dados do site cria uma pessoa
 nova, que não está nas salas privadas antigas. É preciso um convite de
 novo. Login por e-mail resolveria isso, se um dia fizer falta.
 
+## Som
+
+Chegou mensagem de outra pessoa, toca um som: **um toque** nas salas
+abertas, **dois** nas privadas e nas conversas a sós. Várias mensagens
+seguidas tocam uma vez só. O sino 🔔 no rodapé da barra lateral liga e
+desliga, e o aparelho lembra a escolha.
+
+O som é gerado na hora (Web Audio), sem arquivo de áudio. Duas coisas do
+iPhone e do iPad valem saber:
+
+- o Safari só libera som **depois do primeiro toque** na página;
+- com a **chave de silencioso** ligada, ou com o app fechado e a tela
+  bloqueada, não toca. Para avisar com o app fechado, só com notificação.
+
 ## Trocar de apelido
 
 O botão no canto da barra lateral renomeia o perfil — não apaga nada. As
@@ -178,7 +192,7 @@ vai acontecer — e é o comportamento desejado para um pedido de remoção.
 
 ## Rodar os testes
 
-Há 70 testes de ponta a ponta em [`teste/`](teste/), que rodam sem precisar
+Há 76 testes de ponta a ponta em [`teste/`](teste/), que rodam sem precisar
 de um projeto no Supabase. Veja o [README de lá](teste/README.md).
 
 ## Moderação

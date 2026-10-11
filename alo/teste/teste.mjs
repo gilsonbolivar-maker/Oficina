@@ -33,6 +33,16 @@ pagina.on('pageerror', e => erros.push('pageerror: ' + e.message));
 pagina.on('console', m => { if (m.type() === 'error') erros.push('console: ' + m.text()); });
 pagina.on('response', r => { if (r.status() === 404) erros.push('404: ' + r.url()); });
 
+// Conta as notas tocadas, para conferir o som sem ouvir.
+await pagina.addInitScript(() => {
+  window.__notas = 0;
+  const original = AudioContext.prototype.createOscillator;
+  AudioContext.prototype.createOscillator = function () {
+    window.__notas += 1;
+    return original.call(this);
+  };
+});
+
 // Todo import do cliente Supabase cai no nosso duble.
 await pagina.route('**/@supabase/supabase-js**', rota => rota.fulfill({
   status: 200, contentType: 'text/javascript', body: fs.readFileSync(MOCK, 'utf8'),
@@ -232,7 +242,44 @@ await pagina.waitForTimeout(400);
 ok('troca para apelido ocupado é recusada', (await pagina.textContent('#aviso')).includes('já é de outra pessoa'));
 ok('apelido antigo é mantido na recusa', (await pagina.textContent('#meu-nome')) === 'Gilson Novo');
 
-// ——— 20. Sala privada: criar, convidar, falar ———
+// ——— 20. Som ao receber mensagem ———
+const notas = () => pagina.evaluate(() => window.__notas);
+const chegar = (id, sala_id, autor_id) => pagina.evaluate(m => {
+  const canal = window.__mock.canais.find(c => c.nome === 'alo-mensagens');
+  canal.ouvintes[0].cb({ new: { ...m, autor_apelido: 'Ana', corpo: 'som ' + m.id,
+    criado_em: new Date().toISOString() } });
+}, { id, sala_id, autor_id });
+
+await pagina.waitForTimeout(1300);
+let antesDoSom = await notas();
+await chegar(3000, 'geral', 'outro');
+await pagina.waitForTimeout(200);
+ok('som toca quando outra pessoa escreve', (await notas()) === antesDoSom + 1);
+
+await pagina.waitForTimeout(1300);
+antesDoSom = await notas();
+await chegar(3001, 'geral', 'eu-123');
+await pagina.waitForTimeout(200);
+ok('a própria mensagem não toca som', (await notas()) === antesDoSom);
+
+await chegar(3002, 'geral', 'outro');
+await chegar(3003, 'recados', 'outro');
+await pagina.waitForTimeout(200);
+ok('rajada de mensagens toca uma vez só', (await notas()) === antesDoSom + 1);
+
+await pagina.click('#botao-som');
+ok('botão desliga o som', (await pagina.getAttribute('#botao-som', 'aria-pressed')) === 'false');
+await pagina.waitForTimeout(1300);
+antesDoSom = await notas();
+await chegar(3004, 'geral', 'outro');
+await pagina.waitForTimeout(200);
+ok('som desligado fica em silêncio', (await notas()) === antesDoSom);
+
+await pagina.click('#botao-som');
+await pagina.waitForTimeout(200);
+ok('religar toca uma amostra', (await notas()) > antesDoSom);
+
+// ——— 21. Sala privada: criar, convidar, falar ———
 await pagina.evaluate(() => { window.prompt = () => 'Família'; });
 await pagina.click('#botao-nova-sala');
 await pagina.waitForTimeout(400);
@@ -272,7 +319,7 @@ await pagina.waitForTimeout(300);
 ok('mensagem vai para a sala privada', await pagina.evaluate(() =>
   window.__mock.mensagens.some(m => m.sala_id.startsWith('priv-') && m.corpo === 'Só nós aqui')));
 
-// ——— 21. Conversa a sós pelo nome na presença ———
+// ——— 22. Conversa a sós pelo nome na presença ———
 await pagina.evaluate(() => {
   window.__mock.presentes.push({ id: 'ana-1', apelido: 'Ana', sala: 'geral' });
   const c = window.__mock.canais.find(c => c.nome === 'alo-presenca');
@@ -297,7 +344,7 @@ await pagina.evaluate(() => {
 await pagina.waitForTimeout(400);
 ok('conversa nova chega sozinha', (await pagina.textContent('#lista-conversas')).includes('João'));
 
-// ——— 22. Entrar por link de convite ———
+// ——— 23. Entrar por link de convite ———
 await pagina.goto('http://localhost:4173/#convite=' + 'b'.repeat(64));
 await pagina.waitForSelector('#tela-app:not([hidden])', { timeout: 5000 });
 await pagina.waitForTimeout(500);
@@ -317,7 +364,7 @@ await pagina.waitForSelector('#tela-app:not([hidden])', { timeout: 5000 });
 await pagina.waitForTimeout(500);
 ok('convite inválido é explicado', (await pagina.textContent('#aviso')).includes('não vale'));
 
-// ——— 23. Apagar a própria sala ———
+// ——— 24. Apagar a própria sala ———
 await pagina.click('#lista-privadas .sala');
 await pagina.waitForTimeout(300);
 await pagina.evaluate(() => { window.confirm = () => true; });
@@ -326,7 +373,7 @@ await pagina.click('#opcao-apagar');
 await pagina.waitForTimeout(400);
 ok('sala apagada some da lista', (await pagina.$$('#lista-privadas .sala')).length === 0);
 
-// ——— 24. Abrir o app já pelo link de convite (carga do zero) ———
+// ——— 25. Abrir o app já pelo link de convite (carga do zero) ———
 await pagina.evaluate(c => history.replaceState(null, '', '/#convite=' + c), 'b'.repeat(64));
 await pagina.reload();
 await pagina.waitForSelector('#tela-app:not([hidden])', { timeout: 5000 });
@@ -338,7 +385,7 @@ await pagina.click('.sala:nth-child(1)');
 await pagina.waitForTimeout(300);
 await pagina.screenshot({ path: path.join(AQUI, 'mesa.png') });
 
-// ——— 25. Telefone: uma coluna de cada vez ———
+// ——— 26. Telefone: uma coluna de cada vez ———
 await pagina.setViewportSize({ width: 390, height: 780 });
 await pagina.waitForTimeout(300);
 ok('no telefone aparece o botão voltar', await pagina.isVisible('#botao-voltar'));

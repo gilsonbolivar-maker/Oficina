@@ -19,6 +19,7 @@ const HISTORICO = 80;        // mensagens carregadas ao abrir uma sala
 const LIMITE_CORPO = 500;    // igual à constraint do banco
 const CHAVE_CONFIG = 'alo:config';
 const CHAVE_LIDO = 'alo:lido';
+const CHAVE_SOM = 'alo:som';
 
 const FONTES_LIB = [
   'https://esm.sh/@supabase/supabase-js@2',
@@ -83,6 +84,7 @@ const estado = {
   carregadas: new Set(),  // salas cujo histórico já veio do banco
   vistos: new Set(),      // ids já na tela (evita duplicar com o tempo real)
   lido: lembrar(CHAVE_LIDO, {}),
+  som: lembrar(CHAVE_SOM, true),
   presentes: [],
   convite: null,          // código vindo de um link #convite=…
   canalMensagens: null,
@@ -671,7 +673,10 @@ function ouvirMensagens() {
         if (!guardarMensagem(msg)) return;
         // O banco só entrega o que a pessoa pode ler. Mensagem de sala que
         // ainda não está na lista é conversa nova: alguém chamou a sós.
-        if (!estado.salas.some(s => s.id === msg.sala_id)) recarregarSalas();
+        const sala = estado.salas.find(s => s.id === msg.sala_id);
+        if (!sala) recarregarSalas();
+        // O banco também devolve as nossas mensagens: essas não tocam.
+        if (msg.autor_id !== estado.eu.id) tocarSom(sala?.tipo || 'individual');
         estado.mensagens.get(msg.sala_id).sort((a, b) => a.id - b.id);
         if (msg.sala_id === estado.salaAtual) {
           desenharMensagens(true);
@@ -746,6 +751,68 @@ function desenharPresenca() {
     }
     alvo.append(item);
   }
+}
+
+/* ——— Som ao receber mensagem ———————————————————————————————
+   Gerado na hora com Web Audio: nenhum arquivo para baixar, e funciona
+   sem internet. O Safari só libera som depois de um toque na página,
+   por isso o áudio é destravado no primeiro toque ou tecla. */
+
+let audio = null;
+let ultimoSom = -Infinity;
+
+function destravarSom() {
+  try {
+    audio ??= new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.state === 'suspended') audio.resume().catch(() => {});
+  } catch {
+    audio = null;   // navegador sem Web Audio: segue em silêncio
+  }
+}
+
+/**
+ * Sala aberta: um toque. Privada ou a sós: dois, para dar para
+ * distinguir sem olhar. Rajada de mensagens toca uma vez só.
+ */
+function tocarSom(tipo) {
+  if (!estado.som || !audio || audio.state !== 'running') return;
+  const agora = audio.currentTime;
+  if (agora - ultimoSom < 1.2) return;
+  ultimoSom = agora;
+
+  const notas = tipo === 'publica' ? [880] : [660, 990];
+  notas.forEach((freq, i) => {
+    const inicio = agora + i * 0.13;
+    const osc = audio.createOscillator();
+    const volume = audio.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    volume.gain.setValueAtTime(0.0001, inicio);
+    volume.gain.exponentialRampToValueAtTime(0.25, inicio + 0.015);
+    volume.gain.exponentialRampToValueAtTime(0.0001, inicio + 0.28);
+    osc.connect(volume).connect(audio.destination);
+    osc.start(inicio);
+    osc.stop(inicio + 0.3);
+  });
+}
+
+function mostrarBotaoSom() {
+  const botao = $('botao-som');
+  botao.textContent = estado.som ? '🔔' : '🔕';
+  botao.setAttribute('aria-pressed', String(estado.som));
+  botao.title = estado.som ? 'Som ligado — tocar para desligar' : 'Som desligado — tocar para ligar';
+}
+
+async function alternarSom() {
+  estado.som = !estado.som;
+  guardar(CHAVE_SOM, estado.som);
+  mostrarBotaoSom();
+  if (!estado.som) return;
+  // Ao ligar, toca uma amostra: confirma que o som saiu do aparelho.
+  destravarSom();
+  try { await audio?.resume(); } catch { /* sem som neste navegador */ }
+  ultimoSom = -Infinity;
+  tocarSom('publica');
 }
 
 /* ——— Trocar de apelido ————————————————————————————————————— */
@@ -965,6 +1032,11 @@ async function iniciarApp() {
 
   $('botao-sair').addEventListener('click', trocarApelido);
   $('botao-nova-sala').addEventListener('click', criarSala);
+  $('botao-som').addEventListener('click', alternarSom);
+  mostrarBotaoSom();
+  for (const evento of ['pointerdown', 'keydown']) {
+    document.addEventListener(evento, destravarSom, { passive: true });
+  }
   $('botao-opcoes').addEventListener('click', abrirOpcoes);
   $('opcao-convidar').addEventListener('click', convidar);
   $('opcao-novo-link').addEventListener('click', gerarLinkNovo);
