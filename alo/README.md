@@ -1,6 +1,7 @@
 # Alô
 
-Sala de conversa aberta. Entre com um apelido e fale com quem estiver por aqui.
+Salas de conversa. Entre com um apelido e fale com quem estiver por aqui — nas
+salas abertas, em salas privadas por convite ou a sós com alguém.
 
 Roda inteiro no navegador, publicado pelo GitHub Pages. Não existe servidor
 deste projeto: quem guarda as conversas e avisa quando chega mensagem nova é o
@@ -129,10 +130,40 @@ junto o que a pessoa disse, por causa do `on delete cascade`.
 | Tamanho da mensagem | 500 caracteres |
 | Ritmo | 12 por minuto, por conta |
 | Apelido | 2 a 24 caracteres, único |
-| Salas | 3 fixas (`geral`, `recados`, `cafe`) |
+| Salas abertas | 3 fixas (`geral`, `recados`, `cafe`) |
+| Salas privadas | nome de 2 a 40 letras, até 10 novas por hora por conta |
 | Histórico | não expira sozinho |
 
-As salas ficam na tabela `salas` — para criar outra, basta um `insert`.
+As salas abertas ficam na tabela `salas` — para criar outra, basta um
+`insert` com `tipo = 'publica'`.
+
+## Salas privadas e conversas a sós
+
+| | Sala privada 🔒 | Conversa a sós 👤 |
+|---|---|---|
+| Como nasce | botão **+** em *Salas privadas* | tocar no nome de alguém em *Por aqui agora* |
+| Quem entra | quem abre o link de convite | só as duas pessoas |
+| Convidar | **⋯ → Convidar pessoas** | — |
+| Cancelar convite | **⋯ → Gerar link novo** (só o dono) | — |
+| Ir embora | **⋯ → Sair da sala** · o dono **apaga** | **⋯ → Fechar a conversa** |
+
+O convite é um código de 64 letras e números no fim do link
+(`#convite=…`). Como fica depois do `#`, ele não vai para o servidor do
+GitHub Pages, e o app o tira do endereço assim que lê.
+
+Quem decide quem é membro é o banco: não existe política de `insert` em
+`membros`, então ninguém se põe numa sala pela API. Só as funções
+`criar_sala`, `entrar_por_convite` e `abrir_conversa` fazem isso, cada uma
+conferindo o que precisa. A leitura e a escrita de mensagens passam por
+`sala_aberta()`: sala aberta, ou a pessoa é membro.
+
+A presença ("Por aqui agora") chega a todo mundo, por isso só diz o nome
+das salas **abertas**. Quem está numa sala privada aparece sem sala.
+
+**Limite conhecido:** a conta é anônima e mora no navegador. Trocar de
+aparelho, usar aba anônima ou apagar os dados do site cria uma pessoa
+nova, que não está nas salas privadas antigas. É preciso um convite de
+novo. Login por e-mail resolveria isso, se um dia fizer falta.
 
 ## Trocar de apelido
 
@@ -147,7 +178,7 @@ vai acontecer — e é o comportamento desejado para um pedido de remoção.
 
 ## Rodar os testes
 
-Há 47 testes de ponta a ponta em [`teste/`](teste/), que rodam sem precisar
+Há 70 testes de ponta a ponta em [`teste/`](teste/), que rodam sem precisar
 de um projeto no Supabase. Veja o [README de lá](teste/README.md).
 
 ## Moderação

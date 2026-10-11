@@ -232,11 +232,113 @@ await pagina.waitForTimeout(400);
 ok('troca para apelido ocupado é recusada', (await pagina.textContent('#aviso')).includes('já é de outra pessoa'));
 ok('apelido antigo é mantido na recusa', (await pagina.textContent('#meu-nome')) === 'Gilson Novo');
 
+// ——— 20. Sala privada: criar, convidar, falar ———
+await pagina.evaluate(() => { window.prompt = () => 'Família'; });
+await pagina.click('#botao-nova-sala');
+await pagina.waitForTimeout(400);
+ok('sala privada aparece na lista dela', (await pagina.textContent('#lista-privadas')).includes('Família'));
+ok('sala privada abre ao ser criada', (await pagina.textContent('#titulo-sala')) === 'Família');
+ok('sala pública não ganha a privada', (await pagina.$$('#lista-salas .sala')).length === 3);
+ok('dica some quando há sala privada', !(await pagina.isVisible('#dica-privadas')));
+ok('presença não revela a sala privada', await pagina.evaluate(() =>
+  window.__mock.canais.find(c => c.nome === 'alo-presenca').rastreado.sala === null));
+
+await pagina.evaluate(() => {
+  window.__copiado = null;
+  Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
+  navigator.clipboard.writeText = async t => { window.__copiado = t; };
+});
+await pagina.click('#botao-opcoes');
+ok('dono vê "apagar" e não "sair"',
+  await pagina.isVisible('#opcao-apagar') && !(await pagina.isVisible('#opcao-sair')));
+await pagina.click('#opcao-convidar');
+await pagina.waitForTimeout(200);
+const link = await pagina.evaluate(() => window.__copiado);
+ok('convidar copia o link com o código', /#convite=[0-9a-f]{64}$/.test(link || ''));
+ok('menu fecha depois de escolher', !(await pagina.isVisible('#opcoes-sala')));
+
+await pagina.evaluate(() => { window.confirm = () => true; });
+await pagina.click('#botao-opcoes');
+await pagina.click('#opcao-novo-link');
+await pagina.waitForTimeout(200);
+await pagina.click('#botao-opcoes');
+await pagina.click('#opcao-convidar');
+await pagina.waitForTimeout(200);
+ok('link novo é outro', (await pagina.evaluate(() => window.__copiado)) !== link);
+
+await pagina.fill('#campo-mensagem', 'Só nós aqui');
+await pagina.click('#botao-enviar');
+await pagina.waitForTimeout(300);
+ok('mensagem vai para a sala privada', await pagina.evaluate(() =>
+  window.__mock.mensagens.some(m => m.sala_id.startsWith('priv-') && m.corpo === 'Só nós aqui')));
+
+// ——— 21. Conversa a sós pelo nome na presença ———
+await pagina.evaluate(() => {
+  window.__mock.presentes.push({ id: 'ana-1', apelido: 'Ana', sala: 'geral' });
+  const c = window.__mock.canais.find(c => c.nome === 'alo-presenca');
+  c.ouvintes.find(o => o.tipo === 'presence').cb();
+});
+await pagina.waitForTimeout(200);
+await pagina.click('.pessoa-botao');
+await pagina.waitForTimeout(400);
+ok('conversa a sós tem o nome da pessoa', (await pagina.textContent('#titulo-sala')) === 'Ana');
+ok('conversa a sós aparece na lista dela', (await pagina.textContent('#lista-conversas')).includes('Ana'));
+ok('não dá para conversar consigo mesmo', (await pagina.$$('.pessoa-botao')).length === 1);
+
+// Mensagem de uma conversa que ainda não está na lista traz a sala.
+await pagina.evaluate(() => {
+  window.__mock.salas.push({ id: 'dm:eu-123:joao', titulo: 'Conversa', subtitulo: '', ordem: 0,
+    tipo: 'individual', membros: [{ perfil_id: 'eu-123', perfis: { apelido: 'Gilson Novo' } },
+      { perfil_id: 'joao', perfis: { apelido: 'João' } }] });
+  const canal = window.__mock.canais.find(c => c.nome === 'alo-mensagens');
+  canal.ouvintes[0].cb({ new: { id: 2000, sala_id: 'dm:eu-123:joao', autor_id: 'joao',
+    autor_apelido: 'João', corpo: 'Oi, só pra você', criado_em: new Date().toISOString() } });
+});
+await pagina.waitForTimeout(400);
+ok('conversa nova chega sozinha', (await pagina.textContent('#lista-conversas')).includes('João'));
+
+// ——— 22. Entrar por link de convite ———
+await pagina.goto('http://localhost:4173/#convite=' + 'b'.repeat(64));
+await pagina.waitForSelector('#tela-app:not([hidden])', { timeout: 5000 });
+await pagina.waitForTimeout(500);
+ok('convite abre a sala certa', (await pagina.textContent('#titulo-sala')) === 'Turma');
+ok('código sai do endereço', !(await pagina.evaluate(() => location.hash)));
+await pagina.click('#botao-opcoes');
+ok('membro vê "sair" e não "apagar"',
+  await pagina.isVisible('#opcao-sair') && !(await pagina.isVisible('#opcao-apagar')));
+await pagina.evaluate(() => { window.confirm = () => true; });
+await pagina.click('#opcao-sair');
+await pagina.waitForTimeout(400);
+ok('quem sai deixa de ver a sala', !(await pagina.textContent('#lista-privadas')).includes('Turma'));
+ok('sair leva de volta para uma sala aberta', (await pagina.textContent('#titulo-sala')) === 'Geral');
+
+await pagina.goto('http://localhost:4173/#convite=' + 'f'.repeat(64));
+await pagina.waitForSelector('#tela-app:not([hidden])', { timeout: 5000 });
+await pagina.waitForTimeout(500);
+ok('convite inválido é explicado', (await pagina.textContent('#aviso')).includes('não vale'));
+
+// ——— 23. Apagar a própria sala ———
+await pagina.click('#lista-privadas .sala');
+await pagina.waitForTimeout(300);
+await pagina.evaluate(() => { window.confirm = () => true; });
+await pagina.click('#botao-opcoes');
+await pagina.click('#opcao-apagar');
+await pagina.waitForTimeout(400);
+ok('sala apagada some da lista', (await pagina.$$('#lista-privadas .sala')).length === 0);
+
+// ——— 24. Abrir o app já pelo link de convite (carga do zero) ———
+await pagina.evaluate(c => history.replaceState(null, '', '/#convite=' + c), 'b'.repeat(64));
+await pagina.reload();
+await pagina.waitForSelector('#tela-app:not([hidden])', { timeout: 5000 });
+await pagina.waitForTimeout(500);
+ok('link de convite funciona ao abrir o app', (await pagina.textContent('#titulo-sala')) === 'Turma');
+ok('a sala do convite entra na lista', (await pagina.textContent('#lista-privadas')).includes('Turma'));
+
 await pagina.click('.sala:nth-child(1)');
 await pagina.waitForTimeout(300);
 await pagina.screenshot({ path: path.join(AQUI, 'mesa.png') });
 
-// ——— 20. Telefone: uma coluna de cada vez ———
+// ——— 25. Telefone: uma coluna de cada vez ———
 await pagina.setViewportSize({ width: 390, height: 780 });
 await pagina.waitForTimeout(300);
 ok('no telefone aparece o botão voltar', await pagina.isVisible('#botao-voltar'));

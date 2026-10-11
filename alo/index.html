@@ -142,12 +142,30 @@
               aria-label="Trocar de apelido">⎋</button>
     </header>
 
-    <nav class="salas" id="lista-salas" aria-label="Salas"></nav>
+    <div class="lateral-meio">
+      <nav class="salas" id="lista-salas" aria-label="Salas abertas"></nav>
 
-    <section class="presenca">
-      <h2 class="rotulo">Por aqui agora <span id="contagem-presenca">0</span></h2>
-      <ul id="lista-presenca" class="pessoas"></ul>
-    </section>
+      <section class="grupo">
+        <h2 class="rotulo grupo-topo">
+          Salas privadas
+          <button type="button" class="mais" id="botao-nova-sala"
+                  title="Criar sala privada" aria-label="Criar sala privada">+</button>
+        </h2>
+        <nav class="salas" id="lista-privadas" aria-label="Salas privadas"></nav>
+        <p class="dica" id="dica-privadas">Crie uma sala e convide só quem você quiser.</p>
+      </section>
+
+      <section class="grupo" id="grupo-conversas" hidden>
+        <h2 class="rotulo">Conversas a sós</h2>
+        <nav class="salas" id="lista-conversas" aria-label="Conversas a sós"></nav>
+      </section>
+
+      <section class="presenca">
+        <h2 class="rotulo">Por aqui agora <span id="contagem-presenca">0</span></h2>
+        <ul id="lista-presenca" class="pessoas"></ul>
+        <p class="dica">Toque no nome de alguém para conversar a sós.</p>
+      </section>
+    </div>
 
     <footer class="lateral-rodape">
       <span class="avatar" id="meu-avatar" aria-hidden="true"></span>
@@ -160,9 +178,19 @@
     <header class="conversa-topo">
       <button type="button" class="icone so-telefone" id="botao-voltar"
               aria-label="Voltar para as salas">‹</button>
-      <div>
+      <div class="conversa-titulo">
         <h1 id="titulo-sala">Geral</h1>
         <p id="subtitulo-sala">Quem está por aqui</p>
+      </div>
+      <div class="menu-sala" id="menu-sala" hidden>
+        <button type="button" class="icone" id="botao-opcoes" title="Opções da sala"
+                aria-label="Opções da sala" aria-haspopup="true" aria-expanded="false">⋯</button>
+        <div class="opcoes" id="opcoes-sala" role="menu" hidden>
+          <button type="button" role="menuitem" id="opcao-convidar">Convidar pessoas</button>
+          <button type="button" role="menuitem" id="opcao-novo-link">Gerar link novo</button>
+          <button type="button" role="menuitem" id="opcao-sair">Sair da sala</button>
+          <button type="button" role="menuitem" id="opcao-apagar" class="perigo">Apagar a sala</button>
+        </div>
       </div>
     </header>
 
