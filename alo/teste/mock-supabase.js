@@ -18,13 +18,28 @@ let proximoId = 100;
 const GUARDA = 'mock:perfil';
 let perfil = JSON.parse(localStorage.getItem(GUARDA) || 'null');
 const gravarPerfil = p => { perfil = p; p ? localStorage.setItem(GUARDA, JSON.stringify(p)) : localStorage.removeItem(GUARDA); };
-window.__mock = { mensagens, get perfil() { return perfil; }, canais: [] };
+// Salas privadas que existem no "banco" mas a pessoa só vê depois de
+// entrar pelo convite — como faria a regra de RLS de verdade.
+const CONVITE_TURMA = 'b'.repeat(64);
+const escondidas = [
+  { id: 'turma', titulo: 'Turma', subtitulo: '', ordem: 0, tipo: 'privada',
+    dono_id: 'outro', convite: CONVITE_TURMA,
+    membros: [{ perfil_id: 'outro', perfis: { apelido: 'Ana' } }] },
+];
+let codigos = 0;
+window.__mock = { mensagens, salas, escondidas, CONVITE_TURMA,
+  get perfil() { return perfil; }, canais: [], presentes: [], rpcs: [] };
+
+const eu = () => ({ perfil_id: 'eu-123', perfis: { apelido: perfil?.apelido } });
 
 function builder(resolver) {
   const b = {};
   for (const m of ['select','eq','order','limit','insert','delete','update']) {
     b[m] = (...args) => { b['_' + m] = args; return b; };
   }
+  b._eqs = [];
+  const eq = b.eq;
+  b.eq = (...args) => { b._eqs.push(args); return eq(...args); };
   b.maybeSingle = () => resolver(b, 'maybeSingle');
   b.single = () => resolver(b, 'single');
   b.then = (ok, err) => Promise.resolve(resolver(b, 'lista')).then(ok, err);
@@ -52,7 +67,17 @@ export function createClient(url, key) {
             return { data: null, error: { code: '42P01',
               message: 'relation "public.salas" does not exist' } };
           }
+          if (b._delete) {
+            const i = salas.findIndex(s => s.id === b._eqs[0]?.[1]);
+            if (i >= 0) salas.splice(i, 1);
+            return { data: null, error: null };
+          }
           return { data: salas, error: null };
+        }
+        if (tabela === 'membros' && b._delete) {
+          const i = salas.findIndex(s => s.id === b._eqs[0]?.[1]);
+          if (i >= 0) salas.splice(i, 1);   // quem sai deixa de enxergar a sala
+          return { data: null, error: null };
         }
         if (tabela === 'perfis') {
           if (b._insert) {
@@ -85,6 +110,36 @@ export function createClient(url, key) {
         return { data: null, error: null };
       });
     },
+    async rpc(nome, args) {
+      window.__mock.rpcs.push([nome, args]);
+      if (nome === 'criar_sala') {
+        const id = 'priv-' + (salas.length + 1);
+        salas.push({ id, titulo: args.p_titulo, subtitulo: '', ordem: 0, tipo: 'privada',
+          dono_id: 'eu-123', convite: String(++codigos).padStart(64, 'a'), membros: [eu()] });
+        return { data: id, error: null };
+      }
+      if (nome === 'trocar_convite') {
+        const sala = salas.find(s => s.id === args.p_sala);
+        sala.convite = String(++codigos).padStart(64, 'c');
+        return { data: sala.convite, error: null };
+      }
+      if (nome === 'entrar_por_convite') {
+        const sala = escondidas.find(s => s.convite === args.p_codigo);
+        if (!sala) return { data: null, error: { message: 'Esse convite não vale mais.' } };
+        if (!salas.includes(sala)) { sala.membros.push(eu()); salas.push(sala); }
+        return { data: sala.id, error: null };
+      }
+      if (nome === 'abrir_conversa') {
+        const id = 'dm:eu-123:' + args.p_outro;
+        if (!salas.some(s => s.id === id)) {
+          const outro = window.__mock.presentes.find(p => p.id === args.p_outro);
+          salas.push({ id, titulo: 'Conversa', subtitulo: '', ordem: 0, tipo: 'individual',
+            membros: [eu(), { perfil_id: args.p_outro, perfis: { apelido: outro?.apelido } }] });
+        }
+        return { data: id, error: null };
+      }
+      return { data: null, error: { message: 'rpc desconhecida' } };
+    },
     channel(nome, opts) {
       const c = {
         nome, opts, ouvintes: [],
@@ -96,7 +151,10 @@ export function createClient(url, key) {
           for (const o of c.ouvintes) if (o.tipo === 'presence') o.cb();
           return 'ok';
         },
-        presenceState: () => ({ 'eu-123': [{ apelido: perfil?.apelido, sala: c.rastreado?.sala }] }),
+        presenceState: () => ({
+          'eu-123': [{ apelido: perfil?.apelido, sala: c.rastreado?.sala }],
+          ...Object.fromEntries(window.__mock.presentes.map(p => [p.id, [p]])),
+        }),
       };
       window.__mock.canais.push(c);
       return c;

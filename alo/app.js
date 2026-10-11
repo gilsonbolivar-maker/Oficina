@@ -1,5 +1,5 @@
 /* ————————————————————————————————————————————————————————————
-   Alô — sala de conversa aberta.
+   Alô — salas de conversa: abertas, privadas e a sós.
 
    Roda direto no navegador, sem servidor próprio: o GitHub Pages
    entrega estes arquivos e o Supabase cuida de conta, banco e tempo
@@ -84,6 +84,7 @@ const estado = {
   vistos: new Set(),      // ids já na tela (evita duplicar com o tempo real)
   lido: lembrar(CHAVE_LIDO, {}),
   presentes: [],
+  convite: null,          // código vindo de um link #convite=…
   canalMensagens: null,
   canalPresenca: null
 };
@@ -344,50 +345,107 @@ function telaEntrada(idUsuario) {
 
 /* ——— Salas ————————————————————————————————————————————————— */
 
+/*
+ * Três tipos de sala, e o banco só devolve as que a pessoa pode ver:
+ * as abertas (para todo mundo), as privadas de que ela é membro e as
+ * conversas a sós em que ela é uma das duas pontas.
+ */
 async function carregarSalas() {
   const { data, error } = await estado.sb
-    .from('salas').select('id, titulo, subtitulo, ordem').order('ordem');
+    .from('salas')
+    .select('id, titulo, subtitulo, ordem, tipo, dono_id, convite, membros(perfil_id, perfis(apelido))')
+    .order('ordem');
   if (error) throw error;
-  estado.salas = data || [];
+  const porNome = (a, b) => a.titulo.localeCompare(b.titulo, 'pt-BR');
+  const salas = (data || []).map(prepararSala);
+  estado.salas = [
+    ...salas.filter(s => s.tipo === 'publica'),
+    ...salas.filter(s => s.tipo === 'privada').sort(porNome),
+    ...salas.filter(s => s.tipo === 'individual').sort(porNome)
+  ];
+}
+
+/** Título e subtítulo de cada sala como a pessoa deve ver. */
+function prepararSala(s) {
+  const tipo = s.tipo || 'publica';
+  const membros = (s.membros || []).map(m => ({ id: m.perfil_id, apelido: m.perfis?.apelido || '' }));
+  let titulo = s.titulo;
+  let subtitulo = s.subtitulo || '';
+
+  if (tipo === 'individual') {
+    // A conversa a sós se chama pelo nome da outra pessoa.
+    const outro = membros.find(m => m.id !== estado.eu.id);
+    titulo = outro?.apelido || 'Conversa';
+    subtitulo = outro ? 'Conversa a sós' : 'A outra pessoa saiu da conversa';
+  } else if (tipo === 'privada') {
+    subtitulo = membros.length > 1
+      ? `Sala privada · ${membros.length} pessoas`
+      : 'Sala privada · só você, por enquanto';
+  }
+  return { ...s, tipo, membros, titulo, subtitulo };
+}
+
+async function recarregarSalas() {
+  try {
+    await carregarSalas();
+  } catch (e) {
+    avisar(e.message || 'Não consegui atualizar as salas.');
+    return;
+  }
+  desenharSalas();
+}
+
+function salaAtual() {
+  return estado.salas.find(s => s.id === estado.salaAtual);
 }
 
 const MARCA_SALA = { geral: '#', recados: '✎', cafe: '☕' };
+const MARCA_TIPO = { privada: '🔒', individual: '👤' };
 
 function desenharSalas() {
-  const alvo = $('lista-salas');
-  alvo.replaceChildren();
+  const listas = {
+    publica: $('lista-salas'),
+    privada: $('lista-privadas'),
+    individual: $('lista-conversas')
+  };
+  for (const lista of Object.values(listas)) lista.replaceChildren();
 
-  for (const sala of estado.salas) {
-    const botao = el('button', 'sala');
-    botao.type = 'button';
-    botao.setAttribute('aria-current', String(sala.id === estado.salaAtual));
+  for (const sala of estado.salas) listas[sala.tipo]?.append(botaoSala(sala));
 
-    const marca = el('span', 'sala-marca');
-    marca.textContent = MARCA_SALA[sala.id] || '#';
+  $('dica-privadas').hidden = listas.privada.children.length > 0;
+  $('grupo-conversas').hidden = listas.individual.children.length === 0;
+}
 
-    const nome = el('span', 'sala-nome');
-    nome.textContent = sala.titulo;
+function botaoSala(sala) {
+  const botao = el('button', 'sala');
+  botao.type = 'button';
+  botao.setAttribute('aria-current', String(sala.id === estado.salaAtual));
 
-    botao.append(marca, nome);
+  const marca = el('span', 'sala-marca');
+  marca.textContent = MARCA_SALA[sala.id] || MARCA_TIPO[sala.tipo] || '#';
 
-    const naoLidas = contarNaoLidas(sala.id);
-    if (naoLidas > 0 && sala.id !== estado.salaAtual) {
-      const selo = el('span', 'nao-lidas');
-      selo.textContent = naoLidas > 99 ? '99+' : String(naoLidas);
-      botao.append(selo);
-    }
+  const nome = el('span', 'sala-nome');
+  nome.textContent = sala.titulo;
 
-    const ultimas = estado.mensagens.get(sala.id);
-    const ultima = ultimas?.[ultimas.length - 1];
-    const resumo = el('span', 'sala-ultima');
-    resumo.textContent = ultima
-      ? `${ultima.autor_apelido}: ${ultima.corpo}`
-      : sala.subtitulo;
-    botao.append(resumo);
+  botao.append(marca, nome);
 
-    botao.addEventListener('click', () => abrirSala(sala.id));
-    alvo.append(botao);
+  const naoLidas = contarNaoLidas(sala.id);
+  if (naoLidas > 0 && sala.id !== estado.salaAtual) {
+    const selo = el('span', 'nao-lidas');
+    selo.textContent = naoLidas > 99 ? '99+' : String(naoLidas);
+    botao.append(selo);
   }
+
+  const ultimas = estado.mensagens.get(sala.id);
+  const ultima = ultimas?.[ultimas.length - 1];
+  const resumo = el('span', 'sala-ultima');
+  resumo.textContent = ultima
+    ? `${ultima.autor_apelido}: ${ultima.corpo}`
+    : sala.subtitulo;
+  botao.append(resumo);
+
+  botao.addEventListener('click', () => abrirSala(sala.id));
+  return botao;
 }
 
 function contarNaoLidas(salaId) {
@@ -505,6 +563,7 @@ async function abrirSala(salaId) {
   $('titulo-sala').textContent = sala?.titulo || '';
   $('subtitulo-sala').textContent = sala?.subtitulo || '';
   $('tela-app').dataset.vista = 'conversa';
+  prepararOpcoes(sala);
 
   if (!estado.carregadas.has(salaId)) {
     try { await carregarMensagens(salaId); }
@@ -515,18 +574,16 @@ async function abrirSala(salaId) {
   desenharMensagens();
   desenharSalas();
   desenharPresenca();
-
-  if (estado.canalPresenca) {
-    await estado.canalPresenca.track({ apelido: estado.eu.apelido, sala: salaId });
-  }
+  await anunciarPresenca();
 }
 
 /* ——— Envio ————————————————————————————————————————————————— */
 
-function avisar(texto) {
+function avisar(texto, tipo = 'ruim') {
   const aviso = $('aviso');
   if (!texto) { aviso.hidden = true; return; }
   aviso.textContent = texto;
+  aviso.classList.toggle('bom', tipo === 'bom');
   aviso.hidden = false;
   clearTimeout(avisar.relogio);
   avisar.relogio = setTimeout(() => { aviso.hidden = true; }, 6000);
@@ -612,6 +669,9 @@ function ouvirMensagens() {
       carga => {
         const msg = carga.new;
         if (!guardarMensagem(msg)) return;
+        // O banco só entrega o que a pessoa pode ler. Mensagem de sala que
+        // ainda não está na lista é conversa nova: alguém chamou a sós.
+        if (!estado.salas.some(s => s.id === msg.sala_id)) recarregarSalas();
         estado.mensagens.get(msg.sala_id).sort((a, b) => a.id - b.id);
         if (msg.sala_id === estado.salaAtual) {
           desenharMensagens(true);
@@ -639,13 +699,22 @@ function ouvirPresenca() {
       desenharPresenca();
     })
     .subscribe(async situacao => {
-      if (situacao === 'SUBSCRIBED') {
-        await estado.canalPresenca.track({
-          apelido: estado.eu.apelido,
-          sala: estado.salaAtual
-        });
-      }
+      if (situacao === 'SUBSCRIBED') await anunciarPresenca();
     });
+}
+
+/**
+ * Conta aos outros onde estamos. Sala privada e conversa a sós ficam de
+ * fora: a presença chega a todo mundo, e até o id de uma conversa a sós
+ * diria quem está falando com quem.
+ */
+function anunciarPresenca() {
+  if (!estado.canalPresenca) return undefined;
+  const sala = salaAtual();
+  return estado.canalPresenca.track({
+    apelido: estado.eu.apelido,
+    sala: sala?.tipo === 'publica' ? sala.id : null
+  });
 }
 
 function desenharPresenca() {
@@ -665,7 +734,16 @@ function desenharPresenca() {
       ? `${pessoa.apelido} · ${sala.titulo}`
       : pessoa.apelido;
 
-    item.append(marca, nome);
+    if (pessoa.id === estado.eu.id) {
+      item.append(marca, nome);
+    } else {
+      const botao = el('button', 'pessoa-botao');
+      botao.type = 'button';
+      botao.title = `Conversar a sós com ${pessoa.apelido}`;
+      botao.append(marca, nome);
+      botao.addEventListener('click', () => abrirConversa(pessoa.id));
+      item.append(botao);
+    }
     alvo.append(item);
   }
 }
@@ -699,10 +777,149 @@ async function trocarApelido() {
   $('meu-avatar').style.background = corDe(estado.eu.apelido);
 
   // O que já foi dito fica com o nome de quando foi dito.
-  if (estado.canalPresenca) {
-    await estado.canalPresenca.track({ apelido: estado.eu.apelido, sala: estado.salaAtual });
-  }
+  await anunciarPresenca();
   avisar('');
+}
+
+/* ——— Salas privadas e conversas a sós ————————————————————————
+   Criar, entrar e abrir conversa passam por funções do banco
+   (supabase.sql): é lá que se decide quem é membro, nunca aqui. */
+
+async function criarSala() {
+  const nome = prompt('Nome da sala privada:');
+  if (nome === null) return;
+  const titulo = nome.trim().replace(/\s+/g, ' ');
+  if (titulo.length < 2 || titulo.length > 40) {
+    avisar('O nome da sala precisa ter de 2 a 40 letras.');
+    return;
+  }
+  const { data, error } = await estado.sb.rpc('criar_sala', { p_titulo: titulo });
+  if (error) { avisar(error.message || 'Não consegui criar a sala.'); return; }
+  await recarregarSalas();
+  await abrirSala(data);
+  avisar('Sala criada. Para chamar alguém, toque em ⋯ → Convidar pessoas.', 'bom');
+}
+
+async function abrirConversa(outroId) {
+  const { data, error } = await estado.sb.rpc('abrir_conversa', { p_outro: outroId });
+  if (error) { avisar(error.message || 'Não consegui abrir a conversa.'); return; }
+  await recarregarSalas();
+  await abrirSala(data);
+}
+
+/** Devolve a sala do convite, ou null se o convite não vale. */
+async function entrarPorConvite(codigo) {
+  const { data, error } = await estado.sb.rpc('entrar_por_convite', { p_codigo: codigo });
+  if (error) { avisar(error.message || 'Não consegui usar o convite.'); return null; }
+  await recarregarSalas();
+  return data;
+}
+
+/** Código de um link de convite (#convite=…), já tirado do endereço. */
+function lerConviteDoEndereco() {
+  const achado = location.hash.match(/convite=([0-9a-f]{64})/);
+  if (!achado) return null;
+  // Tira do endereço para não reaparecer ao recarregar nem ir junto num
+  // compartilhamento da página.
+  history.replaceState(null, '', location.pathname + location.search);
+  return achado[1];
+}
+
+function linkDoConvite(codigo) {
+  return `${location.origin}${location.pathname}#convite=${codigo}`;
+}
+
+function prepararOpcoes(sala) {
+  fecharOpcoes();
+  const tipo = sala?.tipo || 'publica';
+  const souDono = tipo === 'privada' && sala.dono_id === estado.eu.id;
+  $('menu-sala').hidden = tipo === 'publica';
+  $('opcao-convidar').hidden = tipo !== 'privada';
+  $('opcao-novo-link').hidden = !souDono;
+  // Quem criou não sai: apaga. Senão a sala ficaria sem ninguém para
+  // trocar o link de convite.
+  $('opcao-sair').hidden = souDono;
+  $('opcao-sair').textContent = tipo === 'individual' ? 'Fechar a conversa' : 'Sair da sala';
+  $('opcao-apagar').hidden = !souDono;
+}
+
+function abrirOpcoes() {
+  const aberto = $('opcoes-sala').hidden;
+  $('opcoes-sala').hidden = !aberto;
+  $('botao-opcoes').setAttribute('aria-expanded', String(aberto));
+}
+
+function fecharOpcoes() {
+  $('opcoes-sala').hidden = true;
+  $('botao-opcoes').setAttribute('aria-expanded', 'false');
+}
+
+async function convidar() {
+  fecharOpcoes();
+  const sala = salaAtual();
+  if (!sala?.convite) return;
+  const url = linkDoConvite(sala.convite);
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'Alô', text: `Entre na sala "${sala.titulo}" do Alô:`, url });
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return;   // a pessoa desistiu
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    avisar('Link copiado. Mande só para quem você quer na sala.', 'bom');
+  } catch {
+    prompt('Copie o link do convite:', url);
+  }
+}
+
+async function gerarLinkNovo() {
+  fecharOpcoes();
+  const sala = salaAtual();
+  if (!sala) return;
+  if (!confirm('O link de convite atual vai parar de funcionar. Gerar outro?')) return;
+  const { data, error } = await estado.sb.rpc('trocar_convite', { p_sala: sala.id });
+  if (error) { avisar(error.message || 'Não consegui gerar o link.'); return; }
+  sala.convite = data;
+  avisar('Link novo pronto. Quem já está na sala continua nela.', 'bom');
+}
+
+/** Tira a sala da tela depois de sair dela ou apagá-la. */
+async function esquecerSala(salaId) {
+  estado.salas = estado.salas.filter(s => s.id !== salaId);
+  estado.mensagens.delete(salaId);
+  estado.carregadas.delete(salaId);
+  desenharSalas();
+  await abrirSala(estado.salas[0]?.id || 'geral');
+}
+
+async function sairDaSala() {
+  fecharOpcoes();
+  const sala = salaAtual();
+  if (!sala) return;
+  const pergunta = sala.tipo === 'individual'
+    ? `Fechar a conversa com ${sala.titulo}? Ela volta quando um de vocês tocar no nome do outro.`
+    : `Sair de "${sala.titulo}"? Para voltar, vai precisar de um convite.`;
+  if (!confirm(pergunta)) return;
+
+  const { error } = await estado.sb
+    .from('membros').delete().eq('sala_id', sala.id).eq('perfil_id', estado.eu.id);
+  if (error) { avisar(error.message || 'Não consegui sair.'); return; }
+  await esquecerSala(sala.id);
+}
+
+async function apagarSala() {
+  fecharOpcoes();
+  const sala = salaAtual();
+  if (!sala) return;
+  if (!confirm(`Apagar "${sala.titulo}" e tudo o que foi dito nela? Não dá para desfazer.`)) return;
+
+  const { error } = await estado.sb.from('salas').delete().eq('id', sala.id);
+  if (error) { avisar(error.message || 'Não consegui apagar a sala.'); return; }
+  await esquecerSala(sala.id);
 }
 
 /* ——— Montagem ——————————————————————————————————————————————— */
@@ -715,9 +932,16 @@ async function iniciarApp() {
   $('meu-avatar').style.background = corDe(estado.eu.apelido);
 
   await carregarSalas();
+  desenharSalas();
   ouvirMensagens();
   ouvirPresenca();
-  await abrirSala(estado.salas[0]?.id || 'geral');
+
+  let primeira = estado.salas[0]?.id || 'geral';
+  if (estado.convite) {
+    primeira = (await entrarPorConvite(estado.convite)) || primeira;
+    estado.convite = null;
+  }
+  await abrirSala(primeira);
 
   const campo = $('campo-mensagem');
   campo.addEventListener('input', ajustarAltura);
@@ -740,19 +964,42 @@ async function iniciarApp() {
   });
 
   $('botao-sair').addEventListener('click', trocarApelido);
+  $('botao-nova-sala').addEventListener('click', criarSala);
+  $('botao-opcoes').addEventListener('click', abrirOpcoes);
+  $('opcao-convidar').addEventListener('click', convidar);
+  $('opcao-novo-link').addEventListener('click', gerarLinkNovo);
+  $('opcao-sair').addEventListener('click', sairDaSala);
+  $('opcao-apagar').addEventListener('click', apagarSala);
+  document.addEventListener('click', ev => {
+    if (!$('menu-sala').contains(ev.target)) fecharOpcoes();
+  });
+
+  // Link de convite aberto com o app já aberto, na mesma aba.
+  addEventListener('hashchange', async () => {
+    const codigo = lerConviteDoEndereco();
+    if (!codigo) return;
+    const salaId = await entrarPorConvite(codigo);
+    if (salaId) await abrirSala(salaId);
+  });
 
   // Ao voltar para a aba, a conexão pode ter caído em segundo plano.
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
     estado.carregadas.delete(estado.salaAtual);
     estado.mensagens.delete(estado.salaAtual);
-    abrirSala(estado.salaAtual);
+    // Pode ter chegado sala nova (convite aceito, conversa a sós) ou ido
+    // embora alguma (apagada pelo dono).
+    recarregarSalas().then(() => {
+      const ainda = estado.salas.some(s => s.id === estado.salaAtual);
+      abrirSala(ainda ? estado.salaAtual : (estado.salas[0]?.id || 'geral'));
+    });
   });
 }
 
 async function comecar() {
   const config = lerConfig();
   if (!config) { telaConfig(); return; }
+  estado.convite = lerConviteDoEndereco();
 
   try {
     const idUsuario = await conectar(config);
