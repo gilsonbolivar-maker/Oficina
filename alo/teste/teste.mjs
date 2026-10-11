@@ -38,6 +38,13 @@ await pagina.route('**/@supabase/supabase-js**', rota => rota.fulfill({
   status: 200, contentType: 'text/javascript', body: fs.readFileSync(MOCK, 'utf8'),
 }));
 
+// O config.js publicado aponta para o banco de verdade; o teste parte
+// sempre do vazio, para passar pelo assistente.
+await pagina.route('**/config.js', rota => rota.fulfill({
+  status: 200, contentType: 'text/javascript',
+  body: "globalThis.ALO_CONFIG = { url: '', anonKey: '' };",
+}));
+
 const passos = [];
 const ok = (nome, cond) => { passos.push([cond ? 'PASSOU' : 'FALHOU', nome]); };
 

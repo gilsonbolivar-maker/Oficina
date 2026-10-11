@@ -16,6 +16,6 @@
 'use strict';
 
 globalThis.ALO_CONFIG = {
-  url: '',
-  anonKey: ''
+  url: 'https://lnqrnaaadhvseqgtlgnq.supabase.co',
+  anonKey: 'sb_publishable_FbugL5O__mO6r4aOGoLt2g_-ZzFzWEV'
 };
