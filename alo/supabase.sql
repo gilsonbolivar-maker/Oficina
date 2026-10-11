@@ -239,6 +239,7 @@ create or replace function public.novo_codigo()
 returns text
 language sql
 volatile
+set search_path = public
 as $$
   select replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '');
 $$;
@@ -359,10 +360,14 @@ revoke execute on function public.criar_sala(text)         from public, anon;
 revoke execute on function public.entrar_por_convite(text) from public, anon;
 revoke execute on function public.trocar_convite(text)     from public, anon;
 revoke execute on function public.abrir_conversa(uuid)     from public, anon;
+revoke execute on function public.eh_membro(text)          from public, anon;
+revoke execute on function public.sala_aberta(text)        from public, anon;
 grant  execute on function public.criar_sala(text)         to authenticated;
 grant  execute on function public.entrar_por_convite(text) to authenticated;
 grant  execute on function public.trocar_convite(text)     to authenticated;
 grant  execute on function public.abrir_conversa(uuid)     to authenticated;
+grant  execute on function public.eh_membro(text)          to authenticated;
+grant  execute on function public.sala_aberta(text)        to authenticated;
 
 alter table public.membros enable row level security;
 
