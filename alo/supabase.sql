@@ -152,9 +152,6 @@ drop policy if exists "mensagens visíveis para quem entrou"  on public.mensagen
 drop policy if exists "escrever só em nome próprio"          on public.mensagens;
 drop policy if exists "apagar só o que é seu"                on public.mensagens;
 
-create policy "perfis visíveis para quem entrou"
-  on public.perfis for select to authenticated using (true);
-
 create policy "cada um cria o próprio perfil"
   on public.perfis for insert to authenticated with check (id = auth.uid());
 
@@ -162,13 +159,137 @@ create policy "cada um edita o próprio perfil"
   on public.perfis for update to authenticated
   using (id = auth.uid()) with check (id = auth.uid());
 
+-- Sem política de UPDATE: ninguém reescreve mensagem já dita.
+-- Quem vê os perfis, quem apaga mensagem, quem lê cada sala e escreve
+-- nela vem logo abaixo, com a portaria e as salas privadas.
+
+-- ——— Portaria e administração ————————————————————————————
+-- Quem chega escolhe o apelido e fica `pendente`: não lê nem escreve
+-- nada até alguém da administração aprovar. Isso fecha a porta que a
+-- entrada sem senha deixa aberta — bloquear sozinho não bastaria, porque
+-- quem fosse bloqueado apagaria os dados do site e voltaria como conta
+-- nova. Com a portaria, conta nova também espera.
+--
+-- A coluna nasce com 'aprovado' para quem já existia antes da portaria
+-- (ninguém é expulso na atualização) e logo passa a 'pendente' para quem
+-- chegar depois.
+alter table public.perfis add column if not exists situacao text not null default 'aprovado';
+alter table public.perfis alter column situacao set default 'pendente';
+alter table public.perfis add column if not exists admin boolean not null default false;
+alter table public.perfis add column if not exists decidido_em timestamptz;
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'perfis_situacao_valida') then
+    alter table public.perfis add constraint perfis_situacao_valida
+      check (situacao in ('pendente', 'aprovado', 'bloqueado'));
+  end if;
+end;
+$$;
+
+-- Ninguém se aprova sozinho: o navegador só escolhe o apelido. Situação
+-- e admin mudam apenas pela função decidir_acesso, logo abaixo.
+revoke insert, update on public.perfis from anon, authenticated;
+grant insert (id, apelido) on public.perfis to authenticated;
+grant update (apelido)     on public.perfis to authenticated;
+
+-- A primeira pessoa de todas abre a casa: entra aprovada e como admin.
+-- Daí em diante, todo mundo chega pendente.
+create or replace function public.perfis_antes_de_inserir()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not exists (select 1 from public.perfis where admin) then
+    new.situacao := 'aprovado';
+    new.admin    := true;
+  else
+    new.situacao := 'pendente';
+    new.admin    := false;
+  end if;
+  new.decidido_em := null;
+  return new;
+end;
+$$;
+
+-- Só o próprio banco a chama, pelo trigger.
+revoke execute on function public.perfis_antes_de_inserir() from public, anon, authenticated;
+
+drop trigger if exists perfis_antes_de_inserir on public.perfis;
+create trigger perfis_antes_de_inserir
+  before insert on public.perfis
+  for each row execute function public.perfis_antes_de_inserir();
+
+create or replace function public.aprovado()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.perfis where id = auth.uid() and situacao = 'aprovado'
+  );
+$$;
+
+create or replace function public.eh_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.perfis
+    where id = auth.uid() and situacao = 'aprovado' and admin
+  );
+$$;
+
+-- Aprovar, recusar, bloquear e desbloquear. Admin não mexe em admin
+-- (nem em si mesmo): tirar alguém da administração é pelo Table Editor.
+create or replace function public.decidir_acesso(p_perfil uuid, p_situacao text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.eh_admin() then
+    raise exception 'Só a administração decide quem entra.' using errcode = 'P0001';
+  end if;
+  if p_situacao not in ('aprovado', 'bloqueado') then
+    raise exception 'Situação desconhecida.' using errcode = 'P0001';
+  end if;
+  update public.perfis
+     set situacao = p_situacao, decidido_em = now()
+   where id = p_perfil and not admin;
+  if not found then
+    raise exception 'Essa pessoa não existe ou é da administração.' using errcode = 'P0001';
+  end if;
+end;
+$$;
+
+revoke execute on function public.aprovado()                   from public, anon;
+revoke execute on function public.eh_admin()                   from public, anon;
+revoke execute on function public.decidir_acesso(uuid, text)   from public, anon;
+grant  execute on function public.aprovado()                   to authenticated;
+grant  execute on function public.eh_admin()                   to authenticated;
+grant  execute on function public.decidir_acesso(uuid, text)   to authenticated;
+
+-- Quem espera vê só o próprio perfil; quem já entrou vê todo mundo
+-- (a administração precisa enxergar a fila).
+drop policy if exists "perfis visíveis para quem entrou" on public.perfis;
+create policy "perfis visíveis para quem entrou"
+  on public.perfis for select to authenticated
+  using (id = auth.uid() or public.aprovado());
+
+-- A administração apaga qualquer mensagem; cada um, as suas.
+drop policy if exists "apagar só o que é seu" on public.mensagens;
 create policy "apagar só o que é seu"
   on public.mensagens for delete to authenticated
-  using (autor_id = auth.uid());
-
--- Sem política de UPDATE: ninguém reescreve mensagem já dita.
--- Quem pode ler cada sala e escrever nela vem logo abaixo, junto das
--- salas privadas.
+  using (autor_id = auth.uid() or public.eh_admin());
 
 -- ——— Salas privadas e conversas individuais ————————————————
 -- Três tipos de sala:
@@ -230,8 +351,10 @@ stable
 security definer
 set search_path = public
 as $$
-  select exists (select 1 from public.salas where id = p_sala and tipo = 'publica')
-      or public.eh_membro(p_sala);
+  select public.aprovado() and (
+    exists (select 1 from public.salas where id = p_sala and tipo = 'publica')
+    or public.eh_membro(p_sala)
+  );
 $$;
 
 -- Código de convite: 64 letras e números ao acaso. Impossível de adivinhar.
@@ -255,8 +378,8 @@ declare
   v_titulo text := btrim(regexp_replace(coalesce(p_titulo, ''), '\s+', ' ', 'g'));
   v_id     text := gen_random_uuid()::text;
 begin
-  if not exists (select 1 from public.perfis where id = auth.uid()) then
-    raise exception 'Escolha um apelido antes.' using errcode = 'P0001';
+  if not public.aprovado() then
+    raise exception 'Seu acesso ainda não foi aprovado.' using errcode = 'P0001';
   end if;
   if char_length(v_titulo) not between 2 and 40 then
     raise exception 'O nome da sala precisa ter de 2 a 40 letras.' using errcode = 'P0001';
@@ -284,8 +407,8 @@ as $$
 declare
   v_sala text;
 begin
-  if not exists (select 1 from public.perfis where id = auth.uid()) then
-    raise exception 'Escolha um apelido antes.' using errcode = 'P0001';
+  if not public.aprovado() then
+    raise exception 'Seu acesso ainda não foi aprovado.' using errcode = 'P0001';
   end if;
 
   select id into v_sala from public.salas
@@ -333,13 +456,13 @@ declare
   v_eu uuid := auth.uid();
   v_id text;
 begin
-  if not exists (select 1 from public.perfis where id = v_eu) then
-    raise exception 'Escolha um apelido antes.' using errcode = 'P0001';
+  if not public.aprovado() then
+    raise exception 'Seu acesso ainda não foi aprovado.' using errcode = 'P0001';
   end if;
   if p_outro is null or p_outro = v_eu then
     raise exception 'Escolha outra pessoa.' using errcode = 'P0001';
   end if;
-  if not exists (select 1 from public.perfis where id = p_outro) then
+  if not exists (select 1 from public.perfis where id = p_outro and situacao = 'aprovado') then
     raise exception 'Essa pessoa não está mais aqui.' using errcode = 'P0001';
   end if;
 
@@ -383,7 +506,7 @@ drop policy if exists "escrever só em nome próprio"         on public.mensagen
 -- Pública: todo mundo vê. Privada e individual: só quem é membro.
 create policy "salas visíveis para quem pode"
   on public.salas for select to authenticated
-  using (tipo = 'publica' or public.eh_membro(id));
+  using (public.aprovado() and (tipo = 'publica' or public.eh_membro(id)));
 
 create policy "dono apaga a sala privada"
   on public.salas for delete to authenticated
@@ -422,6 +545,16 @@ begin
       and tablename = 'mensagens'
   ) then
     alter publication supabase_realtime add table public.mensagens;
+  end if;
+  -- A portaria: quem espera fica sabendo que foi aprovado, e a
+  -- administração fica sabendo de quem chegou.
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'perfis'
+  ) then
+    alter publication supabase_realtime add table public.perfis;
   end if;
 end;
 $$;

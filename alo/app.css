@@ -435,6 +435,28 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
 }
 
 .balao.minha .balao-hora { color: #c7d7ff; }
+
+.balao-rodape {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.balao-apagar {
+  margin-right: auto;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+  opacity: 0.5;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.balao-apagar:hover { opacity: 1; }
 .balao.enviando { opacity: 0.55; }
 
 .vazio {
@@ -491,6 +513,90 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
   border-top-color: #34d399;
   color: #bbf7d0;
 }
+
+/* ——— Portaria ——————————————————————————————————————————— */
+
+.com-selo { position: relative; }
+
+.selo {
+  position: absolute;
+  top: -7px; right: -7px;
+  min-width: 18px;
+  padding: 1px 5px;
+  background: var(--destaque);
+  color: #24170a;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+}
+
+.painel {
+  width: min(460px, calc(100% - 32px));
+  max-height: min(640px, calc(100dvh - 32px));
+  padding: 0;
+  background: var(--alto);
+  color: var(--texto);
+  border: 1px solid var(--linha);
+  border-radius: 18px;
+}
+
+.painel::backdrop { background: rgb(0 0 0 / 0.6); }
+
+.painel-topo {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: var(--alto);
+  border-bottom: 1px solid var(--linha);
+}
+
+.painel-topo h2 { margin: 0; font-size: 18px; }
+.painel-corpo { padding: 6px 18px 18px; }
+.painel-corpo .dica { margin: 0 0 6px; }
+
+.gente { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 8px; }
+
+.gente-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+}
+
+.gente-item .nome {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.etiqueta {
+  padding: 2px 8px;
+  border: 1px solid var(--linha);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--apagado);
+}
+
+.acao {
+  padding: 7px 12px;
+  background: var(--fundo);
+  color: var(--texto);
+  border: 1px solid var(--linha);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.acao.principal { background: var(--destaque); color: #24170a; border-color: transparent; }
+.acao.perigo { color: var(--perigo); }
 
 /* ——— Telefone ————————————————————————————————————————————— */
 

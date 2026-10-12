@@ -279,6 +279,34 @@ await pagina.click('#botao-som');
 await pagina.waitForTimeout(200);
 ok('religar toca uma amostra', (await notas()) > antesDoSom);
 
+// ——— 20b. Apagar mensagens ———
+ok('quem não é admin não vê a portaria', !(await pagina.isVisible('#botao-admin')));
+await pagina.click('.sala:nth-child(1)');   // Geral, onde chegaram as mensagens do som
+await pagina.waitForTimeout(300);
+await pagina.evaluate(() => { window.confirm = () => true; });
+await pagina.fill('#campo-mensagem', 'para apagar');
+await pagina.click('#botao-enviar');
+await pagina.waitForTimeout(300);
+ok('só as próprias mensagens têm "apagar"',
+  (await pagina.$$('.balao:not(.minha) .balao-apagar')).length === 0 &&
+  (await pagina.$$('.balao.minha .balao-apagar')).length > 0);
+const antesDeApagar = (await pagina.$$('.balao')).length;
+await pagina.locator('.balao.minha', { hasText: 'para apagar' }).locator('.balao-apagar').click();
+await pagina.waitForTimeout(300);
+ok('apagar tira a mensagem da tela', (await pagina.$$('.balao')).length === antesDeApagar - 1);
+ok('apagar tira a mensagem do banco', await pagina.evaluate(() =>
+  !window.__mock.mensagens.some(m => m.corpo === 'para apagar')));
+
+const comAna = (await pagina.$$eval('.balao-corpo', ns => ns.map(n => n.textContent)))
+  .filter(c => c === 'som 3000').length;
+await pagina.evaluate(() => {
+  const canal = window.__mock.canais.find(c => c.nome === 'alo-mensagens');
+  canal.ouvintes.find(o => o.filtro?.event === 'DELETE').cb({ old: { id: 3000 } });
+});
+await pagina.waitForTimeout(200);
+ok('mensagem apagada por outra pessoa some sozinha', comAna === 1 &&
+  !(await pagina.$$eval('.balao-corpo', ns => ns.map(n => n.textContent))).includes('som 3000'));
+
 // ——— 21. Sala privada: criar, convidar, falar ———
 await pagina.evaluate(() => { window.prompt = () => 'Família'; });
 await pagina.click('#botao-nova-sala');
@@ -394,6 +422,95 @@ await pagina.waitForTimeout(300);
 ok('voltar mostra a lista de salas', await pagina.isVisible('#lista-salas'));
 ok('voltar esconde a conversa', !(await pagina.isVisible('#mensagens')));
 await pagina.screenshot({ path: path.join(AQUI, 'telefone.png') });
+
+// ——— 27. Portaria: quem chega espera ———
+async function novaPagina(cfg) {
+  const contexto = await navegador.newContext({ viewport: { width: 1100, height: 780 } });
+  const p = await contexto.newPage();
+  p.on('pageerror', e => erros.push('pageerror: ' + e.message));
+  p.on('console', m => { if (m.type() === 'error') erros.push('console: ' + m.text()); });
+  await p.addInitScript(c => { window.__cfg = c; }, cfg);
+  await p.route('**/@supabase/supabase-js**', rota => rota.fulfill({
+    status: 200, contentType: 'text/javascript', body: fs.readFileSync(MOCK, 'utf8'),
+  }));
+  await p.route('**/config.js', rota => rota.fulfill({
+    status: 200, contentType: 'text/javascript',
+    body: "globalThis.ALO_CONFIG = { url: 'https://x.supabase.co', anonKey: 'eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiYW5vbiJ9.x' };",
+  }));
+  await p.goto('http://localhost:4173/');
+  await p.waitForSelector('#tela-entrada:not([hidden])', { timeout: 5000 });
+  return p;
+}
+
+const espera = await novaPagina({ situacaoNova: 'pendente' });
+await espera.fill('#campo-apelido', 'Novata');
+await espera.click('#botao-entrar');
+await espera.waitForTimeout(400);
+ok('quem chega cai na espera', await espera.isVisible('#tela-espera'));
+ok('quem espera não vê o app', !(await espera.isVisible('#tela-app')));
+ok('a espera chama a pessoa pelo nome', (await espera.textContent('#espera-texto')).includes('Novata'));
+
+await espera.reload();
+await espera.waitForTimeout(500);
+ok('recarregar continua na espera', await espera.isVisible('#tela-espera'));
+
+await espera.evaluate(() => window.__mock.mudarSituacao('aprovado'));
+await espera.waitForTimeout(500);
+ok('aprovada, o app abre sozinho', await espera.isVisible('#tela-app'));
+
+await espera.evaluate(() => window.__mock.mudarSituacao('bloqueado'));
+await espera.waitForTimeout(300);
+ok('bloqueada, o app fecha na hora', !(await espera.isVisible('#tela-app')));
+ok('bloqueada vê o aviso', (await espera.textContent('#espera-titulo')).includes('não liberado'));
+ok('bloqueada não tem botão de conferir', !(await espera.isVisible('#botao-conferir')));
+await espera.context().close();
+
+// ——— 28. Portaria: a administração decide ———
+const admin = await novaPagina({ adminNovo: true, pessoas: [
+  { id: 'p-maria', apelido: 'Maria', situacao: 'pendente', admin: false },
+  { id: 'p-joao', apelido: 'João', situacao: 'aprovado', admin: false },
+] });
+await admin.fill('#campo-apelido', 'Chefe');
+await admin.click('#botao-entrar');
+await admin.waitForSelector('#tela-app:not([hidden])', { timeout: 5000 });
+await admin.waitForTimeout(400);
+ok('admin vê a portaria', await admin.isVisible('#botao-admin'));
+ok('selo conta quem espera', (await admin.textContent('#selo-portaria')) === '1');
+
+await admin.click('#botao-admin');
+await admin.waitForTimeout(300);
+ok('portaria abre', await admin.isVisible('#painel-admin'));
+ok('quem espera aparece na fila', (await admin.textContent('#lista-pendentes')).includes('Maria'));
+ok('admin não tem botão contra si', (await admin.textContent('#lista-aprovados')).includes('você · admin'));
+
+await admin.click('#lista-pendentes .acao.principal');
+await admin.waitForTimeout(300);
+ok('aprovar move para dentro', (await admin.textContent('#lista-aprovados')).includes('Maria'));
+ok('selo some sem ninguém esperando', !(await admin.isVisible('#selo-portaria')));
+ok('aprovar passa pelo banco', await admin.evaluate(() =>
+  window.__mock.rpcs.some(([n, a]) => n === 'decidir_acesso' && a.p_perfil === 'p-maria' && a.p_situacao === 'aprovado')));
+
+await admin.evaluate(() => { window.confirm = () => true; });
+const bloquearJoao = admin.locator('#lista-aprovados .gente-item', { hasText: 'João' }).locator('.acao');
+await bloquearJoao.click();
+await admin.waitForTimeout(300);
+ok('bloquear move para bloqueadas', (await admin.textContent('#lista-bloqueados')).includes('João'));
+await admin.click('#botao-fechar-painel');
+
+await admin.evaluate(() => {
+  const canal = window.__mock.canais.find(c => c.nome === 'alo-perfis');
+  canal.ouvintes[0].cb({ eventType: 'INSERT',
+    new: { id: 'p-ze', apelido: 'Zé', situacao: 'pendente', admin: false } });
+});
+await admin.waitForTimeout(300);
+ok('quem chega acende o selo', (await admin.textContent('#selo-portaria')) === '1');
+ok('quem chega vira aviso', (await admin.textContent('#aviso')).includes('Zé quer entrar'));
+ok('admin pode apagar mensagem dos outros', (await admin.$$('.balao:not(.minha) .balao-apagar')).length > 0);
+await admin.screenshot({ path: path.join(AQUI, 'fotos', '6-admin.png') });
+await admin.click('#botao-admin');
+await admin.waitForTimeout(300);
+await admin.screenshot({ path: path.join(AQUI, 'fotos', '7-portaria.png') });
+await admin.context().close();
 
 console.log('\n———— RESULTADO ————');
 for (const [r, n] of passos) console.log(`${r === 'PASSOU' ? '  ok  ' : ' FALHA'} ${n}`);

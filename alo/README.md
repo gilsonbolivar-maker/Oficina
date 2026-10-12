@@ -165,6 +165,36 @@ aparelho, usar aba anônima ou apagar os dados do site cria uma pessoa
 nova, que não está nas salas privadas antigas. É preciso um convite de
 novo. Login por e-mail resolveria isso, se um dia fizer falta.
 
+## Portaria e administração
+
+Quem chega escolhe o apelido e fica **aguardando aprovação**: não vê salas,
+mensagens nem pessoas até a administração liberar. A tela de espera abre o
+app sozinha quando a aprovação chega.
+
+```
+Pessoa nova ──▶ apelido ──▶ ⏳ aguardando
+                                 │
+     Admin: 🔔 + "Fulano quer entrar" + selo no 🛡️
+     ├─ Aprovar ──▶ entra (e cai na sala, se veio por convite)
+     └─ Recusar ──▶ fica de fora
+```
+
+| Quem | Pode |
+|---|---|
+| **Administração** (🛡️ no topo da barra lateral) | aprovar, recusar, bloquear e desbloquear pessoas · apagar qualquer mensagem |
+| **Todo mundo** | apagar as próprias mensagens |
+
+Bloquear vale na hora: a pessoa deixa de ler e de escrever, e o app dela
+fecha. Como **toda conta nova passa pela portaria**, apagar os dados do
+site e voltar como outra pessoa não adianta — volta para a fila.
+
+Tudo isso mora no banco. O navegador só consegue gravar o próprio
+apelido (as colunas `situacao` e `admin` não aceitam escrita de fora), e
+só a função `decidir_acesso`, que confere se quem chama é admin, muda a
+situação de alguém. A primeira pessoa a se cadastrar num banco novo vira
+admin. Para pôr mais alguém na administração, marque `admin` na tabela
+`perfis` pelo *Table Editor*.
+
 ## Som
 
 Chegou mensagem de outra pessoa, toca um som: **um toque** nas salas
@@ -192,15 +222,15 @@ vai acontecer — e é o comportamento desejado para um pedido de remoção.
 
 ## Rodar os testes
 
-Há 76 testes de ponta a ponta em [`teste/`](teste/), que rodam sem precisar
+Há 101 testes de ponta a ponta em [`teste/`](teste/), que rodam sem precisar
 de um projeto no Supabase. Veja o [README de lá](teste/README.md).
 
 ## Moderação
 
-Qualquer pessoa com o endereço entra. As proteções são o limite de ritmo, o
-bloqueio de repetição e os tamanhos — não há filtro de conteúdo. Para apagar
-uma mensagem, use o *Table Editor* do Supabase. Cada pessoa também pode apagar
-as próprias mensagens pelo banco.
+Só entra quem a administração aprova (veja *Portaria*). Depois disso, as
+proteções são o limite de ritmo, o bloqueio de repetição e os tamanhos —
+não há filtro de conteúdo. A administração apaga qualquer mensagem pelo
+próprio app.
 
 Se um dia a sala precisar ser fechada, troque a entrada anônima por login com
 e-mail em **Authentication → Providers** — o resto do app continua igual.

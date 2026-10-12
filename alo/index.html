@@ -132,12 +132,25 @@
   </div>
 </section>
 
+<!-- ——— Tela 2b: esperando a portaria ——— -->
+<section id="tela-espera" class="tela" hidden>
+  <div class="cartao">
+    <div class="marca" aria-hidden="true">Alô</div>
+    <h1 id="espera-titulo">Pedido enviado</h1>
+    <p class="ajuda" id="espera-texto"></p>
+    <button type="button" class="principal" id="botao-conferir">Conferir agora</button>
+  </div>
+</section>
+
 <!-- ——— Tela 3: o aplicativo ——— -->
 <main id="tela-app" class="app" hidden>
 
   <aside class="lateral" id="lateral">
     <header class="lateral-topo">
       <div class="marca-pequena">Alô</div>
+      <button type="button" class="icone com-selo" id="botao-admin" hidden
+              title="Portaria: quem entra e quem fica de fora" aria-label="Portaria">🛡️<span
+              class="selo" id="selo-portaria" hidden></span></button>
       <button type="button" class="icone" id="botao-sair" title="Trocar de apelido"
               aria-label="Trocar de apelido">⎋</button>
     </header>
@@ -208,6 +221,26 @@
   </section>
 
 </main>
+
+<!-- ——— Portaria (só para a administração) ——— -->
+<dialog id="painel-admin" class="painel" aria-labelledby="painel-titulo">
+  <header class="painel-topo">
+    <h2 id="painel-titulo">Portaria</h2>
+    <button type="button" class="icone" id="botao-fechar-painel" aria-label="Fechar">✕</button>
+  </header>
+  <div class="painel-corpo">
+    <h3 class="rotulo">Aguardando <span id="conta-pendentes">0</span></h3>
+    <ul class="gente" id="lista-pendentes"></ul>
+    <p class="dica" id="vazio-pendentes">Ninguém esperando.</p>
+
+    <h3 class="rotulo">Dentro</h3>
+    <ul class="gente" id="lista-aprovados"></ul>
+
+    <h3 class="rotulo">Bloqueadas</h3>
+    <ul class="gente" id="lista-bloqueados"></ul>
+    <p class="dica" id="vazio-bloqueados">Ninguém bloqueado.</p>
+  </div>
+</dialog>
 
 <script type="module" src="app.js"></script>
 </body>

@@ -27,8 +27,20 @@ const escondidas = [
     membros: [{ perfil_id: 'outro', perfis: { apelido: 'Ana' } }] },
 ];
 let codigos = 0;
-window.__mock = { mensagens, salas, escondidas, CONVITE_TURMA,
-  get perfil() { return perfil; }, canais: [], presentes: [], rpcs: [] };
+// window.__cfg (posto antes do app carregar) diz como a portaria trata
+// quem chega: { situacaoNova, adminNovo, pessoas }.
+const cfg = window.__cfg || {};
+const pessoas = (cfg.pessoas || []).map(p => ({ ...p }));
+window.__mock = { mensagens, salas, escondidas, CONVITE_TURMA, pessoas,
+  get perfil() { return perfil; }, canais: [], presentes: [], rpcs: [],
+  // Faz o papel da administração mudando a situação desta pessoa.
+  mudarSituacao(situacao) {
+    gravarPerfil({ ...perfil, situacao });
+    for (const c of window.__mock.canais.filter(c => c.nome === 'alo-perfis')) {
+      for (const o of c.ouvintes) o.cb({ eventType: 'UPDATE', new: { ...perfil } });
+    }
+  },
+};
 
 const eu = () => ({ perfil_id: 'eu-123', perfis: { apelido: perfil?.apelido } });
 
@@ -83,19 +95,26 @@ export function createClient(url, key) {
           if (b._insert) {
             const { id, apelido } = b._insert[0];
             if (apelido.toLowerCase() === 'maria') return { data: null, error: { code: '23505', message: 'duplicado' } };
-            gravarPerfil({ id, apelido });
+            gravarPerfil({ id, apelido, situacao: cfg.situacaoNova || 'aprovado', admin: !!cfg.adminNovo });
             return { data: perfil, error: null };
           }
           if (b._update) {
             const { apelido } = b._update[0];
             if (apelido.toLowerCase() === 'maria') return { data: null, error: { code: '23505', message: 'duplicado' } };
-            gravarPerfil({ id: perfil.id, apelido });
+            gravarPerfil({ ...perfil, apelido });
             return { data: perfil, error: null };
           }
+          if (modo === 'lista') return { data: [perfil, ...pessoas], error: null };
           if (b._delete) { gravarPerfil(null); return { data: null, error: null }; }
           return { data: perfil, error: null };
         }
         if (tabela === 'mensagens') {
+          if (b._delete) {
+            const id = b._eqs[0]?.[1];
+            const i = mensagens.findIndex(m => m.id === id);
+            if (i >= 0) mensagens.splice(i, 1);
+            return { data: i >= 0 ? [{ id }] : [], error: null };
+          }
           if (b._insert) {
             const { sala_id, corpo } = b._insert[0];
             if (corpo === 'RECUSAR') return { data: null, error: { message: 'Calma — um recado de cada vez.' } };
@@ -117,6 +136,12 @@ export function createClient(url, key) {
         salas.push({ id, titulo: args.p_titulo, subtitulo: '', ordem: 0, tipo: 'privada',
           dono_id: 'eu-123', convite: String(++codigos).padStart(64, 'a'), membros: [eu()] });
         return { data: id, error: null };
+      }
+      if (nome === 'decidir_acesso') {
+        const pessoa = pessoas.find(p => p.id === args.p_perfil);
+        if (!pessoa || pessoa.admin) return { data: null, error: { message: 'Essa pessoa não existe ou é da administração.' } };
+        pessoa.situacao = args.p_situacao;
+        return { data: null, error: null };
       }
       if (nome === 'trocar_convite') {
         const sala = salas.find(s => s.id === args.p_sala);

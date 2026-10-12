@@ -20,6 +20,7 @@ const LIMITE_CORPO = 500;    // igual à constraint do banco
 const CHAVE_CONFIG = 'alo:config';
 const CHAVE_LIDO = 'alo:lido';
 const CHAVE_SOM = 'alo:som';
+const CHAVE_CONVITE = 'alo:convite';
 
 const FONTES_LIB = [
   'https://esm.sh/@supabase/supabase-js@2',
@@ -87,6 +88,9 @@ const estado = {
   som: lembrar(CHAVE_SOM, true),
   presentes: [],
   convite: null,          // código vindo de um link #convite=…
+  appIniciado: false,
+  pessoas: [],            // a fila da portaria (só para a administração)
+  canalPerfis: null,
   canalMensagens: null,
   canalPresenca: null
 };
@@ -102,7 +106,7 @@ function lerConfig() {
 }
 
 function mostrarTela(qual) {
-  for (const t of ['tela-config', 'tela-entrada', 'tela-app']) $(t).hidden = t !== qual;
+  for (const t of ['tela-config', 'tela-entrada', 'tela-espera', 'tela-app']) $(t).hidden = t !== qual;
 }
 
 /**
@@ -305,7 +309,7 @@ async function conectar(config) {
 
 async function buscarPerfil(id) {
   const { data, error } = await estado.sb
-    .from('perfis').select('id, apelido').eq('id', id).maybeSingle();
+    .from('perfis').select('id, apelido, situacao, admin').eq('id', id).maybeSingle();
   if (error) throw error;
   return data;
 }
@@ -328,8 +332,10 @@ function telaEntrada(idUsuario) {
     }
     botao.disabled = true;
     botao.textContent = 'Entrando…';
+    // Situação e admin quem decide é o banco: daqui só sai o apelido.
     const { data, error } = await estado.sb
-      .from('perfis').insert({ id: idUsuario, apelido }).select().single();
+      .from('perfis').insert({ id: idUsuario, apelido })
+      .select('id, apelido, situacao, admin').single();
     botao.disabled = false;
     botao.textContent = 'Entrar';
 
@@ -340,9 +346,181 @@ function telaEntrada(idUsuario) {
       erro.hidden = false;
       return;
     }
-    estado.eu = data;
-    await iniciarApp();
+    await seguir(data);
   });
+}
+
+/* ——— Portaria: quem espera, quem entra ——————————————————————
+   A regra mora no banco (supabase.sql): quem está pendente ou
+   bloqueado não lê nem escreve nada. Aqui só se mostra a tela certa. */
+
+/** Abre a tela que cabe à situação da pessoa. */
+async function seguir(perfil) {
+  estado.eu = perfil;
+  ouvirPerfis();
+  if (perfil.situacao === 'aprovado') await iniciarApp();
+  else telaEspera(perfil.situacao);
+}
+
+function telaEspera(situacao) {
+  mostrarTela('tela-espera');
+  const bloqueado = situacao === 'bloqueado';
+  $('espera-titulo').textContent = bloqueado ? 'Acesso não liberado' : 'Pedido enviado';
+  $('espera-texto').textContent = bloqueado
+    ? 'A administração do Alô não liberou a sua entrada.'
+    : `Olá, ${estado.eu.apelido}. A administração vai ver o seu pedido para entrar. ` +
+      'Assim que for aprovado, esta tela abre sozinha.';
+  $('botao-conferir').hidden = bloqueado;
+  $('botao-conferir').onclick = async () => {
+    const perfil = await buscarPerfil(estado.eu.id).catch(() => null);
+    if (perfil) await mudouMinhaSituacao(perfil);
+  };
+}
+
+async function mudouMinhaSituacao(perfil) {
+  const antes = estado.eu.situacao;
+  estado.eu = { ...estado.eu, ...perfil };
+  if (perfil.situacao === antes) return;
+  if (perfil.situacao !== 'aprovado') {
+    // A presença não passa pelas regras do banco: sai dela por conta própria.
+    estado.canalPresenca?.untrack?.();
+    telaEspera(perfil.situacao);
+    return;
+  }
+  // Voltando de um bloqueio, recomeça do zero com tudo carregado de novo.
+  if (estado.appIniciado) location.reload();
+  else await iniciarApp();
+}
+
+/**
+ * Um canal para os perfis. O banco só manda o que a pessoa pode ver:
+ * quem espera recebe só o próprio perfil (e descobre que foi aprovado);
+ * quem já entrou recebe todos (a administração vê a fila crescer).
+ */
+function ouvirPerfis() {
+  if (estado.canalPerfis) return;
+  estado.canalPerfis = estado.sb
+    .channel('alo-perfis')
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'perfis' },
+      carga => {
+        const perfil = carga.new;
+        if (!perfil?.id) return;
+        if (perfil.id === estado.eu.id) mudouMinhaSituacao(perfil);
+        else if (estado.eu.admin) chegouNaPortaria(perfil, carga.eventType);
+      })
+    .subscribe();
+}
+
+/* ——— Administração —————————————————————————————————————————— */
+
+function chegouNaPortaria(perfil, evento) {
+  const i = estado.pessoas.findIndex(p => p.id === perfil.id);
+  if (i >= 0) estado.pessoas[i] = { ...estado.pessoas[i], ...perfil };
+  else estado.pessoas.unshift(perfil);
+  desenharPortaria();
+
+  if (evento === 'INSERT' && perfil.situacao === 'pendente') {
+    tocarSom('privada');
+    avisar(`${perfil.apelido} quer entrar. Toque em 🛡️ para aprovar.`, 'bom');
+  }
+}
+
+async function carregarPessoas() {
+  const { data, error } = await estado.sb
+    .from('perfis')
+    .select('id, apelido, situacao, admin, criado_em')
+    .order('criado_em', { ascending: false });
+  if (error) { avisar(error.message || 'Não consegui ver a portaria.'); return; }
+  estado.pessoas = data || [];
+  desenharPortaria();
+}
+
+const ACOES_PORTARIA = {
+  pendente:  [['Aprovar', 'aprovado', 'principal'], ['Recusar', 'bloqueado', 'perigo']],
+  aprovado:  [['Bloquear', 'bloqueado', 'perigo']],
+  bloqueado: [['Desbloquear', 'aprovado', '']]
+};
+
+function desenharPortaria() {
+  const listas = {
+    pendente: $('lista-pendentes'),
+    aprovado: $('lista-aprovados'),
+    bloqueado: $('lista-bloqueados')
+  };
+  for (const lista of Object.values(listas)) lista.replaceChildren();
+
+  for (const pessoa of estado.pessoas) {
+    const item = el('li', 'gente-item');
+    const marca = el('span', 'avatar');
+    marca.textContent = iniciais(pessoa.apelido);
+    marca.style.background = corDe(pessoa.apelido);
+    const nome = el('span', 'nome');
+    nome.textContent = pessoa.apelido;
+    item.append(marca, nome);
+
+    if (pessoa.admin) {
+      const etiqueta = el('span', 'etiqueta');
+      etiqueta.textContent = pessoa.id === estado.eu.id ? 'você · admin' : 'admin';
+      item.append(etiqueta);
+    } else {
+      for (const [rotulo, situacao, classe] of ACOES_PORTARIA[pessoa.situacao] || []) {
+        const botao = el('button', `acao ${classe}`.trim());
+        botao.type = 'button';
+        botao.textContent = rotulo;
+        botao.addEventListener('click', () => decidirAcesso(pessoa, situacao));
+        item.append(botao);
+      }
+    }
+    listas[pessoa.situacao]?.append(item);
+  }
+
+  const pendentes = listas.pendente.children.length;
+  $('conta-pendentes').textContent = String(pendentes);
+  $('vazio-pendentes').hidden = pendentes > 0;
+  $('vazio-bloqueados').hidden = listas.bloqueado.children.length > 0;
+  $('selo-portaria').textContent = String(pendentes);
+  $('selo-portaria').hidden = pendentes === 0;
+}
+
+async function decidirAcesso(pessoa, situacao) {
+  if (situacao === 'bloqueado' && pessoa.situacao === 'aprovado' &&
+      !confirm(`Bloquear ${pessoa.apelido}? A pessoa deixa de ler e de escrever na hora.`)) return;
+
+  const { error } = await estado.sb.rpc('decidir_acesso', { p_perfil: pessoa.id, p_situacao: situacao });
+  if (error) { avisar(error.message || 'Não consegui mudar o acesso.'); return; }
+  pessoa.situacao = situacao;
+  desenharPortaria();
+}
+
+async function abrirPortaria() {
+  await carregarPessoas();
+  $('painel-admin').showModal();
+}
+
+async function apagarMensagem(msg) {
+  const qual = msg.autor_id === estado.eu.id ? 'a sua mensagem' : `a mensagem de ${msg.autor_apelido}`;
+  if (!confirm(`Apagar ${qual}? Ela some para todo mundo.`)) return;
+
+  // O select confirma que apagou mesmo: se a regra do banco não deixar,
+  // o delete não dá erro, só não acha nada.
+  const { data, error } = await estado.sb
+    .from('mensagens').delete().eq('id', msg.id).select('id');
+  if (error || !data?.length) {
+    avisar(error?.message || 'Não deu para apagar essa mensagem.');
+    return;
+  }
+  removerMensagem(msg.id);
+}
+
+function removerMensagem(id) {
+  for (const [salaId, lista] of estado.mensagens) {
+    const resto = lista.filter(m => m.id !== id);
+    if (resto.length === lista.length) continue;
+    estado.mensagens.set(salaId, resto);
+    if (salaId === estado.salaAtual) desenharMensagens(true);
+  }
+  desenharSalas();
 }
 
 /* ——— Salas ————————————————————————————————————————————————— */
@@ -538,10 +716,20 @@ function desenharMensagens(manterRolagem = false) {
     corpo.textContent = msg.corpo;             // idem — é aqui que o XSS morre
     balao.append(corpo);
 
+    const rodape = el('div', 'balao-rodape');
+    // Cada um apaga o que disse; a administração apaga qualquer coisa.
+    if (!msg.provisoria && (minha || estado.eu.admin)) {
+      const apagar = el('button', 'balao-apagar');
+      apagar.type = 'button';
+      apagar.textContent = 'apagar';
+      apagar.addEventListener('click', () => apagarMensagem(msg));
+      rodape.append(apagar);
+    }
     const hora = el('time', 'balao-hora');
     hora.dateTime = quando.toISOString();
     hora.textContent = msg.provisoria ? 'enviando…' : horaDe.format(quando);
-    balao.append(hora);
+    rodape.append(hora);
+    balao.append(rodape);
 
     caixa.append(balao);
     autorAnterior = msg.autor_apelido;
@@ -684,6 +872,9 @@ function ouvirMensagens() {
         }
         desenharSalas();
       })
+    .on('postgres_changes',
+      { event: 'DELETE', schema: 'public', table: 'mensagens' },
+      carga => { if (carga.old?.id) removerMensagem(carga.old.id); })
     .subscribe(situacao => sinalizar(situacao === 'SUBSCRIBED'));
 }
 
@@ -829,7 +1020,8 @@ async function trocarApelido() {
   }
 
   const { data, error } = await estado.sb
-    .from('perfis').update({ apelido }).eq('id', estado.eu.id).select().single();
+    .from('perfis').update({ apelido }).eq('id', estado.eu.id)
+    .select('id, apelido, situacao, admin').single();
 
   if (error) {
     avisar(error.code === '23505'
@@ -838,7 +1030,7 @@ async function trocarApelido() {
     return;
   }
 
-  estado.eu = data;
+  estado.eu = { ...estado.eu, ...data };
   $('meu-nome').textContent = estado.eu.apelido;
   $('meu-avatar').textContent = iniciais(estado.eu.apelido);
   $('meu-avatar').style.background = corDe(estado.eu.apelido);
@@ -992,6 +1184,8 @@ async function apagarSala() {
 /* ——— Montagem ——————————————————————————————————————————————— */
 
 async function iniciarApp() {
+  if (estado.appIniciado) return;
+  estado.appIniciado = true;
   mostrarTela('tela-app');
 
   $('meu-nome').textContent = estado.eu.apelido;
@@ -1007,6 +1201,7 @@ async function iniciarApp() {
   if (estado.convite) {
     primeira = (await entrarPorConvite(estado.convite)) || primeira;
     estado.convite = null;
+    guardar(CHAVE_CONVITE, null);
   }
   await abrirSala(primeira);
 
@@ -1033,6 +1228,12 @@ async function iniciarApp() {
   $('botao-sair').addEventListener('click', trocarApelido);
   $('botao-nova-sala').addEventListener('click', criarSala);
   $('botao-som').addEventListener('click', alternarSom);
+  if (estado.eu.admin) {
+    $('botao-admin').hidden = false;
+    $('botao-admin').addEventListener('click', abrirPortaria);
+    $('botao-fechar-painel').addEventListener('click', () => $('painel-admin').close());
+    carregarPessoas();
+  }
   mostrarBotaoSom();
   for (const evento of ['pointerdown', 'keydown']) {
     document.addEventListener(evento, destravarSom, { passive: true });
@@ -1071,14 +1272,16 @@ async function iniciarApp() {
 async function comecar() {
   const config = lerConfig();
   if (!config) { telaConfig(); return; }
-  estado.convite = lerConviteDoEndereco();
+  // O convite fica guardado até ser usado: quem chega por um link
+  // pode ter de esperar a portaria antes de entrar na sala.
+  estado.convite = lerConviteDoEndereco() || lembrar(CHAVE_CONVITE, null);
+  if (estado.convite) guardar(CHAVE_CONVITE, estado.convite);
 
   try {
     const idUsuario = await conectar(config);
     const perfil = await buscarPerfil(idUsuario);
     if (!perfil) { telaEntrada(idUsuario); return; }
-    estado.eu = perfil;
-    await iniciarApp();
+    await seguir(perfil);
   } catch (e) {
     mostrarTela('tela-entrada');
     const erro = $('erro-entrada');
