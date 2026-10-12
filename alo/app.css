@@ -514,6 +514,37 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
   color: #bbf7d0;
 }
 
+/* ——— Conversa secreta: só a conversa aparece ——————————————— */
+
+.modo-reservado #lista-salas,
+.modo-reservado #grupo-privadas,
+.modo-reservado .presenca { display: none; }
+
+.faixa {
+  margin: 8px;
+  padding: 8px 12px;
+  background: #3b1d1d;
+  border: 1px solid var(--perigo);
+  border-radius: 10px;
+  color: #fecaca;
+  font-size: 13px;
+}
+
+.chave-chat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 0 6px;
+  padding: 12px 14px;
+  background: #10291f;
+  border: 1px solid #34d399;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.chave-chat.fechado { background: #3b1d1d; border-color: var(--perigo); }
+
 /* ——— Portaria ——————————————————————————————————————————— */
 
 .com-selo { position: relative; }

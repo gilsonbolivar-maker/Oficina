@@ -222,6 +222,36 @@ create trigger perfis_antes_de_inserir
   before insert on public.perfis
   for each row execute function public.perfis_antes_de_inserir();
 
+-- ——— Ligar e desligar o chat ———
+-- Uma linha só. Fechado, ninguém além da administração lê nem escreve:
+-- aprovado() logo abaixo já responde "não" para todo o resto, e todas
+-- as regras de acesso passam por ela.
+create table if not exists public.ajustes (
+  id        integer primary key default 1,
+  aberto    boolean not null default true,
+  mudado_em timestamptz,
+  constraint ajustes_linha_unica check (id = 1)
+);
+insert into public.ajustes (id) values (1) on conflict (id) do nothing;
+alter table public.ajustes enable row level security;
+
+-- Todo mundo pode saber se o chat está aberto (é o que mostra a tela
+-- "Chat fechado"); mudar, só pela função abrir_fechar_chat.
+drop policy if exists "todos sabem se o chat está aberto" on public.ajustes;
+create policy "todos sabem se o chat está aberto"
+  on public.ajustes for select to authenticated using (true);
+
+create or replace function public.chat_aberto()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce((select aberto from public.ajustes where id = 1), true);
+$$;
+
+-- Aprovado e, com o chat fechado, da administração.
 create or replace function public.aprovado()
 returns boolean
 language sql
@@ -230,7 +260,9 @@ security definer
 set search_path = public
 as $$
   select exists (
-    select 1 from public.perfis where id = auth.uid() and situacao = 'aprovado'
+    select 1 from public.perfis
+    where id = auth.uid() and situacao = 'aprovado'
+      and (admin or public.chat_aberto())
   );
 $$;
 
@@ -271,6 +303,24 @@ begin
 end;
 $$;
 
+create or replace function public.abrir_fechar_chat(p_aberto boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.eh_admin() then
+    raise exception 'Só a administração liga e desliga o chat.' using errcode = 'P0001';
+  end if;
+  update public.ajustes set aberto = p_aberto, mudado_em = now() where id = 1;
+end;
+$$;
+
+revoke execute on function public.chat_aberto()                from public, anon;
+revoke execute on function public.abrir_fechar_chat(boolean)   from public, anon;
+grant  execute on function public.chat_aberto()                to authenticated;
+grant  execute on function public.abrir_fechar_chat(boolean)   to authenticated;
 revoke execute on function public.aprovado()                   from public, anon;
 revoke execute on function public.eh_admin()                   from public, anon;
 revoke execute on function public.decidir_acesso(uuid, text)   from public, anon;
@@ -278,12 +328,24 @@ grant  execute on function public.aprovado()                   to authenticated;
 grant  execute on function public.eh_admin()                   to authenticated;
 grant  execute on function public.decidir_acesso(uuid, text)   to authenticated;
 
--- Quem espera vê só o próprio perfil; quem já entrou vê todo mundo
--- (a administração precisa enxergar a fila).
-drop policy if exists "perfis visíveis para quem entrou" on public.perfis;
-create policy "perfis visíveis para quem entrou"
-  on public.perfis for select to authenticated
-  using (id = auth.uid() or public.aprovado());
+-- ——— Conversa secreta ———
+-- A administração gera um link de uso único. Quem o abre entra direto
+-- numa conversa a sós com ela, sem passar pela portaria, mas fica
+-- `reservado`: não vê as salas abertas nem o resto das pessoas, e
+-- ninguém de fora da conversa vê o perfil dela. Ninguém fica sabendo
+-- que a conversa existe.
+alter table public.perfis add column if not exists reservado boolean not null default false;
+
+create or replace function public.reservado()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce((select reservado from public.perfis where id = auth.uid()), false);
+$$;
+
 
 -- A administração apaga qualquer mensagem; cada um, as suas.
 drop policy if exists "apagar só o que é seu" on public.mensagens;
@@ -328,6 +390,39 @@ create table if not exists public.membros (
 
 create index if not exists membros_perfil_idx on public.membros (perfil_id);
 
+-- As duas pessoas estão juntas em alguma sala?
+create or replace function public.compartilha_sala(p_perfil uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.membros a
+    join public.membros b on b.sala_id = a.sala_id
+    where a.perfil_id = auth.uid() and b.perfil_id = p_perfil
+  );
+$$;
+
+revoke execute on function public.reservado()              from public, anon;
+revoke execute on function public.compartilha_sala(uuid)   from public, anon;
+grant  execute on function public.reservado()              to authenticated;
+grant  execute on function public.compartilha_sala(uuid)   to authenticated;
+
+-- Quem espera vê só o próprio perfil. Quem já entrou vê todo mundo,
+-- menos os reservados — esses, só quem está na conversa com eles (e a
+-- administração, que precisa enxergar a portaria inteira).
+drop policy if exists "perfis visíveis para quem entrou" on public.perfis;
+create policy "perfis visíveis para quem entrou"
+  on public.perfis for select to authenticated
+  using (
+    id = auth.uid()
+    or public.eh_admin()
+    or (public.aprovado() and not public.reservado() and not reservado)
+    or public.compartilha_sala(id)
+  );
+
 -- Usada pelas regras de acesso. Roda como dono do banco para poder
 -- olhar `membros` sem cair na própria regra de `membros` (o que daria
 -- uma volta infinita).
@@ -352,7 +447,8 @@ security definer
 set search_path = public
 as $$
   select public.aprovado() and (
-    exists (select 1 from public.salas where id = p_sala and tipo = 'publica')
+    (not public.reservado()
+     and exists (select 1 from public.salas where id = p_sala and tipo = 'publica'))
     or public.eh_membro(p_sala)
   );
 $$;
@@ -380,6 +476,9 @@ declare
 begin
   if not public.aprovado() then
     raise exception 'Seu acesso ainda não foi aprovado.' using errcode = 'P0001';
+  end if;
+  if public.reservado() then
+    raise exception 'Seu convite vale só para a conversa.' using errcode = 'P0001';
   end if;
   if char_length(v_titulo) not between 2 and 40 then
     raise exception 'O nome da sala precisa ter de 2 a 40 letras.' using errcode = 'P0001';
@@ -409,6 +508,9 @@ declare
 begin
   if not public.aprovado() then
     raise exception 'Seu acesso ainda não foi aprovado.' using errcode = 'P0001';
+  end if;
+  if public.reservado() then
+    raise exception 'Seu convite vale só para a conversa.' using errcode = 'P0001';
   end if;
 
   select id into v_sala from public.salas
@@ -459,10 +561,14 @@ begin
   if not public.aprovado() then
     raise exception 'Seu acesso ainda não foi aprovado.' using errcode = 'P0001';
   end if;
+  if public.reservado() then
+    raise exception 'Seu convite vale só para a conversa.' using errcode = 'P0001';
+  end if;
   if p_outro is null or p_outro = v_eu then
     raise exception 'Escolha outra pessoa.' using errcode = 'P0001';
   end if;
-  if not exists (select 1 from public.perfis where id = p_outro and situacao = 'aprovado') then
+  if not exists (select 1 from public.perfis
+                 where id = p_outro and situacao = 'aprovado' and not reservado) then
     raise exception 'Essa pessoa não está mais aqui.' using errcode = 'P0001';
   end if;
 
@@ -478,6 +584,101 @@ begin
   return v_id;
 end;
 $$;
+
+-- C: o dono tira alguém da sala. O convite é trocado junto — senão a
+-- pessoa voltava pelo mesmo link.
+create or replace function public.remover_membro(p_sala text, p_perfil uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not exists (select 1 from public.salas
+                 where id = p_sala and tipo = 'privada' and dono_id = auth.uid()) then
+    raise exception 'Só quem criou a sala tira alguém dela.' using errcode = 'P0001';
+  end if;
+  if p_perfil = auth.uid() then
+    raise exception 'Para sair da própria sala, apague a sala.' using errcode = 'P0001';
+  end if;
+  delete from public.membros where sala_id = p_sala and perfil_id = p_perfil;
+  if not found then
+    raise exception 'Essa pessoa já não está na sala.' using errcode = 'P0001';
+  end if;
+  update public.salas set convite = public.novo_codigo() where id = p_sala;
+end;
+$$;
+
+-- Conversa secreta: a administração cria e recebe o código do link.
+create or replace function public.criar_conversa_secreta()
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_id     text := gen_random_uuid()::text;
+  v_codigo text := public.novo_codigo();
+begin
+  if not public.eh_admin() then
+    raise exception 'Só a administração cria conversa secreta.' using errcode = 'P0001';
+  end if;
+  insert into public.salas (id, titulo, subtitulo, ordem, tipo, dono_id, convite)
+  values (v_id, 'Conversa', '', 0, 'individual', auth.uid(), v_codigo);
+  insert into public.membros (sala_id, perfil_id) values (v_id, auth.uid());
+  return v_id;
+end;
+$$;
+
+-- Quem abre o link entra na conversa. O link vale uma vez só. Quem
+-- estava esperando a portaria passa a aprovado, mas reservado.
+create or replace function public.aceitar_conversa_secreta(p_codigo text)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_situacao text;
+  v_sala     text;
+  v_dono     uuid;
+begin
+  select situacao into v_situacao from public.perfis where id = auth.uid();
+  if v_situacao is null then
+    raise exception 'Escolha um apelido antes.' using errcode = 'P0001';
+  end if;
+  if v_situacao = 'bloqueado' then
+    raise exception 'Seu acesso não foi liberado.' using errcode = 'P0001';
+  end if;
+
+  select id, dono_id into v_sala, v_dono from public.salas
+  where tipo = 'individual' and convite = p_codigo;
+  if v_sala is null then
+    raise exception 'Esse convite já foi usado ou não vale mais.' using errcode = 'P0001';
+  end if;
+  if v_dono = auth.uid() then
+    raise exception 'Esse convite é seu: mande o link para a outra pessoa.' using errcode = 'P0001';
+  end if;
+
+  insert into public.membros (sala_id, perfil_id) values (v_sala, auth.uid())
+  on conflict do nothing;
+  update public.salas set convite = null where id = v_sala;
+
+  if v_situacao = 'pendente' then
+    update public.perfis
+       set situacao = 'aprovado', reservado = true, decidido_em = now()
+     where id = auth.uid();
+  end if;
+  return v_sala;
+end;
+$$;
+
+revoke execute on function public.remover_membro(text, uuid)          from public, anon;
+revoke execute on function public.criar_conversa_secreta()            from public, anon;
+revoke execute on function public.aceitar_conversa_secreta(text)      from public, anon;
+grant  execute on function public.remover_membro(text, uuid)          to authenticated;
+grant  execute on function public.criar_conversa_secreta()            to authenticated;
+grant  execute on function public.aceitar_conversa_secreta(text)      to authenticated;
 
 revoke execute on function public.criar_sala(text)         from public, anon;
 revoke execute on function public.entrar_por_convite(text) from public, anon;
@@ -497,6 +698,7 @@ alter table public.membros enable row level security;
 drop policy if exists "salas visíveis para quem entrou"     on public.salas;
 drop policy if exists "salas visíveis para quem pode"       on public.salas;
 drop policy if exists "dono apaga a sala privada"           on public.salas;
+drop policy if exists "dono apaga a sala que criou"         on public.salas;
 drop policy if exists "membros visíveis entre si"           on public.membros;
 drop policy if exists "cada um sai quando quiser"           on public.membros;
 drop policy if exists "mensagens visíveis para quem entrou" on public.mensagens;
@@ -506,11 +708,14 @@ drop policy if exists "escrever só em nome próprio"         on public.mensagen
 -- Pública: todo mundo vê. Privada e individual: só quem é membro.
 create policy "salas visíveis para quem pode"
   on public.salas for select to authenticated
-  using (public.aprovado() and (tipo = 'publica' or public.eh_membro(id)));
+  using (public.aprovado()
+         and ((tipo = 'publica' and not public.reservado()) or public.eh_membro(id)));
 
-create policy "dono apaga a sala privada"
+-- Sala privada ou conversa secreta: quem criou apaga. As salas abertas
+-- e as conversas a sós comuns não têm dono.
+create policy "dono apaga a sala que criou"
   on public.salas for delete to authenticated
-  using (tipo = 'privada' and dono_id = auth.uid());
+  using (dono_id = auth.uid());
 
 -- Quem está numa sala vê quem mais está nela — e só nela.
 create policy "membros visíveis entre si"
@@ -555,6 +760,15 @@ begin
       and tablename = 'perfis'
   ) then
     alter publication supabase_realtime add table public.perfis;
+  end if;
+  -- Chat ligado ou desligado: todo mundo fica sabendo na hora.
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'ajustes'
+  ) then
+    alter publication supabase_realtime add table public.ajustes;
   end if;
 end;
 $$;

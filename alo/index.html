@@ -138,6 +138,7 @@
     <div class="marca" aria-hidden="true">Alô</div>
     <h1 id="espera-titulo">Pedido enviado</h1>
     <p class="ajuda" id="espera-texto"></p>
+    <p class="erro" id="erro-espera" hidden></p>
     <button type="button" class="principal" id="botao-conferir">Conferir agora</button>
   </div>
 </section>
@@ -156,9 +157,10 @@
     </header>
 
     <div class="lateral-meio">
+      <p class="faixa" id="faixa-fechada" hidden>Chat fechado — só a administração está dentro.</p>
       <nav class="salas" id="lista-salas" aria-label="Salas abertas"></nav>
 
-      <section class="grupo">
+      <section class="grupo" id="grupo-privadas">
         <h2 class="rotulo grupo-topo">
           Salas privadas
           <button type="button" class="mais" id="botao-nova-sala"
@@ -169,7 +171,12 @@
       </section>
 
       <section class="grupo" id="grupo-conversas" hidden>
-        <h2 class="rotulo">Conversas a sós</h2>
+        <h2 class="rotulo grupo-topo">
+          Conversas a sós
+          <button type="button" class="mais" id="botao-secreta" hidden
+                  title="Conversa secreta: gerar um link para uma pessoa"
+                  aria-label="Criar conversa secreta">+</button>
+        </h2>
         <nav class="salas" id="lista-conversas" aria-label="Conversas a sós"></nav>
       </section>
 
@@ -203,6 +210,7 @@
         <div class="opcoes" id="opcoes-sala" role="menu" hidden>
           <button type="button" role="menuitem" id="opcao-convidar">Convidar pessoas</button>
           <button type="button" role="menuitem" id="opcao-novo-link">Gerar link novo</button>
+          <button type="button" role="menuitem" id="opcao-membros">Pessoas da sala</button>
           <button type="button" role="menuitem" id="opcao-sair">Sair da sala</button>
           <button type="button" role="menuitem" id="opcao-apagar" class="perigo">Apagar a sala</button>
         </div>
@@ -229,6 +237,11 @@
     <button type="button" class="icone" id="botao-fechar-painel" aria-label="Fechar">✕</button>
   </header>
   <div class="painel-corpo">
+    <div class="chave-chat">
+      <span id="estado-chat">Chat aberto</span>
+      <button type="button" class="acao" id="botao-chat">Fechar o chat</button>
+    </div>
+
     <h3 class="rotulo">Aguardando <span id="conta-pendentes">0</span></h3>
     <ul class="gente" id="lista-pendentes"></ul>
     <p class="dica" id="vazio-pendentes">Ninguém esperando.</p>
@@ -239,6 +252,18 @@
     <h3 class="rotulo">Bloqueadas</h3>
     <ul class="gente" id="lista-bloqueados"></ul>
     <p class="dica" id="vazio-bloqueados">Ninguém bloqueado.</p>
+  </div>
+</dialog>
+
+<!-- ——— Pessoas de uma sala privada ——— -->
+<dialog id="painel-membros" class="painel" aria-labelledby="membros-titulo">
+  <header class="painel-topo">
+    <h2 id="membros-titulo">Pessoas da sala</h2>
+    <button type="button" class="icone" id="botao-fechar-membros" aria-label="Fechar">✕</button>
+  </header>
+  <div class="painel-corpo">
+    <ul class="gente" id="lista-membros"></ul>
+    <p class="dica" id="membros-dica"></p>
   </div>
 </dialog>
 

@@ -195,6 +195,35 @@ situação de alguém. A primeira pessoa a se cadastrar num banco novo vira
 admin. Para pôr mais alguém na administração, marque `admin` na tabela
 `perfis` pelo *Table Editor*.
 
+## Conversa secreta 🕶️
+
+Só para a administração: o **+** em *Conversas a sós* gera um link de
+**uso único** (`#secreta=…`). Quem o abre escolhe um apelido e cai direto
+na conversa, **sem passar pela portaria**, mas fica *reservado*:
+
+| A pessoa convidada | Os outros |
+|---|---|
+| vê só essa conversa | não veem o perfil dela |
+| não vê as salas abertas nem "Por aqui agora" | não a veem em "Por aqui agora" |
+| não cria sala nem abre conversa com ninguém | não conseguem chamá-la a sós |
+
+Quem criou apaga a conversa pelo **⋯**. Na portaria, a administração vê a
+pessoa como qualquer outra e pode bloquear.
+
+## Ligar e desligar o chat
+
+Na portaria 🛡️, **Fechar o chat**: ninguém além da administração lê nem
+escreve, e todo mundo vê *"Chat fechado"* (as conversas secretas também
+param). **Abrir o chat** devolve todo mundo sozinho, sem recarregar. Quem
+manda é `aprovado()` no banco, que com o chat fechado só diz "sim" para a
+administração.
+
+## Tirar alguém de uma sala privada
+
+**⋯ → Pessoas da sala → Tirar** (só quem criou). A pessoa perde o acesso
+na hora e o link de convite é **trocado junto**, para ela não voltar pelo
+mesmo link.
+
 ## Som
 
 Chegou mensagem de outra pessoa, toca um som: **um toque** nas salas
@@ -222,7 +251,7 @@ vai acontecer — e é o comportamento desejado para um pedido de remoção.
 
 ## Rodar os testes
 
-Há 101 testes de ponta a ponta em [`teste/`](teste/), que rodam sem precisar
+Há 127 testes de ponta a ponta em [`teste/`](teste/), que rodam sem precisar
 de um projeto no Supabase. Veja o [README de lá](teste/README.md).
 
 ## Moderação

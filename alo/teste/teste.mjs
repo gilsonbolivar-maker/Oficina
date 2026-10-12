@@ -347,6 +347,28 @@ await pagina.waitForTimeout(300);
 ok('mensagem vai para a sala privada', await pagina.evaluate(() =>
   window.__mock.mensagens.some(m => m.sala_id.startsWith('priv-') && m.corpo === 'Só nós aqui')));
 
+// ——— 21b. C: quem criou tira alguém da sala ———
+await pagina.evaluate(() => {
+  const sala = window.__mock.salas.find(s => s.titulo === 'Família');
+  sala.membros.push({ perfil_id: 'bia-1', perfis: { apelido: 'Bia' } });
+  document.dispatchEvent(new Event('visibilitychange'));
+});
+await pagina.waitForTimeout(400);
+ok('sala conta quem entrou', (await pagina.textContent('#subtitulo-sala')).includes('2 pessoas'));
+await pagina.click('#botao-opcoes');
+await pagina.click('#opcao-membros');
+await pagina.waitForTimeout(200);
+ok('dono vê quem está na sala', (await pagina.textContent('#lista-membros')).includes('Bia'));
+const codigoAntes = await pagina.evaluate(() => window.__mock.salas.find(s => s.titulo === 'Família').convite);
+await pagina.evaluate(() => { window.confirm = () => true; });
+await pagina.click('#lista-membros .acao.perigo');
+await pagina.waitForTimeout(400);
+ok('tirar some com a pessoa da lista', !(await pagina.textContent('#lista-membros')).includes('Bia'));
+ok('tirar troca o link de convite', await pagina.evaluate(c =>
+  window.__mock.salas.find(s => s.titulo === 'Família').convite !== c, codigoAntes));
+ok('quem criou não tem botão contra si', (await pagina.$$('#lista-membros .acao')).length === 0);
+await pagina.click('#botao-fechar-membros');
+
 // ——— 22. Conversa a sós pelo nome na presença ———
 await pagina.evaluate(() => {
   window.__mock.presentes.push({ id: 'ana-1', apelido: 'Ana', sala: 'geral' });
@@ -378,6 +400,13 @@ await pagina.waitForSelector('#tela-app:not([hidden])', { timeout: 5000 });
 await pagina.waitForTimeout(500);
 ok('convite abre a sala certa', (await pagina.textContent('#titulo-sala')) === 'Turma');
 ok('código sai do endereço', !(await pagina.evaluate(() => location.hash)));
+await pagina.click('#botao-opcoes');
+await pagina.click('#opcao-membros');
+await pagina.waitForTimeout(200);
+ok('membro vê as pessoas mas não tira ninguém',
+  (await pagina.textContent('#lista-membros')).includes('Ana') &&
+  (await pagina.$$('#lista-membros .acao')).length === 0);
+await pagina.click('#botao-fechar-membros');
 await pagina.click('#botao-opcoes');
 ok('membro vê "sair" e não "apagar"',
   await pagina.isVisible('#opcao-sair') && !(await pagina.isVisible('#opcao-apagar')));
@@ -437,7 +466,7 @@ async function novaPagina(cfg) {
     status: 200, contentType: 'text/javascript',
     body: "globalThis.ALO_CONFIG = { url: 'https://x.supabase.co', anonKey: 'eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiYW5vbiJ9.x' };",
   }));
-  await p.goto('http://localhost:4173/');
+  await p.goto('http://localhost:4173/' + (cfg.hash || ''));
   await p.waitForSelector('#tela-entrada:not([hidden])', { timeout: 5000 });
   return p;
 }
@@ -506,11 +535,78 @@ await admin.waitForTimeout(300);
 ok('quem chega acende o selo', (await admin.textContent('#selo-portaria')) === '1');
 ok('quem chega vira aviso', (await admin.textContent('#aviso')).includes('Zé quer entrar'));
 ok('admin pode apagar mensagem dos outros', (await admin.$$('.balao:not(.minha) .balao-apagar')).length > 0);
+// Conversa secreta: a administração gera o link
+await admin.click('#botao-secreta');
+await admin.waitForTimeout(400);
+ok('conversa secreta nasce como convite', (await admin.textContent('#titulo-sala')) === 'Convite secreto');
+await admin.evaluate(() => {
+  window.__copiado = null;
+  Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
+  navigator.clipboard.writeText = async t => { window.__copiado = t; };
+});
+await admin.click('#botao-opcoes');
+ok('dono da secreta não tem "sair"', !(await admin.isVisible('#opcao-sair')));
+await admin.click('#opcao-convidar');
+await admin.waitForTimeout(200);
+ok('convite secreto usa #secreta=', /#secreta=[0-9a-f]{64}$/.test(await admin.evaluate(() => window.__copiado) || ''));
+
+// Ligar e desligar o chat
+await admin.click('#botao-admin');
+await admin.waitForTimeout(200);
+await admin.evaluate(() => { window.confirm = () => true; });
+await admin.click('#botao-chat');
+await admin.waitForTimeout(300);
+ok('admin fecha o chat', await admin.evaluate(() => window.__mock.chatAberto === false));
+ok('painel mostra chat fechado', (await admin.textContent('#estado-chat')) === 'Chat fechado');
+await admin.click('#botao-fechar-painel');
+ok('faixa avisa a admin que está fechado', await admin.isVisible('#faixa-fechada'));
+ok('admin continua dentro com o chat fechado', await admin.isVisible('#tela-app'));
+await admin.click('#botao-admin');
+await admin.click('#botao-chat');
+await admin.waitForTimeout(300);
+ok('admin reabre o chat', await admin.evaluate(() => window.__mock.chatAberto === true));
+await admin.click('#botao-fechar-painel');
+await admin.click('.sala:nth-child(1)');
+await admin.waitForTimeout(300);
+
 await admin.screenshot({ path: path.join(AQUI, 'fotos', '6-admin.png') });
 await admin.click('#botao-admin');
 await admin.waitForTimeout(300);
 await admin.screenshot({ path: path.join(AQUI, 'fotos', '7-portaria.png') });
 await admin.context().close();
+
+// ——— 29. Quem abre o link secreto ———
+const secreta = await novaPagina({ situacaoNova: 'pendente', hash: '#secreta=' + 'd'.repeat(64) });
+await secreta.fill('#campo-apelido', 'Visita');
+await secreta.click('#botao-entrar');
+await secreta.waitForTimeout(600);
+ok('link secreto pula a portaria', await secreta.isVisible('#tela-app'));
+ok('link secreto abre a conversa', (await secreta.textContent('#titulo-sala')) === 'Ana');
+ok('convidado secreto não vê as salas abertas', !(await secreta.isVisible('#lista-salas')));
+ok('convidado secreto não vê quem está por aqui', !(await secreta.isVisible('#lista-presenca')));
+ok('convidado secreto não aparece na presença', await secreta.evaluate(() =>
+  !window.__mock.canais.some(c => c.nome === 'alo-presenca')));
+ok('convidado secreto não cria sala', !(await secreta.isVisible('#botao-nova-sala')));
+ok('o link secreto vale uma vez', await secreta.evaluate(() =>
+  window.__mock.escondidas.find(s => s.id === 'secreta-ana').convite === null));
+ok('código secreto sai do endereço', !(await secreta.evaluate(() => location.hash)));
+await secreta.screenshot({ path: path.join(AQUI, 'fotos', '8-secreta.png') });
+await secreta.context().close();
+
+// ——— 30. Chat fechado para quem não é admin ———
+const fora = await novaPagina({ chatFechado: true });
+await fora.fill('#campo-apelido', 'Visitante');
+await fora.click('#botao-entrar');
+await fora.waitForTimeout(500);
+ok('chat fechado barra quem não é admin', !(await fora.isVisible('#tela-app')));
+ok('chat fechado explica', (await fora.textContent('#espera-titulo')) === 'Chat fechado');
+await fora.evaluate(() => window.__mock.mudarChat(true));
+await fora.waitForTimeout(500);
+ok('chat reaberto entra sozinho', await fora.isVisible('#tela-app'));
+await fora.evaluate(() => window.__mock.mudarChat(false));
+await fora.waitForTimeout(300);
+ok('chat fechado com o app aberto fecha na hora', !(await fora.isVisible('#tela-app')));
+await fora.context().close();
 
 console.log('\n———— RESULTADO ————');
 for (const [r, n] of passos) console.log(`${r === 'PASSOU' ? '  ok  ' : ' FALHA'} ${n}`);

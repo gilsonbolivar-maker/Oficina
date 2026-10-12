@@ -25,24 +25,41 @@ const escondidas = [
   { id: 'turma', titulo: 'Turma', subtitulo: '', ordem: 0, tipo: 'privada',
     dono_id: 'outro', convite: CONVITE_TURMA,
     membros: [{ perfil_id: 'outro', perfis: { apelido: 'Ana' } }] },
+  // Conversa secreta que a "Ana" (admin) gerou; o link vale uma vez.
+  { id: 'secreta-ana', titulo: 'Conversa', subtitulo: '', ordem: 0, tipo: 'individual',
+    dono_id: 'outro', convite: 'd'.repeat(64),
+    membros: [{ perfil_id: 'outro', perfis: { apelido: 'Ana' } }] },
 ];
 let codigos = 0;
 // window.__cfg (posto antes do app carregar) diz como a portaria trata
 // quem chega: { situacaoNova, adminNovo, pessoas }.
 const cfg = window.__cfg || {};
 const pessoas = (cfg.pessoas || []).map(p => ({ ...p }));
+let chatAberto = !cfg.chatFechado;
 window.__mock = { mensagens, salas, escondidas, CONVITE_TURMA, pessoas,
   get perfil() { return perfil; }, canais: [], presentes: [], rpcs: [],
   // Faz o papel da administração mudando a situação desta pessoa.
   mudarSituacao(situacao) {
     gravarPerfil({ ...perfil, situacao });
-    for (const c of window.__mock.canais.filter(c => c.nome === 'alo-perfis')) {
-      for (const o of c.ouvintes) o.cb({ eventType: 'UPDATE', new: { ...perfil } });
-    }
+    avisarTabela('perfis', { ...perfil });
   },
+  // Faz o papel da administração ligando e desligando o chat.
+  mudarChat(aberto) {
+    chatAberto = aberto;
+    avisarTabela('ajustes', { id: 1, aberto });
+  },
+  get chatAberto() { return chatAberto; },
 };
 
 const eu = () => ({ perfil_id: 'eu-123', perfis: { apelido: perfil?.apelido } });
+
+function avisarTabela(tabela, linha) {
+  for (const c of window.__mock.canais.filter(c => c.nome === 'alo-perfis')) {
+    for (const o of c.ouvintes.filter(o => o.filtro?.table === tabela)) {
+      o.cb({ eventType: 'UPDATE', new: linha });
+    }
+  }
+}
 
 function builder(resolver) {
   const b = {};
@@ -84,8 +101,11 @@ export function createClient(url, key) {
             if (i >= 0) salas.splice(i, 1);
             return { data: null, error: null };
           }
-          return { data: salas, error: null };
+          // Quem veio por conversa secreta não enxerga as salas abertas.
+          const visiveis = perfil?.reservado ? salas.filter(s => s.tipo && s.tipo !== 'publica') : salas;
+          return { data: visiveis, error: null };
         }
+        if (tabela === 'ajustes') return { data: { aberto: chatAberto }, error: null };
         if (tabela === 'membros' && b._delete) {
           const i = salas.findIndex(s => s.id === b._eqs[0]?.[1]);
           if (i >= 0) salas.splice(i, 1);   // quem sai deixa de enxergar a sala
@@ -136,6 +156,31 @@ export function createClient(url, key) {
         salas.push({ id, titulo: args.p_titulo, subtitulo: '', ordem: 0, tipo: 'privada',
           dono_id: 'eu-123', convite: String(++codigos).padStart(64, 'a'), membros: [eu()] });
         return { data: id, error: null };
+      }
+      if (nome === 'abrir_fechar_chat') {
+        chatAberto = args.p_aberto;
+        return { data: null, error: null };
+      }
+      if (nome === 'remover_membro') {
+        const sala = salas.find(s => s.id === args.p_sala);
+        sala.membros = sala.membros.filter(m => m.perfil_id !== args.p_perfil);
+        sala.convite = String(++codigos).padStart(64, 'e');
+        return { data: null, error: null };
+      }
+      if (nome === 'criar_conversa_secreta') {
+        const id = 'secreta-' + (salas.length + 1);
+        salas.push({ id, titulo: 'Conversa', subtitulo: '', ordem: 0, tipo: 'individual',
+          dono_id: 'eu-123', convite: String(++codigos).padStart(64, 'f'), membros: [eu()] });
+        return { data: id, error: null };
+      }
+      if (nome === 'aceitar_conversa_secreta') {
+        const sala = [...salas, ...escondidas].find(s => s.tipo === 'individual' && s.convite === args.p_codigo);
+        if (!sala) return { data: null, error: { message: 'Esse convite já foi usado ou não vale mais.' } };
+        sala.membros.push(eu());
+        sala.convite = null;
+        if (!salas.includes(sala)) salas.push(sala);
+        if (perfil.situacao === 'pendente') gravarPerfil({ ...perfil, situacao: 'aprovado', reservado: true });
+        return { data: sala.id, error: null };
       }
       if (nome === 'decidir_acesso') {
         const pessoa = pessoas.find(p => p.id === args.p_perfil);
