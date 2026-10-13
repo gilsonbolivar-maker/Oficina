@@ -15,7 +15,7 @@
 
 /* ——— Ajustes ——————————————————————————————————————————————— */
 
-const VERSAO = '1.5.0';     // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.5.1';     // precisa casar com a VERSAO do sw.js
 const HISTORICO = 80;        // mensagens carregadas ao abrir uma sala
 const LIMITE_CORPO = 500;    // igual à constraint do banco
 const CHAVE_CONFIG = 'alo:config';
@@ -510,7 +510,22 @@ async function abrirConta() {
   } else {
     pedirEmail(corpo, false);
   }
+
+  // Trocar de conta, em qualquer situação.
+  const trocar = el('div', 'acoes-senha trocar-conta');
+  trocar.append(botao('Entrar em outra conta', 'texto-link', () => entrarEmOutraConta(user)));
+  corpo.append(trocar);
   if (!$('painel-conta').open) $('painel-conta').showModal();
+}
+
+/** Troca para outra conta. Conta sem e-mail não tem volta: avisa antes. */
+function entrarEmOutraConta(user) {
+  const protegida = user.email && user.user_metadata?.senha_definida;
+  if (!protegida && !confirm(
+      `Esta conta ("${estado.eu.apelido}") não tem e-mail e senha. Se você entrar em outra, ` +
+      'não dá para voltar para ela.\n\nEntrar em outra conta mesmo assim?')) return;
+  $('painel-conta').close();
+  abrirEntrarConta();
 }
 
 /** Primeiro passo: o e-mail. O Supabase manda um link para confirmar. */

@@ -703,6 +703,7 @@ await conta.waitForTimeout(500);
 await conta.click('#botao-conta');
 await conta.waitForTimeout(300);
 ok('conta anônima explica e pede o e-mail', (await conta.textContent('#conta-corpo')).includes('só existe neste aparelho'));
+ok('conta anônima também tem "Entrar em outra conta"', await conta.isVisible('#conta-corpo >> text=Entrar em outra conta'));
 await conta.fill('#conta-corpo input[type=email]', 'nao-e-email');
 await conta.click('#conta-corpo .acao.principal');
 await conta.waitForTimeout(200);
@@ -724,6 +725,10 @@ await senhas.nth(1).fill('minha-senha-1');
 await conta.click('#conta-corpo .acao.principal');
 await conta.waitForTimeout(400);
 ok('senha salva deixa a conta protegida', (await conta.textContent('#conta-corpo')).includes('Conta protegida: gilson@exemplo.com'));
+ok('conta protegida pode sair', await conta.isVisible('#conta-corpo >> text=Sair desta conta'));
+await conta.click('#conta-corpo >> text=Entrar em outra conta');
+await conta.waitForTimeout(300);
+ok('"Entrar em outra conta" abre o login', await conta.isVisible('#painel-entrar') && !(await conta.isVisible('#painel-conta')));
 await conta.context().close();
 
 // ——— 29d. Já tenho conta: entrar como a mesma pessoa em outro aparelho ———
