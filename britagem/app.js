@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '3.1.1';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '3.1.2';   // precisa casar com a VERSAO do sw.js
 
 /* Área padrão, para quem ainda não carregou a configuração das áreas.
    Equipamento, motivo e medida de cada área real vêm do arquivo que fica
@@ -1117,7 +1117,7 @@ function formLeitura(t, l) {
       '<button class="agora" type="button" data-agora="f-hora">agora</button></label>' +
     '<label class="campo opcao-linha">' +
       '<input type="checkbox" id="f-parada"' + (l && l.parada ? ' checked' : '') + '> ' +
-      'A usina estava parada nesta hora' +
+      'Fora de operação' +
     '</label>' +
     '<div id="campos-leitura">' +
       '<label class="campo">Horímetro (h)' +
