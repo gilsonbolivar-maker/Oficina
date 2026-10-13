@@ -21,12 +21,13 @@
 <section class="tela vazio-tela" id="tela-vazio">
   <div class="vazio-caixa">
     <h1>Agenda Telefônica</h1>
+    <p class="fraco versao-solta" data-versao></p>
     <p class="fraco">O app está vazio. Carregue o arquivo com a lista de contatos
       para buscar e ligar — tudo fica só neste aparelho, nada é enviado para
       lugar nenhum.</p>
     <label class="botao principal grande">
       Escolher arquivo
-      <input type="file" id="arquivo-inicial" accept=".json,application/json" hidden>
+      <input type="file" id="arquivo-inicial" hidden>
     </label>
     <p class="fraco pequeno" id="estado-carga" role="status" aria-live="polite"></p>
     <p class="fraco pequeno">Ou <button class="ligacao" id="comecar-vazio" type="button">comece
@@ -102,7 +103,7 @@
       <div class="botoes">
         <label class="botao">
           Trocar por outra lista
-          <input type="file" id="arquivo-troca" accept=".json,application/json" hidden>
+          <input type="file" id="arquivo-troca" hidden>
         </label>
         <button class="botao" id="apagar-base" type="button">Apagar do aparelho</button>
       </div>
@@ -175,6 +176,7 @@
   <button class="aba" data-tela="favoritos" type="button"><span>Favoritos</span></button>
   <button class="aba" data-tela="areas" type="button"><span>Áreas</span></button>
   <button class="aba" data-tela="ajustes" type="button"><span>Ajustes</span></button>
+  <span class="versao-app" data-versao title="Versão do app"></span>
 </nav>
 
 <p class="aviso" id="aviso" role="status" aria-live="polite" hidden></p>

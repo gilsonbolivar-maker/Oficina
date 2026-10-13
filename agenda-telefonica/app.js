@@ -5,7 +5,10 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.2.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.2.1';   // precisa casar com a VERSAO do sw.js
+
+// Versão sempre à vista: cada [data-versao] da página mostra a deste app.
+for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
 const LOTE = 80;          // contatos desenhados por vez, para a rolagem não travar
 
 // Guardado antes de tudo: diz se já havia uma versão no comando desta aba.

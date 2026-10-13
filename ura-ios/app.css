@@ -237,3 +237,16 @@ mark { background: rgba(255,176,32,0.28); color: inherit; border-radius: 3px; pa
   .rolagem { padding-left: max(16px, calc((100% - 720px) / 2)); padding-right: max(16px, calc((100% - 720px) / 2)); }
   .topo { padding-left: max(16px, calc((100% - 720px) / 2)); padding-right: max(16px, calc((100% - 720px) / 2)); }
 }
+
+/* ————— versão sempre à vista, no canto da barra de abas ————— */
+.abas { position: relative; }   /* a versão se posiciona pela barra */
+.abas .versao-app {
+  position: absolute;
+  top: 3px;
+  right: 8px;
+  font-size: 10px;
+  line-height: 1;
+  opacity: 0.55;
+  pointer-events: none;
+}
+.versao-solta { margin-top: 10px; font-size: 12px; opacity: 0.6; }

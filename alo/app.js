@@ -15,6 +15,7 @@
 
 /* ——— Ajustes ——————————————————————————————————————————————— */
 
+const VERSAO = '1.0.0';     // precisa casar com a VERSAO do sw.js
 const HISTORICO = 80;        // mensagens carregadas ao abrir uma sala
 const LIMITE_CORPO = 500;    // igual à constraint do banco
 const CHAVE_CONFIG = 'alo:config';
@@ -75,6 +76,9 @@ function corDe(nome) {
   for (let i = 0; i < nome.length; i += 1) soma = (soma * 31 + nome.charCodeAt(i)) >>> 0;
   return `hsl(${soma % 360} 52% 30%)`;
 }
+
+// Versão sempre à vista: cada [data-versao] da página mostra a deste app.
+for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
 
 /* ——— Estado ———————————————————————————————————————————————— */
 

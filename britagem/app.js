@@ -4,7 +4,10 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '3.1.4';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '3.1.5';   // precisa casar com a VERSAO do sw.js
+
+// Versão sempre à vista: cada [data-versao] da página mostra a deste app.
+for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
 
 /* Área padrão, para quem ainda não carregou a configuração das áreas.
    Equipamento, motivo e medida de cada área real vêm do arquivo que fica
@@ -744,7 +747,7 @@ function cartaoAreas() {
     '<p class="fraco" id="sobre-areas"></p>' +
     '<div class="botoes">' +
       '<label class="botao">' + (cfg ? 'Trocar arquivo' : 'Carregar áreas') +
-        '<input type="file" id="arquivo-areas-2" accept=".json,application/json" hidden></label>' +
+        '<input type="file" id="arquivo-areas-2" hidden></label>' +
       (cfg ? '<button class="botao" id="apagar-areas" type="button">Apagar</button>' : '') +
     '</div>' +
     '<p class="fraco pequeno" id="estado-areas-2" role="status" aria-live="polite"></p>';

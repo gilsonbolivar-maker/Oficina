@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = 'v2';
+const VERSAO = '2.1.0';   // precisa casar com a VERSAO do app.js
 const CACHE_APP = 'alarme-gps-app-' + VERSAO;
 const CACHE_TILES = 'alarme-gps-tiles';
 const CACHE_SALVO = 'alarme-gps-mapa-salvo';

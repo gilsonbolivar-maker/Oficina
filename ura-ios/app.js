@@ -5,7 +5,10 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.0.1';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.0.2';   // precisa casar com a VERSAO do sw.js
+
+// Versão sempre à vista: cada [data-versao] da página mostra a deste app.
+for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
 
 const $ = s => document.querySelector(s);
 const esc = s => Busca.escapar(s);
