@@ -15,7 +15,7 @@
 
 /* ——— Ajustes ——————————————————————————————————————————————— */
 
-const VERSAO = '1.3.0';     // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.4.0';     // precisa casar com a VERSAO do sw.js
 const HISTORICO = 80;        // mensagens carregadas ao abrir uma sala
 const LIMITE_CORPO = 500;    // igual à constraint do banco
 const CHAVE_CONFIG = 'alo:config';
@@ -547,6 +547,14 @@ function ouvirPerfis() {
     .on('postgres_changes',
       { event: '*', schema: 'public', table: 'perfis' },
       carga => {
+        // Pessoa excluída: o banco só manda o id dela.
+        if (carga.eventType === 'DELETE') {
+          const id = carga.old?.id;
+          if (!id) return;
+          if (id === estado.eu.id) location.reload();   // fui excluído: recomeça do zero
+          else if (estado.appIniciado) saiuDaLista(id);
+          return;
+        }
         const perfil = carga.new;
         if (!perfil?.id) return;
         if (perfil.id === estado.eu.id) { mudouMinhaSituacao(perfil); return; }
@@ -618,6 +626,12 @@ function desenharPortaria() {
         botao.addEventListener('click', () => decidirAcesso(pessoa, situacao));
         item.append(botao);
       }
+      const excluir = el('button', 'acao perigo excluir');
+      excluir.type = 'button';
+      excluir.textContent = 'Excluir';
+      excluir.setAttribute('aria-label', `Excluir ${pessoa.apelido}`);
+      excluir.addEventListener('click', () => excluirPessoa(pessoa));
+      item.append(excluir);
     }
     listas[pessoa.situacao]?.append(item);
   }
@@ -638,6 +652,29 @@ async function decidirAcesso(pessoa, situacao) {
   if (error) { avisar(error.message || 'Não consegui mudar o acesso.'); return; }
   pessoa.situacao = situacao;
   desenharPortaria();
+}
+
+async function excluirPessoa(pessoa) {
+  if (!confirm(`Excluir ${pessoa.apelido}?\n\nApaga a pessoa, TUDO o que ela disse e as salas ` +
+               'privadas que ela criou. Não dá para desfazer.\n\nSe ela abrir o Alô de novo, ' +
+               'volta como pessoa nova, aguardando aprovação.')) return;
+  const { error } = await estado.sb.rpc('excluir_pessoa', { p_perfil: pessoa.id });
+  if (error) { avisar(error.message || 'Não consegui excluir.'); return; }
+  saiuDaLista(pessoa.id);
+  avisar(`${pessoa.apelido} foi excluído(a).`, 'bom');
+}
+
+/** Tira a pessoa da portaria, da lista de pessoas e das mensagens na tela. */
+function saiuDaLista(id) {
+  estado.pessoas = estado.pessoas.filter(p => p.id !== id);
+  estado.gente = estado.gente.filter(p => p.id !== id);
+  for (const [salaId, lista] of estado.mensagens) {
+    estado.mensagens.set(salaId, lista.filter(m => m.autor_id !== id));
+  }
+  if (estado.eu.admin) desenharPortaria();
+  desenharPresenca();
+  desenharMensagens(true);
+  desenharSalas();
 }
 
 async function abrirPortaria() {

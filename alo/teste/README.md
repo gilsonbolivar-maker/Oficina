@@ -1,6 +1,6 @@
 # Testes do Alô
 
-Abrem o app num Chromium de verdade e conferem 151 comportamentos: o assistente
+Abrem o app num Chromium de verdade e conferem 155 comportamentos: o assistente
 de instalação (inclusive cada passo do Supabase faltando), entrada, envio,
 tempo real, não lidas, troca de apelido, telefone e — o mais importante — que
 o HTML escrito por outra pessoa aparece como texto, nunca como marcação.

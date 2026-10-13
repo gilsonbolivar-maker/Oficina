@@ -328,6 +328,43 @@ grant  execute on function public.aprovado()                   to authenticated;
 grant  execute on function public.eh_admin()                   to authenticated;
 grant  execute on function public.decidir_acesso(uuid, text)   to authenticated;
 
+-- ——— Excluir pessoa ———
+-- Diferente de bloquear: apaga a pessoa e, pelo on delete cascade, tudo
+-- o que ela disse, as participações e as salas privadas que criou. Se
+-- ela abrir o Alô de novo, volta como pessoa nova, na portaria. Ninguém
+-- se exclui sozinho, e quem é da administração não é excluído por aqui.
+create or replace function public.excluir_pessoa(p_perfil uuid)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_apelido text;
+  v_admin   boolean;
+begin
+  if not public.eh_admin() then
+    raise exception 'Só a administração exclui pessoas.' using errcode = 'P0001';
+  end if;
+  if p_perfil = auth.uid() then
+    raise exception 'Você não pode excluir a si mesmo.' using errcode = 'P0001';
+  end if;
+  select apelido, admin into v_apelido, v_admin from public.perfis where id = p_perfil;
+  if v_apelido is null then
+    raise exception 'Essa pessoa já não existe.' using errcode = 'P0001';
+  end if;
+  if v_admin then
+    raise exception 'Quem é da administração não é excluído por aqui.' using errcode = 'P0001';
+  end if;
+
+  delete from public.perfis where id = p_perfil;
+  return v_apelido;
+end;
+$$;
+
+revoke execute on function public.excluir_pessoa(uuid) from public, anon;
+grant  execute on function public.excluir_pessoa(uuid) to authenticated;
+
 -- ——— Senha da administração ———
 -- Como a entrada é sem senha, cada aparelho (e até o ícone da Tela de
 -- Início, que no iPhone/iPad tem armazenamento próprio) vira uma conta

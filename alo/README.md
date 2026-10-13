@@ -195,6 +195,14 @@ situação de alguém. A primeira pessoa a se cadastrar num banco novo vira
 admin. Para pôr mais alguém na administração, marque `admin` na tabela
 `perfis` pelo *Table Editor*.
 
+## Excluir pessoa
+
+🛡️ Portaria → **Excluir**, em qualquer pessoa que não seja da administração.
+Diferente de **Bloquear**: apaga a pessoa e, junto, tudo o que ela disse e as
+salas privadas que criou (`on delete cascade`). Não dá para desfazer. Se ela
+abrir o Alô de novo, volta como pessoa nova, na portaria. Quem foi excluído com
+o app aberto volta na hora para a escolha do apelido.
+
 ## Senha da administração 🔑
 
 A entrada é sem senha, então cada jeito de abrir é uma conta: outro
@@ -278,7 +286,7 @@ vai acontecer — e é o comportamento desejado para um pedido de remoção.
 
 ## Rodar os testes
 
-Há 151 testes de ponta a ponta em [`teste/`](teste/), que rodam sem precisar
+Há 155 testes de ponta a ponta em [`teste/`](teste/), que rodam sem precisar
 de um projeto no Supabase. Veja o [README de lá](teste/README.md).
 
 ## Moderação

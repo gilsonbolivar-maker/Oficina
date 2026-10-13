@@ -51,6 +51,16 @@ window.__mock = { mensagens, salas, escondidas, CONVITE_TURMA, pessoas,
     avisarTabela('ajustes', { id: 1, aberto });
   },
   get chatAberto() { return chatAberto; },
+  // Faz o papel da administração excluindo esta pessoa.
+  excluirEu() {
+    const id = perfil.id;
+    gravarPerfil(null);
+    for (const c of window.__mock.canais.filter(c => c.nome === 'alo-perfis')) {
+      for (const o of c.ouvintes.filter(o => o.filtro?.table === 'perfis')) {
+        o.cb({ eventType: 'DELETE', new: {}, old: { id } });
+      }
+    }
+  },
 };
 
 const eu = () => ({ perfil_id: 'eu-123', perfis: { apelido: perfil?.apelido } });
@@ -204,6 +214,12 @@ export function createClient(url, key) {
         if (!salas.includes(sala)) salas.push(sala);
         if (perfil.situacao === 'pendente') gravarPerfil({ ...perfil, situacao: 'aprovado', reservado: true });
         return { data: sala.id, error: null };
+      }
+      if (nome === 'excluir_pessoa') {
+        const i = pessoas.findIndex(p => p.id === args.p_perfil);
+        if (i < 0 || pessoas[i].admin) return { data: null, error: { message: 'Quem é da administração não é excluído por aqui.' } };
+        const [saiu] = pessoas.splice(i, 1);
+        return { data: saiu.apelido, error: null };
       }
       if (nome === 'decidir_acesso') {
         const pessoa = pessoas.find(p => p.id === args.p_perfil);

@@ -514,6 +514,10 @@ await espera.waitForTimeout(300);
 ok('bloqueada, o app fecha na hora', !(await espera.isVisible('#tela-app')));
 ok('bloqueada vê o aviso', (await espera.textContent('#espera-titulo')).includes('não liberado'));
 ok('bloqueada não tem botão de conferir', !(await espera.isVisible('#botao-conferir')));
+await espera.evaluate(() => window.__mock.excluirEu());
+await espera.waitForTimeout(800);
+ok('pessoa excluída volta para a escolha do apelido', await espera.isVisible('#tela-entrada') &&
+  await espera.isVisible('#forma-entrada'));
 await espera.context().close();
 
 // ——— 27b. Senha da administração: entrar de qualquer aparelho ———
@@ -569,10 +573,16 @@ ok('aprovar passa pelo banco', await admin.evaluate(() =>
   window.__mock.rpcs.some(([n, a]) => n === 'decidir_acesso' && a.p_perfil === 'p-maria' && a.p_situacao === 'aprovado')));
 
 await admin.evaluate(() => { window.confirm = () => true; });
-const bloquearJoao = admin.locator('#lista-aprovados .gente-item', { hasText: 'João' }).locator('.acao');
+const bloquearJoao = admin.locator('#lista-aprovados .gente-item', { hasText: 'João' }).locator('.acao:not(.excluir)');
 await bloquearJoao.click();
 await admin.waitForTimeout(300);
 ok('bloquear move para bloqueadas', (await admin.textContent('#lista-bloqueados')).includes('João'));
+ok('admin não tem "Excluir" para si', (await admin.$$('#lista-aprovados .gente-item:has(.etiqueta) .excluir')).length === 0);
+await admin.locator('#lista-bloqueados .gente-item', { hasText: 'João' }).locator('.excluir').click();
+await admin.waitForTimeout(300);
+ok('excluir tira a pessoa da portaria', !(await admin.textContent('#painel-admin')).includes('João'));
+ok('excluir passa pelo banco', await admin.evaluate(() =>
+  window.__mock.rpcs.some(([n, a]) => n === 'excluir_pessoa' && a.p_perfil === 'p-joao')));
 await admin.click('#botao-fechar-painel');
 
 await admin.evaluate(() => {
