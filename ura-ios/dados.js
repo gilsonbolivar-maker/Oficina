@@ -65,6 +65,7 @@ const Dados = (() => {
 
   return {
     lerBase: () => ler('base'),
+    gravarBase: base => gravar('base', base),
     importarArquivo,
     removerBase: () => apagar('base'),
     lerProgresso: () => ler('progresso').then(p => p || { acertos: {}, erros: {} }),

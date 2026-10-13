@@ -22,12 +22,17 @@
   <div class="vazio-caixa">
     <h1>IOs da URA</h1>
     <p class="fraco versao-solta" data-versao></p>
-    <p class="fraco">O app está vazio. Carregue o arquivo com as Instruções Operacionais
-      para consultar e treinar — tudo fica só neste aparelho.</p>
+    <p class="fraco">O app está vazio. Escolha os PDFs das Instruções Operacionais:
+      o app lê e monta a base aqui mesmo — nada sai deste aparelho.</p>
     <label class="botao principal grande">
-      Escolher arquivo
-      <input type="file" id="arquivo-inicial" hidden>
+      Importar os PDFs das IOs
+      <input type="file" id="pdfs-inicial" multiple hidden>
     </label>
+    <p class="fraco pequeno">
+      Já tem a base pronta?
+      <label class="ligacao">escolha o arquivo .json
+        <input type="file" id="arquivo-inicial" hidden></label>
+    </p>
     <p class="fraco pequeno" id="estado-carga" role="status" aria-live="polite"></p>
   </div>
 </section>
@@ -89,6 +94,7 @@
 <script src="dados.js"></script>
 <script src="busca.js"></script>
 <script src="treino.js"></script>
+<script src="pdf-base.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

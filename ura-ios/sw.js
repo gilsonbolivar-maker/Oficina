@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.0.2';   // precisa casar com a VERSAO do app.js
+const VERSAO = '1.1.0';   // precisa casar com a VERSAO do app.js
 const CACHE_APP = 'ura-ios-app-' + VERSAO;
 
 const ARQUIVOS = [
@@ -15,6 +15,10 @@ const ARQUIVOS = [
   'busca.js',
   'dados.js',
   'treino.js',
+  'pdf-base.js',
+  // O leitor de PDF fica guardado: importar funciona sem internet.
+  'vendor/pdfjs/pdf.min.mjs',
+  'vendor/pdfjs/pdf.worker.min.mjs',
   'manifest.webmanifest',
   'icones/icone-180.png',
   'icones/icone-192.png',

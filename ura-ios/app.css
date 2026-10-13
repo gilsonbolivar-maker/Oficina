@@ -250,3 +250,6 @@ mark { background: rgba(255,176,32,0.28); color: inherit; border-radius: 3px; pa
   pointer-events: none;
 }
 .versao-solta { margin-top: 10px; font-size: 12px; opacity: 0.6; }
+
+/* ————— link de texto (a base .json pronta, na tela inicial) ————— */
+.ligacao { color: var(--acento); text-decoration: underline; cursor: pointer; }

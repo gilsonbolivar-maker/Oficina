@@ -31,10 +31,40 @@ página carrega. Para tirar as instruções do aparelho, use **Ajustes → Apaga
 
 1. Abra <https://gilsonbolivar-maker.github.io/Oficina/ura-ios/> no Safari
 2. **Compartilhar → Adicionar à Tela de Início**
-3. Abra pelo ícone e toque em **Escolher arquivo**
-4. Selecione o arquivo da base (o app Arquivos mostra também o Google Drive)
+3. Abra pelo ícone e toque em **Importar os PDFs das IOs**
+4. Selecione os PDFs (dá para marcar vários; o app Arquivos mostra também o
+   Google Drive)
 
 Depois disso ele funciona offline, inclusive em modo avião.
+
+## Montar a base a partir dos PDFs
+
+O próprio app lê os PDFs e monta a base **dentro do aparelho**, com o
+[pdf.js](vendor/pdfjs/LEIAME.md) guardado nesta pasta — nada vai para a
+internet, nem para ler o PDF.
+
+| Do PDF | Vira |
+|---|---|
+| `IO-URA-XX-00` no começo | o código |
+| `AA-000 - NOME` | o título e a área |
+| `Revisão: 03`, a primeira data `dd/mm/aaaa` | revisão e data |
+| `1 OBJETIVO`, `2 APLICAÇÃO`… em sequência | as seções |
+| `Tabela 5.1 – …` seguida de linhas numeradas | um procedimento com seus passos |
+| `VL-0101 – Válvula…` na seção de siglas | o glossário |
+| linha repetida em quase toda página | cabeçalho/rodapé: sai do texto |
+
+As perguntas de treino saem do que foi lido: qual é o passo N, o que vem
+depois de tal passo, o que é tal sigla, qual é o objetivo de tal IO.
+
+Num procedimento, o número do passo pode estar no alto da célula (como o
+Word faz) ou no meio dela; os dois casos são lidos. Os passos vindos do PDF
+ganham o aviso para conferir no documento.
+
+**Importar de novo** (em Ajustes) troca só as IOs com o mesmo código e mantém
+as outras: é assim que se atualiza uma IO revisada. **Baixar a base (.json)**
+leva tudo para outro aparelho sem reimportar os PDFs.
+
+PDF escaneado como imagem não tem texto: o app avisa e pula.
 
 ## Formato da base
 
@@ -83,6 +113,8 @@ funciona como consulta, sem `siglas` a busca ignora o glossário.
 | `busca.js` | índice e ranqueamento da busca |
 | `dados.js` | guarda a base no aparelho (IndexedDB) |
 | `treino.js` | montagem das rodadas de perguntas |
+| `pdf-base.js` | lê os PDFs das IOs e monta a base, no aparelho |
+| `vendor/pdfjs/` | o leitor de PDF (pdf.js, Apache 2.0) |
 | `sw.js` | funcionamento offline |
 
 Ao mexer no app, mantenha a `VERSAO` igual em `app.js` e `sw.js` — é ela que

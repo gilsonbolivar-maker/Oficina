@@ -5,7 +5,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.0.2';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.1.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -297,8 +297,18 @@ function telaAjustes() {
         <b>${base.siglas.length}</b> siglas · <b>${base.perguntas.length}</b> perguntas</div>
       <div class="fonte">${esc(base.nomeArquivo || 'base')} · gerada em ${esc(base.gerado || '—')}</div>
     </div>
-    <p class="grupo-titulo">Trocar a base</p>
-    <p class="fraco pequeno">Ao revisar uma IO, gere o arquivo de novo e carregue aqui. A base antiga é substituída.</p>
+    <p class="grupo-titulo">Importar PDFs</p>
+    <p class="fraco pequeno">IO revisada ou nova? Escolha o PDF dela. IO com o mesmo código é
+      trocada; as outras continuam. Tudo é lido aqui, sem internet.</p>
+    <label class="botao principal">Importar PDFs
+      <input type="file" id="pdfs-troca" multiple hidden></label>
+    <p class="fraco pequeno" id="estado-pdfs" role="status" aria-live="polite"></p>
+    <p class="grupo-titulo">Levar para outro aparelho</p>
+    <p class="fraco pequeno">Baixa a base como arquivo .json, para carregar em outro iPad sem
+      importar os PDFs de novo. Guarde onde só você tenha acesso.</p>
+    <button class="botao" type="button" id="btn-baixar">Baixar a base (.json)</button>
+    <p class="grupo-titulo">Trocar a base inteira</p>
+    <p class="fraco pequeno">Carrega um arquivo .json pronto. A base atual é substituída.</p>
     <label class="botao">Escolher arquivo
       <input type="file" id="arquivo-troca" hidden></label>
     <p class="grupo-titulo">Apagar</p>
@@ -309,6 +319,8 @@ function telaAjustes() {
       confira sempre a revisão vigente antes de executar qualquer procedimento.</p>`;
 
   $('#arquivo-troca').addEventListener('change', ev => carregar(ev.target.files[0], true));
+  $('#pdfs-troca').addEventListener('change', ev => importarPDFs(ev.target.files, '#estado-pdfs'));
+  $('#btn-baixar').addEventListener('click', baixarBase);
   $('#btn-apagar').addEventListener('click', async () => {
     if (!confirm('Apagar as instruções deste aparelho?')) return;
     await Dados.removerBase();
@@ -336,6 +348,51 @@ async function carregar(arquivo, jaEstava) {
     if (estado) estado.textContent = recado; else alert(recado);
   }
 }
+
+/* ————————————————— importar os PDFs ————————————————— */
+
+async function importarPDFs(arquivos, onde) {
+  if (!arquivos || !arquivos.length) return;
+  const estado = $(onde);
+  const contar = t => { if (estado) estado.textContent = t; };
+  try {
+    const { base: nova, lidas, problemas } =
+      await ImportarPDF.montar(arquivos, base, contar);
+    contar('Guardando no aparelho…');
+    await Dados.gravarBase(nova);
+    base = nova;
+    Busca.indexar(base);
+
+    const passos = lidas.reduce((s, d) => s + d.procedimentos.reduce((t, p) => t + p.passos.length, 0), 0);
+    const semPassos = lidas.filter(d => !d.procedimentos.length).map(d => d.codigo);
+    let resumo = `${lidas.length} IO(s) importada(s) · ${passos} passos · ` +
+      `${base.perguntas.length} perguntas no total.`;
+    if (semPassos.length) resumo += `\n\nSem tabela de passos reconhecida: ${semPassos.join(', ')} ` +
+      '(o texto delas entra na busca normalmente).';
+    if (problemas.length) resumo += '\n\nNão deu para ler:\n' + problemas.join('\n');
+    contar('');
+    alert(resumo + '\n\nConfira as instruções na aba Instruções.');
+    listarIOs();
+    mostrar('ios');
+  } catch (e) {
+    contar('Não deu para importar: ' + (e.message || e));
+  }
+}
+
+/** Baixa a base como .json. Fica no aparelho: é um arquivo para a pessoa. */
+function baixarBase() {
+  const { nomeArquivo, importadoEm, ...semInternos } = base;
+  const blob = new Blob([JSON.stringify(semInternos)], { type: 'application/json' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `ios-ura-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 4000);
+}
+
+$('#pdfs-inicial').addEventListener('change', ev => importarPDFs(ev.target.files, '#estado-carga'));
 
 /* ————————————————— início ————————————————— */
 
