@@ -695,6 +695,57 @@ ok('voltar para a aba não pula para dentro da sala', await celular.isVisible('#
   !(await celular.isVisible('#mensagens')));
 await celular.context().close();
 
+// ——— 29c. Minha conta: proteger com e-mail e senha ———
+const conta = await novaPagina({});
+await conta.fill('#campo-apelido', 'Gilson Bolivar');
+await conta.click('#botao-entrar');
+await conta.waitForTimeout(500);
+await conta.click('#botao-conta');
+await conta.waitForTimeout(300);
+ok('conta anônima explica e pede o e-mail', (await conta.textContent('#conta-corpo')).includes('só existe neste aparelho'));
+await conta.fill('#conta-corpo input[type=email]', 'nao-e-email');
+await conta.click('#conta-corpo .acao.principal');
+await conta.waitForTimeout(200);
+ok('e-mail errado é explicado', (await conta.textContent('#conta-corpo .erro')).includes('não parece certo'));
+await conta.fill('#conta-corpo input[type=email]', 'gilson@exemplo.com');
+await conta.click('#conta-corpo .acao.principal');
+await conta.waitForTimeout(400);
+ok('depois do e-mail, espera o link', (await conta.textContent('#conta-corpo')).includes('Mandamos um link para gilson@exemplo.com'));
+await conta.click('#conta-corpo .acao.principal');   // "Já confirmei" sem ter confirmado
+await conta.waitForTimeout(300);
+ok('"Já confirmei" sem confirmar é avisado', (await conta.textContent('#conta-corpo .erro')).includes('Ainda não aparece confirmado'));
+await conta.evaluate(() => window.__mock.confirmarEmail());
+await conta.click('#conta-corpo .acao.principal');
+await conta.waitForTimeout(400);
+ok('e-mail confirmado pede a senha', (await conta.textContent('#conta-corpo')).includes('Agora escolha a senha'));
+const senhas = conta.locator('#conta-corpo input[type=password]');
+await senhas.nth(0).fill('minha-senha-1');
+await senhas.nth(1).fill('minha-senha-1');
+await conta.click('#conta-corpo .acao.principal');
+await conta.waitForTimeout(400);
+ok('senha salva deixa a conta protegida', (await conta.textContent('#conta-corpo')).includes('Conta protegida: gilson@exemplo.com'));
+await conta.context().close();
+
+// ——— 29d. Já tenho conta: entrar como a mesma pessoa em outro aparelho ———
+const outro = await novaPagina({ situacaoNova: 'pendente', contaExistente: {
+  email: 'gilson@exemplo.com', senha: 'minha-senha-1',
+  perfil: { id: 'eu-123', apelido: 'Gilson Bolivar', situacao: 'aprovado', admin: true } } });
+ok('entrada oferece "Já tenho conta"', await outro.isVisible('.ja-tenho-conta'));
+await outro.click('#tela-entrada .ja-tenho-conta');
+await outro.fill('#conta-email', 'gilson@exemplo.com');
+await outro.fill('#conta-senha', 'errada');
+await outro.click('#entrar-ok');
+await outro.waitForTimeout(300);
+ok('senha errada da conta é explicada', (await outro.textContent('#erro-entrar-conta')).includes('não conferem'));
+await outro.fill('#conta-senha', 'minha-senha-1');
+await outro.click('#entrar-ok');
+await outro.waitForSelector('#tela-app:not([hidden])', { timeout: 5000 }).catch(() => {});
+await outro.waitForTimeout(500);
+ok('conta certa entra direto, sem portaria', await outro.isVisible('#tela-app'));
+ok('entra com o mesmo apelido', (await outro.textContent('#meu-nome')) === 'Gilson Bolivar');
+ok('e com a administração', await outro.isVisible('#botao-admin'));
+await outro.context().close();
+
 // ——— 30. Chat fechado para quem não é admin ———
 const fora = await novaPagina({ chatFechado: true });
 await fora.fill('#campo-apelido', 'Visitante');

@@ -613,7 +613,17 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
 
 .forma-senha { display: grid; gap: 12px; padding-top: 18px; }
 .forma-senha h2 { margin: 0; font-size: 18px; }
-.acoes-senha { display: flex; justify-content: flex-end; gap: 8px; }
+.acoes-senha { display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap; }
+.acoes-senha .texto-link { margin-right: auto; }
+.conta-estado {
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--fundo);
+  border: 1px solid var(--linha);
+  border-radius: 12px;
+  font-size: 15px;
+}
+.conta-estado.protegida { background: var(--ok-fundo); border-color: var(--ok); color: var(--ok-texto); }
 
 /* ——— Portaria ——————————————————————————————————————————— */
 

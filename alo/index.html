@@ -128,6 +128,7 @@
              placeholder="Seu apelido" spellcheck="false" required>
       <button type="submit" class="principal" id="botao-entrar">Entrar</button>
     </form>
+    <button type="button" class="texto-link ja-tenho-conta">Já tenho conta (e-mail e senha)</button>
     <p id="erro-entrada" class="erro" role="alert" hidden></p>
   </div>
 </section>
@@ -141,6 +142,7 @@
     <p class="erro" id="erro-espera" hidden></p>
     <button type="button" class="principal" id="botao-conferir">Conferir agora</button>
     <button type="button" class="texto-link" id="botao-sou-admin">Sou da administração</button>
+    <button type="button" class="texto-link ja-tenho-conta">Já tenho conta (e-mail e senha)</button>
   </div>
 </section>
 
@@ -192,6 +194,8 @@
     <footer class="lateral-rodape">
       <span class="avatar" id="meu-avatar" aria-hidden="true"></span>
       <span class="meu-nome" id="meu-nome"></span>
+      <button type="button" class="icone" id="botao-conta" title="Minha conta"
+              aria-label="Minha conta: entrar de qualquer aparelho">🔑</button>
       <button type="button" class="icone" id="botao-som" aria-pressed="true"
               title="Som ligado — tocar para desligar" aria-label="Som das mensagens">🔔</button>
       <span class="sinal" id="sinal" title="Conexão">•</span>
@@ -277,6 +281,34 @@
     <div class="acoes-senha">
       <button type="button" class="acao" id="senha-cancelar">Cancelar</button>
       <button type="submit" class="acao principal" id="senha-ok">Entrar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ——— Minha conta: e-mail e senha para entrar de qualquer aparelho ——— -->
+<dialog id="painel-conta" class="painel" aria-labelledby="conta-titulo">
+  <header class="painel-topo">
+    <h2 id="conta-titulo">Minha conta</h2>
+    <button type="button" class="icone" id="botao-fechar-conta" aria-label="Fechar">✕</button>
+  </header>
+  <div class="painel-corpo forma-senha" id="conta-corpo"></div>
+</dialog>
+
+<!-- ——— Entrar com e-mail e senha ——— -->
+<dialog id="painel-entrar" class="painel" aria-labelledby="entrar-titulo">
+  <form class="painel-corpo forma-senha" id="forma-entrar-conta" autocomplete="on">
+    <h2 id="entrar-titulo">Já tenho conta</h2>
+    <p class="ajuda">Use o e-mail e a senha que você cadastrou em <b>🔑 Minha conta</b>.
+      Você entra com o mesmo apelido, as mesmas salas e conversas.</p>
+    <label for="conta-email" class="oculto">E-mail</label>
+    <input type="email" id="conta-email" autocomplete="username" placeholder="E-mail" required>
+    <label for="conta-senha" class="oculto">Senha</label>
+    <input type="password" id="conta-senha" autocomplete="current-password" placeholder="Senha" required>
+    <p class="erro" id="erro-entrar-conta" role="alert" hidden></p>
+    <div class="acoes-senha">
+      <button type="button" class="texto-link" id="botao-esqueci">Esqueci a senha</button>
+      <button type="button" class="acao" id="entrar-cancelar">Cancelar</button>
+      <button type="submit" class="acao principal" id="entrar-ok">Entrar</button>
     </div>
   </form>
 </dialog>

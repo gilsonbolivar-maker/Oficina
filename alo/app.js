@@ -15,7 +15,7 @@
 
 /* ——— Ajustes ——————————————————————————————————————————————— */
 
-const VERSAO = '1.4.0';     // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.5.0';     // precisa casar com a VERSAO do sw.js
 const HISTORICO = 80;        // mensagens carregadas ao abrir uma sala
 const LIMITE_CORPO = 500;    // igual à constraint do banco
 const CHAVE_CONFIG = 'alo:config';
@@ -314,6 +314,11 @@ async function conectar(config) {
 
   const { data: usuario } = await estado.sb.auth.getUser();
   if (!usuario?.user) throw new Error('Sessão inválida.');
+
+  // Voltou pelo link de "Esqueci a senha": pede a nova na hora.
+  estado.sb.auth.onAuthStateChange(evento => {
+    if (evento === 'PASSWORD_RECOVERY') setTimeout(trocarSenhaDaConta, 300);
+  });
   return usuario.user.id;
 }
 
@@ -412,6 +417,175 @@ function telaEspera(motivo) {
     await carregarAjustes();
     await reagir(podia);
   };
+}
+
+/* ——— Minha conta: e-mail e senha ————————————————————————————
+   A conta nasce anônima e mora no aparelho. Para entrar como a mesma
+   pessoa em outro lugar, ela ganha um e-mail (confirmado por um link
+   que o Supabase manda) e uma senha. Os dados não mudam de lugar: é a
+   mesma conta, só que agora com um jeito de voltar a ela. */
+
+const ROTULO_ERRO_AUTH = [
+  [/manual linking/i, 'O Supabase precisa permitir vincular contas: Authentication → Sign In / ' +
+                      'Providers → ligue "Allow manual linking".'],
+  [/already been registered|already registered|exists/i, 'Esse e-mail já é de outra conta. Use "Já tenho conta".'],
+  [/rate limit|too many/i, 'Muitas tentativas. Espere alguns minutos e tente de novo.'],
+  [/invalid login credentials/i, 'E-mail ou senha não conferem.'],
+  [/email not confirmed/i, 'Esse e-mail ainda não foi confirmado. Abra o link que chegou nele.'],
+  [/password.*(short|least|characters)/i, 'A senha precisa ter pelo menos 8 caracteres.'],
+  [/invalid.*email|email.*invalid/i, 'Esse e-mail não parece certo.']
+];
+
+function erroDeConta(error) {
+  const texto = error?.message || '';
+  const achado = ROTULO_ERRO_AUTH.find(([padrao]) => padrao.test(texto));
+  return achado ? achado[1] : (texto || 'Não deu certo. Tente de novo.');
+}
+
+async function usuarioAtual() {
+  await estado.sb.auth.refreshSession().catch(() => {});
+  const { data } = await estado.sb.auth.getUser();
+  return data?.user || null;
+}
+
+/** Desenha o painel conforme a conta está: anônima, esperando o e-mail, sem senha, protegida. */
+async function abrirConta() {
+  const corpo = $('conta-corpo');
+  corpo.replaceChildren();
+  const user = await usuarioAtual();
+  if (!user) return;
+  const p = (texto, classe = 'ajuda') => { const n = el('p', classe); n.textContent = texto; return n; };
+  const botao = (texto, classe, acao) => {
+    const b = el('button', classe); b.type = 'button'; b.textContent = texto;
+    b.addEventListener('click', acao); return b;
+  };
+  const erro = el('p', 'erro'); erro.hidden = true;
+  const mostrarErro = t => { erro.textContent = t; erro.hidden = !t; };
+  const acoes = el('div', 'acoes-senha');
+
+  if (user.email && user.user_metadata?.senha_definida) {
+    // Protegida.
+    corpo.append(
+      p(`Conta protegida: ${user.email}`, 'conta-estado protegida'),
+      p(`Em outro aparelho, toque em "Já tenho conta" e use este e-mail e a sua senha: ` +
+        `você entra como ${estado.eu.apelido}, com as mesmas salas e conversas.`)
+    );
+    acoes.append(
+      botao('Sair desta conta', 'texto-link', sairDaConta),
+      botao('Trocar senha', 'acao', trocarSenhaDaConta)
+    );
+    corpo.append(acoes);
+  } else if (user.email) {
+    // E-mail confirmado; falta a senha.
+    const s1 = el('input'); s1.type = 'password'; s1.placeholder = 'Senha (pelo menos 8 caracteres)';
+    s1.autocomplete = 'new-password';
+    const s2 = el('input'); s2.type = 'password'; s2.placeholder = 'Repita a senha'; s2.autocomplete = 'new-password';
+    corpo.append(p(`E-mail confirmado: ${user.email}`, 'conta-estado protegida'),
+      p('Agora escolha a senha.'), s1, s2, erro);
+    acoes.append(botao('Salvar senha', 'acao principal', async () => {
+      if (s1.value.length < 8) return mostrarErro('A senha precisa ter pelo menos 8 caracteres.');
+      if (s1.value !== s2.value) return mostrarErro('As duas senhas não são iguais.');
+      const { error } = await estado.sb.auth.updateUser({ password: s1.value, data: { senha_definida: true } });
+      if (error) return mostrarErro(erroDeConta(error));
+      avisar('Conta protegida. Já dá para entrar de outro aparelho.', 'bom');
+      abrirConta();
+    }));
+    corpo.append(acoes);
+  } else if (user.new_email) {
+    // Esperando o link do e-mail.
+    corpo.append(
+      p(`Mandamos um link para ${user.new_email}.`, 'conta-estado'),
+      p('Abra o e-mail, toque no link e volte aqui. (Se não chegou, olhe o spam.)'),
+      erro
+    );
+    acoes.append(
+      botao('Usar outro e-mail', 'texto-link', () => pedirEmail(corpo, true)),
+      botao('Já confirmei', 'acao principal', async () => {
+        const u = await usuarioAtual();
+        if (u?.email) abrirConta();
+        else mostrarErro('Ainda não aparece confirmado. Toque no link do e-mail e tente de novo.');
+      })
+    );
+    corpo.append(acoes);
+  } else {
+    pedirEmail(corpo, false);
+  }
+  if (!$('painel-conta').open) $('painel-conta').showModal();
+}
+
+/** Primeiro passo: o e-mail. O Supabase manda um link para confirmar. */
+function pedirEmail(corpo, trocando) {
+  corpo.replaceChildren();
+  const ajuda = el('p', 'ajuda');
+  ajuda.textContent = trocando ? 'Digite o e-mail certo.' :
+    `Hoje "${estado.eu.apelido}" só existe neste aparelho. Com e-mail e senha, você entra ` +
+    'como a mesma pessoa em qualquer lugar — iPad, celular, computador.';
+  const email = el('input'); email.type = 'email'; email.placeholder = 'Seu e-mail'; email.autocomplete = 'email';
+  const erro = el('p', 'erro'); erro.hidden = true;
+  const acoes = el('div', 'acoes-senha');
+  const enviar = el('button', 'acao principal'); enviar.type = 'button'; enviar.textContent = 'Enviar confirmação';
+  enviar.addEventListener('click', async () => {
+    const valor = email.value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor)) { erro.textContent = 'Esse e-mail não parece certo.'; erro.hidden = false; return; }
+    enviar.disabled = true;
+    const { error } = await estado.sb.auth.updateUser(
+      { email: valor }, { emailRedirectTo: location.origin + location.pathname });
+    enviar.disabled = false;
+    if (error) { erro.textContent = erroDeConta(error); erro.hidden = false; return; }
+    abrirConta();
+  });
+  acoes.append(enviar);
+  corpo.append(ajuda, email, erro, acoes);
+  email.focus();
+}
+
+async function trocarSenhaDaConta() {
+  const salvou = await pedirSenha({
+    titulo: 'Nova senha da conta',
+    ajuda: 'Pelo menos 8 caracteres. Vale para entrar em qualquer aparelho.',
+    botao: 'Salvar',
+    repetir: true,
+    conferir: async senha => {
+      if (senha.length < 8) return 'A senha precisa ter pelo menos 8 caracteres.';
+      const { error } = await estado.sb.auth.updateUser({ password: senha, data: { senha_definida: true } });
+      return error ? erroDeConta(error) : '';
+    }
+  });
+  if (salvou) avisar('Senha da conta trocada.', 'bom');
+}
+
+async function sairDaConta() {
+  if (!confirm('Sair desta conta neste aparelho? Para voltar, use "Já tenho conta" com o e-mail e a senha.')) return;
+  await estado.sb.auth.signOut();
+  location.reload();
+}
+
+/** Entrar numa conta protegida, de qualquer aparelho. */
+function abrirEntrarConta() {
+  const painel = $('painel-entrar');
+  const erro = $('erro-entrar-conta');
+  erro.hidden = true;
+  $('entrar-cancelar').onclick = () => painel.close();
+  $('botao-esqueci').onclick = async () => {
+    const email = $('conta-email').value.trim();
+    if (!email) { erro.textContent = 'Digite o e-mail primeiro.'; erro.hidden = false; return; }
+    const { error } = await estado.sb.auth.resetPasswordForEmail(email,
+      { redirectTo: location.origin + location.pathname });
+    erro.textContent = error ? erroDeConta(error)
+      : 'Se esse e-mail tiver conta, chegou um link para criar uma senha nova.';
+    erro.hidden = false;
+  };
+  $('forma-entrar-conta').onsubmit = async ev => {
+    ev.preventDefault();
+    $('entrar-ok').disabled = true;
+    const { error } = await estado.sb.auth.signInWithPassword({
+      email: $('conta-email').value.trim(), password: $('conta-senha').value });
+    $('entrar-ok').disabled = false;
+    if (error) { erro.textContent = erroDeConta(error); erro.hidden = false; return; }
+    location.reload();   // a sessão agora é a da conta: recomeça com ela
+  };
+  painel.showModal();
+  $('conta-email').focus();
 }
 
 /* ——— Senha da administração ——————————————————————————————
@@ -1647,6 +1821,8 @@ async function iniciarApp() {
   $('botao-sair').addEventListener('click', trocarApelido);
   $('botao-nova-sala').addEventListener('click', criarSala);
   $('botao-som').addEventListener('click', alternarSom);
+  $('botao-conta').addEventListener('click', abrirConta);
+  $('botao-fechar-conta').addEventListener('click', () => $('painel-conta').close());
   $('opcao-membros').addEventListener('click', abrirMembros);
   $('opcao-limpar').addEventListener('click', limparMinhaTela);
   $('opcao-apagar-tudo').addEventListener('click', apagarTodasAsMensagens);
@@ -1721,6 +1897,8 @@ async function comecar() {
   estado.convite = lembrar(CHAVE_CONVITE, null);
   estado.secreta = lembrar(CHAVE_SECRETA, null);
   $('botao-sou-admin').addEventListener('click', entrarComoAdmin);
+  document.querySelectorAll('.ja-tenho-conta')
+    .forEach(b => b.addEventListener('click', abrirEntrarConta));
 
   try {
     const idUsuario = await conectar(config);

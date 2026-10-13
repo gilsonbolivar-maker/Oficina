@@ -195,6 +195,22 @@ situação de alguém. A primeira pessoa a se cadastrar num banco novo vira
 admin. Para pôr mais alguém na administração, marque `admin` na tabela
 `perfis` pelo *Table Editor*.
 
+## Minha conta: entrar de qualquer aparelho 🔑
+
+A conta nasce anônima e mora no aparelho. Em **🔑 Minha conta** (rodapé), ela
+ganha um e-mail — confirmado por um link que o Supabase manda — e uma senha.
+É a mesma conta de antes, com o mesmo id: apelido, salas, conversas e
+administração continuam. Em outro aparelho, **Já tenho conta** (na entrada e
+na espera) entra nela com e-mail e senha. **Esqueci a senha** manda um link
+para criar outra.
+
+No painel do Supabase, para os links voltarem para o app:
+**Authentication → URL Configuration → Site URL** =
+`https://gilsonbolivar-maker.github.io/Oficina/alo/` (e o mesmo em
+*Redirect URLs*). O envio de e-mail do plano gratuito só entrega para os
+e-mails da equipe do projeto e tem limite por hora; para outras pessoas usarem,
+configure um SMTP próprio em **Authentication → Emails**.
+
 ## Excluir pessoa
 
 🛡️ Portaria → **Excluir**, em qualquer pessoa que não seja da administração.
@@ -286,7 +302,7 @@ vai acontecer — e é o comportamento desejado para um pedido de remoção.
 
 ## Rodar os testes
 
-Há 155 testes de ponta a ponta em [`teste/`](teste/), que rodam sem precisar
+Há 166 testes de ponta a ponta em [`teste/`](teste/), que rodam sem precisar
 de um projeto no Supabase. Veja o [README de lá](teste/README.md).
 
 ## Moderação

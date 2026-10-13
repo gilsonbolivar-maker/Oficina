@@ -36,6 +36,9 @@ let codigos = 0;
 const cfg = window.__cfg || {};
 const pessoas = (cfg.pessoas || []).map(p => ({ ...p }));
 let chatAberto = !cfg.chatFechado;
+// A conta de autenticação: e-mail, e-mail esperando confirmação, metadados.
+let conta = JSON.parse(localStorage.getItem('mock:conta') || '{"user_metadata":{}}');
+const gravarConta = c => { conta = c; localStorage.setItem('mock:conta', JSON.stringify(c)); };
 let senhaAdmin = cfg.senha || null;
 let errosSenha = 0;
 window.__mock = { mensagens, salas, escondidas, CONVITE_TURMA, pessoas,
@@ -51,6 +54,8 @@ window.__mock = { mensagens, salas, escondidas, CONVITE_TURMA, pessoas,
     avisarTabela('ajustes', { id: 1, aberto });
   },
   get chatAberto() { return chatAberto; },
+  get conta() { return conta; },
+  confirmarEmail() { gravarConta({ ...conta, email: conta.new_email, new_email: null }); },
   // Faz o papel da administração excluindo esta pessoa.
   excluirEu() {
     const id = perfil.id;
@@ -98,8 +103,36 @@ export function createClient(url, key) {
         ? { data: null, error: { code: 'anonymous_provider_disabled',
             message: 'Anonymous sign-ins are disabled' } }
         : { data: {}, error: null }),
-      getUser: async () => ({ data: { user: { id: 'eu-123' } } }),
-      signOut: async () => ({}),
+      getUser: async () => ({ data: { user: { id: 'eu-123', ...conta } } }),
+      signOut: async () => { localStorage.removeItem('mock:conta'); gravarPerfil(null); return {}; },
+      refreshSession: async () => ({ data: {}, error: null }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
+      // E-mail novo fica "esperando o link" até __mock.confirmarEmail().
+      updateUser: async (dados) => {
+        if (dados.email) {
+          if (dados.email === (cfg.contaExistente || {}).email) {
+            return { data: null, error: { message: 'A user with this email address has already been registered' } };
+          }
+          gravarConta({ ...conta, new_email: dados.email });
+          return { data: {}, error: null };
+        }
+        if (dados.password) {
+          if (!conta.email) return { data: null, error: { message: 'Email not confirmed' } };
+          gravarConta({ ...conta, user_metadata: { ...conta.user_metadata, ...(dados.data || {}) } });
+          return { data: {}, error: null };
+        }
+        return { data: {}, error: null };
+      },
+      signInWithPassword: async ({ email, password }) => {
+        const c = cfg.contaExistente;
+        if (!c || c.email !== email || c.senha !== password) {
+          return { data: null, error: { message: 'Invalid login credentials' } };
+        }
+        gravarConta({ email, user_metadata: { senha_definida: true } });
+        gravarPerfil({ ...c.perfil });
+        return { data: {}, error: null };
+      },
+      resetPasswordForEmail: async () => ({ data: {}, error: null }),
     },
     from(tabela) {
       return builder((b, modo) => {
