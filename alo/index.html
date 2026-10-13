@@ -140,6 +140,7 @@
     <p class="ajuda" id="espera-texto"></p>
     <p class="erro" id="erro-espera" hidden></p>
     <button type="button" class="principal" id="botao-conferir">Conferir agora</button>
+    <button type="button" class="texto-link" id="botao-sou-admin">Sou da administração</button>
   </div>
 </section>
 
@@ -244,6 +245,11 @@
       <button type="button" class="acao" id="botao-chat">Fechar o chat</button>
     </div>
 
+    <div class="chave-chat neutra">
+      <span id="estado-senha">Senha da administração</span>
+      <button type="button" class="acao" id="botao-senha">Definir</button>
+    </div>
+
     <h3 class="rotulo">Aguardando <span id="conta-pendentes">0</span></h3>
     <ul class="gente" id="lista-pendentes"></ul>
     <p class="dica" id="vazio-pendentes">Ninguém esperando.</p>
@@ -255,6 +261,23 @@
     <ul class="gente" id="lista-bloqueados"></ul>
     <p class="dica" id="vazio-bloqueados">Ninguém bloqueado.</p>
   </div>
+</dialog>
+
+<!-- ——— Senha (o prompt() do navegador mostraria o que se digita) ——— -->
+<dialog id="painel-senha" class="painel" aria-labelledby="senha-titulo">
+  <form class="painel-corpo forma-senha" id="forma-senha" autocomplete="on">
+    <h2 id="senha-titulo">Senha</h2>
+    <p class="ajuda" id="senha-ajuda"></p>
+    <label for="campo-senha" class="oculto">Senha</label>
+    <input type="password" id="campo-senha" autocomplete="current-password" placeholder="Senha">
+    <label for="campo-senha-2" class="oculto">Repita a senha</label>
+    <input type="password" id="campo-senha-2" autocomplete="new-password" placeholder="Repita a senha" hidden>
+    <p class="erro" id="erro-senha" role="alert" hidden></p>
+    <div class="acoes-senha">
+      <button type="button" class="acao" id="senha-cancelar">Cancelar</button>
+      <button type="submit" class="acao principal" id="senha-ok">Entrar</button>
+    </div>
+  </form>
 </dialog>
 
 <!-- ——— Pessoas de uma sala privada ——— -->

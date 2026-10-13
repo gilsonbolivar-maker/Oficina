@@ -195,6 +195,22 @@ situação de alguém. A primeira pessoa a se cadastrar num banco novo vira
 admin. Para pôr mais alguém na administração, marque `admin` na tabela
 `perfis` pelo *Table Editor*.
 
+## Senha da administração 🔑
+
+A entrada é sem senha, então cada jeito de abrir é uma conta: outro
+aparelho, outro navegador e até o **ícone da Tela de Início** (no iPhone e
+no iPad ele guarda as coisas separado do Safari). Conta nova cai na portaria.
+
+Com a senha, qualquer conta vira admin na hora:
+
+1. 🛡️ Portaria → **Senha da administração → Definir** (uma vez, por quem já é admin)
+2. Em qualquer lugar: escolha um apelido e, na tela de espera, toque em
+   **Sou da administração** e digite a senha
+
+A senha fica embaralhada (bcrypt) numa tabela sem acesso de fora; quem
+confere é a função `entrar_com_senha` no banco. São no máximo 5 erros a cada
+15 minutos por conta, e a senha tem pelo menos 8 caracteres.
+
 ## Conversa secreta 🕶️
 
 Só para a administração: o **+** em *Conversas a sós* gera um link de
@@ -262,7 +278,7 @@ vai acontecer — e é o comportamento desejado para um pedido de remoção.
 
 ## Rodar os testes
 
-Há 134 testes de ponta a ponta em [`teste/`](teste/), que rodam sem precisar
+Há 145 testes de ponta a ponta em [`teste/`](teste/), que rodam sem precisar
 de um projeto no Supabase. Veja o [README de lá](teste/README.md).
 
 ## Moderação

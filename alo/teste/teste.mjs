@@ -510,6 +510,29 @@ ok('bloqueada vê o aviso', (await espera.textContent('#espera-titulo')).include
 ok('bloqueada não tem botão de conferir', !(await espera.isVisible('#botao-conferir')));
 await espera.context().close();
 
+// ——— 27b. Senha da administração: entrar de qualquer aparelho ———
+const comSenha = await novaPagina({ situacaoNova: 'pendente', senha: 'senha-boa-123' });
+await comSenha.fill('#campo-apelido', 'Tablet');
+await comSenha.click('#botao-entrar');
+await comSenha.waitForTimeout(400);
+ok('espera oferece a entrada da administração', await comSenha.isVisible('#botao-sou-admin'));
+await comSenha.click('#botao-sou-admin');
+await comSenha.waitForTimeout(200);
+ok('senha é pedida num campo que esconde o texto',
+  await comSenha.isVisible('#painel-senha') && (await comSenha.getAttribute('#campo-senha', 'type')) === 'password');
+await comSenha.fill('#campo-senha', 'errada');
+await comSenha.click('#senha-ok');
+await comSenha.waitForTimeout(300);
+ok('senha errada é avisada e o painel fica', (await comSenha.textContent('#erro-senha')) === 'Senha errada.' &&
+  await comSenha.isVisible('#painel-senha'));
+ok('senha errada não abre o app', !(await comSenha.isVisible('#tela-app')));
+await comSenha.fill('#campo-senha', 'senha-boa-123');
+await comSenha.click('#senha-ok');
+await comSenha.waitForTimeout(600);
+ok('senha certa abre o app', await comSenha.isVisible('#tela-app'));
+ok('senha certa vira admin', await comSenha.isVisible('#botao-admin'));
+await comSenha.context().close();
+
 // ——— 28. Portaria: a administração decide ———
 const admin = await novaPagina({ adminNovo: true, pessoas: [
   { id: 'p-maria', apelido: 'Maria', situacao: 'pendente', admin: false },
@@ -565,6 +588,29 @@ ok('dono da secreta não tem "sair"', !(await admin.isVisible('#opcao-sair')));
 await admin.click('#opcao-convidar');
 await admin.waitForTimeout(200);
 ok('convite secreto usa #secreta=', /#secreta=[0-9a-f]{64}$/.test(await admin.evaluate(() => window.__copiado) || ''));
+
+// Definir a senha da administração
+await admin.click('#botao-admin');
+await admin.waitForTimeout(300);
+ok('portaria diz que não há senha', (await admin.textContent('#estado-senha')).includes('não definida'));
+await admin.click('#botao-senha');
+await admin.fill('#campo-senha', 'senha-nova-1');
+await admin.fill('#campo-senha-2', 'senha-nova-2');
+await admin.click('#senha-ok');
+await admin.waitForTimeout(200);
+ok('senhas diferentes são recusadas', (await admin.textContent('#erro-senha')).includes('não são iguais'));
+await admin.fill('#campo-senha', 'curta');
+await admin.fill('#campo-senha-2', 'curta');
+await admin.click('#senha-ok');
+await admin.waitForTimeout(200);
+ok('senha curta é recusada', (await admin.textContent('#erro-senha')).includes('8 caracteres'));
+await admin.fill('#campo-senha', 'senha-nova-123');
+await admin.fill('#campo-senha-2', 'senha-nova-123');
+await admin.click('#senha-ok');
+await admin.waitForTimeout(400);
+ok('senha salva fecha o painel', !(await admin.isVisible('#painel-senha')));
+ok('portaria mostra a senha definida', (await admin.textContent('#estado-senha')).includes(': definida'));
+await admin.click('#botao-fechar-painel');
 
 // Ligar e desligar o chat
 await admin.click('#botao-admin');

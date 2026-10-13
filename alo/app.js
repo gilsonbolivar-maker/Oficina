@@ -15,7 +15,7 @@
 
 /* ——— Ajustes ——————————————————————————————————————————————— */
 
-const VERSAO = '1.0.0';     // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.1.0';     // precisa casar com a VERSAO do sw.js
 const HISTORICO = 80;        // mensagens carregadas ao abrir uma sala
 const LIMITE_CORPO = 500;    // igual à constraint do banco
 const CHAVE_CONFIG = 'alo:config';
@@ -413,6 +413,95 @@ function telaEspera(motivo) {
   };
 }
 
+/* ——— Senha da administração ——————————————————————————————
+   Cada aparelho é uma conta nova (até o ícone da Tela de Início tem
+   armazenamento próprio). Com a senha, qualquer conta vira admin na
+   hora — quem confere é o banco (entrar_com_senha), nunca o app. */
+
+/**
+ * Pede uma senha num painel próprio. `conferir(senha)` devolve o texto
+ * do erro, ou nada se deu certo; o painel só fecha quando der certo.
+ */
+function pedirSenha({ titulo, ajuda, botao, repetir, conferir }) {
+  return new Promise(resolver => {
+    const painel = $('painel-senha');
+    const campo = $('campo-senha');
+    const campo2 = $('campo-senha-2');
+    const erro = $('erro-senha');
+    $('senha-titulo').textContent = titulo;
+    $('senha-ajuda').textContent = ajuda;
+    $('senha-ok').textContent = botao;
+    campo.value = '';
+    campo2.value = '';
+    campo2.hidden = !repetir;
+    campo.autocomplete = repetir ? 'new-password' : 'current-password';
+    erro.hidden = true;
+
+    const fechar = ok => { painel.close(); resolver(ok); };
+    $('senha-cancelar').onclick = () => fechar(false);
+    painel.oncancel = () => resolver(false);
+    $('forma-senha').onsubmit = async ev => {
+      ev.preventDefault();
+      if (repetir && campo.value !== campo2.value) {
+        erro.textContent = 'As duas senhas não são iguais.';
+        erro.hidden = false;
+        return;
+      }
+      $('senha-ok').disabled = true;
+      const problema = await conferir(campo.value);
+      $('senha-ok').disabled = false;
+      if (problema) {
+        erro.textContent = problema;
+        erro.hidden = false;
+        campo.select();
+        return;
+      }
+      fechar(true);
+    };
+    painel.showModal();
+    campo.focus();
+  });
+}
+
+async function entrarComoAdmin() {
+  const entrou = await pedirSenha({
+    titulo: 'Sou da administração',
+    ajuda: 'Digite a senha da administração. Esta conta vira administradora na hora.',
+    botao: 'Entrar',
+    conferir: async senha => {
+      const { data, error } = await estado.sb.rpc('entrar_com_senha', { p_senha: senha });
+      if (error) return error.message || 'Não consegui conferir a senha.';
+      return data ? '' : 'Senha errada.';
+    }
+  });
+  if (!entrou) return;
+  const perfil = await buscarPerfil(estado.eu.id).catch(() => null);
+  if (perfil) await mudouMinhaSituacao(perfil);
+}
+
+async function definirSenha() {
+  const salvou = await pedirSenha({
+    titulo: 'Senha da administração',
+    ajuda: 'Com ela, você vira admin em qualquer aparelho: escolha um apelido e, ' +
+           'na tela de espera, toque em "Sou da administração". Pelo menos 8 caracteres.',
+    botao: 'Salvar',
+    repetir: true,
+    conferir: async senha => {
+      const { error } = await estado.sb.rpc('definir_senha_admin', { p_senha: senha });
+      return error ? (error.message || 'Não consegui salvar a senha.') : '';
+    }
+  });
+  if (!salvou) return;
+  avisar('Senha da administração salva.', 'bom');
+  await desenharSenha();
+}
+
+async function desenharSenha() {
+  const { data } = await estado.sb.rpc('tem_senha_admin');
+  $('estado-senha').textContent = data ? 'Senha da administração: definida' : 'Senha da administração: não definida';
+  $('botao-senha').textContent = data ? 'Trocar' : 'Definir';
+}
+
 async function carregarAjustes() {
   const { data } = await estado.sb.from('ajustes').select('aberto').eq('id', 1).maybeSingle();
   estado.chatAberto = data?.aberto ?? true;
@@ -552,6 +641,7 @@ async function decidirAcesso(pessoa, situacao) {
 async function abrirPortaria() {
   await carregarPessoas();
   desenharChaveChat();
+  await desenharSenha();
   $('painel-admin').showModal();
 }
 
@@ -1481,6 +1571,7 @@ async function iniciarApp() {
     $('botao-admin').addEventListener('click', abrirPortaria);
     $('botao-secreta').addEventListener('click', criarConversaSecreta);
     $('botao-chat').addEventListener('click', alternarChat);
+    $('botao-senha').addEventListener('click', definirSenha);
     $('botao-fechar-painel').addEventListener('click', () => $('painel-admin').close());
     desenharChaveChat();
     carregarPessoas();
@@ -1543,6 +1634,7 @@ async function comecar() {
   if (link?.tipo === 'secreta') guardar(CHAVE_SECRETA, link.codigo);
   estado.convite = lembrar(CHAVE_CONVITE, null);
   estado.secreta = lembrar(CHAVE_SECRETA, null);
+  $('botao-sou-admin').addEventListener('click', entrarComoAdmin);
 
   try {
     const idUsuario = await conectar(config);

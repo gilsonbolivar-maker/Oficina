@@ -544,6 +544,23 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
 }
 
 .chave-chat.fechado { background: #3b1d1d; border-color: var(--perigo); }
+.chave-chat.neutra { background: var(--fundo); border-color: var(--linha); }
+
+.texto-link {
+  justify-self: center;
+  padding: 6px;
+  background: none;
+  border: 0;
+  color: var(--apagado);
+  font: inherit;
+  font-size: 14px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.forma-senha { display: grid; gap: 12px; padding-top: 18px; }
+.forma-senha h2 { margin: 0; font-size: 18px; }
+.acoes-senha { display: flex; justify-content: flex-end; gap: 8px; }
 
 /* ——— Portaria ——————————————————————————————————————————— */
 

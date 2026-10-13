@@ -328,6 +328,103 @@ grant  execute on function public.aprovado()                   to authenticated;
 grant  execute on function public.eh_admin()                   to authenticated;
 grant  execute on function public.decidir_acesso(uuid, text)   to authenticated;
 
+-- ——— Senha da administração ———
+-- Como a entrada é sem senha, cada aparelho (e até o ícone da Tela de
+-- Início, que no iPhone/iPad tem armazenamento próprio) vira uma conta
+-- nova, que cai na portaria. A senha da administração resolve: quem a
+-- sabe, em qualquer conta, vira admin na hora.
+--
+-- A senha fica embaralhada com bcrypt numa tabela sem nenhuma política
+-- de acesso: nem quem está logado consegue ler, só as funções abaixo.
+create extension if not exists pgcrypto with schema extensions;
+
+create table if not exists public.segredos (
+  chave     text primary key,
+  valor     text not null,
+  mudado_em timestamptz not null default now()
+);
+alter table public.segredos enable row level security;
+
+create table if not exists public.tentativas_senha (
+  perfil_id uuid        not null,
+  em        timestamptz not null default now()
+);
+create index if not exists tentativas_senha_recentes_idx
+  on public.tentativas_senha (perfil_id, em desc);
+alter table public.tentativas_senha enable row level security;
+
+create or replace function public.definir_senha_admin(p_senha text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.eh_admin() then
+    raise exception 'Só a administração define a senha.' using errcode = 'P0001';
+  end if;
+  if char_length(coalesce(p_senha, '')) < 8 then
+    raise exception 'A senha precisa ter pelo menos 8 caracteres.' using errcode = 'P0001';
+  end if;
+  insert into public.segredos (chave, valor)
+  values ('senha_admin', extensions.crypt(p_senha, extensions.gen_salt('bf', 10)))
+  on conflict (chave) do update set valor = excluded.valor, mudado_em = now();
+end;
+$$;
+
+create or replace function public.tem_senha_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (select 1 from public.segredos where chave = 'senha_admin');
+$$;
+
+-- Senha certa: esta conta vira admin. Senha errada devolve false (sem
+-- erro, para a tentativa ficar anotada) e conta para o limite: 5 erros
+-- em 15 minutos por conta.
+create or replace function public.entrar_com_senha(p_senha text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_hash text;
+begin
+  if not exists (select 1 from public.perfis where id = auth.uid()) then
+    raise exception 'Escolha um apelido antes.' using errcode = 'P0001';
+  end if;
+  select valor into v_hash from public.segredos where chave = 'senha_admin';
+  if v_hash is null then
+    raise exception 'A administração ainda não definiu uma senha.' using errcode = 'P0001';
+  end if;
+  if (select count(*) from public.tentativas_senha
+      where perfil_id = auth.uid() and em > now() - interval '15 minutes') >= 5 then
+    raise exception 'Muitas tentativas erradas. Espere 15 minutos.' using errcode = 'P0001';
+  end if;
+
+  if extensions.crypt(coalesce(p_senha, ''), v_hash) <> v_hash then
+    insert into public.tentativas_senha (perfil_id) values (auth.uid());
+    return false;
+  end if;
+
+  update public.perfis
+     set situacao = 'aprovado', admin = true, reservado = false, decidido_em = now()
+   where id = auth.uid();
+  return true;
+end;
+$$;
+
+revoke execute on function public.definir_senha_admin(text) from public, anon;
+revoke execute on function public.tem_senha_admin()         from public, anon;
+revoke execute on function public.entrar_com_senha(text)    from public, anon;
+grant  execute on function public.definir_senha_admin(text) to authenticated;
+grant  execute on function public.tem_senha_admin()         to authenticated;
+grant  execute on function public.entrar_com_senha(text)    to authenticated;
+
 -- ——— Conversa secreta ———
 -- A administração gera um link de uso único. Quem o abre entra direto
 -- numa conversa a sós com ela, sem passar pela portaria, mas fica

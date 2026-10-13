@@ -36,6 +36,8 @@ let codigos = 0;
 const cfg = window.__cfg || {};
 const pessoas = (cfg.pessoas || []).map(p => ({ ...p }));
 let chatAberto = !cfg.chatFechado;
+let senhaAdmin = cfg.senha || null;
+let errosSenha = 0;
 window.__mock = { mensagens, salas, escondidas, CONVITE_TURMA, pessoas,
   get perfil() { return perfil; }, canais: [], presentes: [], rpcs: [],
   // Faz o papel da administração mudando a situação desta pessoa.
@@ -164,6 +166,19 @@ export function createClient(url, key) {
         salas.push({ id, titulo: args.p_titulo, subtitulo: '', ordem: 0, tipo: 'privada',
           dono_id: 'eu-123', convite: String(++codigos).padStart(64, 'a'), membros: [eu()] });
         return { data: id, error: null };
+      }
+      if (nome === 'tem_senha_admin') return { data: !!senhaAdmin, error: null };
+      if (nome === 'definir_senha_admin') {
+        if ((args.p_senha || '').length < 8) return { data: null, error: { message: 'A senha precisa ter pelo menos 8 caracteres.' } };
+        senhaAdmin = args.p_senha;
+        return { data: null, error: null };
+      }
+      if (nome === 'entrar_com_senha') {
+        if (!senhaAdmin) return { data: null, error: { message: 'A administração ainda não definiu uma senha.' } };
+        if (errosSenha >= 5) return { data: null, error: { message: 'Muitas tentativas erradas. Espere 15 minutos.' } };
+        if (args.p_senha !== senhaAdmin) { errosSenha += 1; return { data: false, error: null }; }
+        gravarPerfil({ ...perfil, situacao: 'aprovado', admin: true, reservado: false });
+        return { data: true, error: null };
       }
       if (nome === 'abrir_fechar_chat') {
         chatAberto = args.p_aberto;
