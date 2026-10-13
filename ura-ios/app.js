@@ -5,7 +5,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.0.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.0.1';   // precisa casar com a VERSAO do sw.js
 
 const $ = s => document.querySelector(s);
 const esc = s => Busca.escapar(s);
@@ -297,7 +297,7 @@ function telaAjustes() {
     <p class="grupo-titulo">Trocar a base</p>
     <p class="fraco pequeno">Ao revisar uma IO, gere o arquivo de novo e carregue aqui. A base antiga é substituída.</p>
     <label class="botao">Escolher arquivo
-      <input type="file" id="arquivo-troca" accept=".json,application/json" hidden></label>
+      <input type="file" id="arquivo-troca" hidden></label>
     <p class="grupo-titulo">Apagar</p>
     <p class="fraco pequeno">Remove as instruções deste aparelho. O app volta à tela inicial.</p>
     <button class="botao perigo" type="button" id="btn-apagar">Apagar a base do aparelho</button>
