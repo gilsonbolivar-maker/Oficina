@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '3.1.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '3.1.1';   // precisa casar com a VERSAO do sw.js
 
 /* Área padrão, para quem ainda não carregou a configuração das áreas.
    Equipamento, motivo e medida de cada área real vêm do arquivo que fica
@@ -1032,14 +1032,14 @@ function formParada(t, p) {
       '</datalist>' +
     '</label>' +
     '<div class="dupla-campo">' +
-      '<label class="campo">Início<input id="f-ini" type="time" value="' +
+      '<label class="campo">Parada<input id="f-ini" type="time" value="' +
         (p ? paraCampo(p.inicio) : paraCampo(agora())) + '">' +
         '<button class="agora" type="button" data-agora="f-ini">agora</button></label>' +
-      '<label class="campo">Fim<input id="f-fim" type="time" value="' +
+      '<label class="campo">Retomada<input id="f-fim" type="time" value="' +
         (p && p.fim ? paraCampo(p.fim) : '') + '">' +
         '<button class="agora" type="button" data-agora="f-fim">agora</button></label>' +
     '</div>' +
-    '<p class="fraco pequeno">Deixe o fim em branco enquanto a parada estiver acontecendo.</p>';
+    '<p class="fraco pequeno">Deixe a retomada em branco enquanto a parada estiver acontecendo.</p>';
 
   abrirCaixa(p ? 'Editar parada' : 'Nova parada', corpo, async () => {
     let equip = escolhido('#g-equip');
