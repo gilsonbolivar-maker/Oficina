@@ -834,12 +834,16 @@ function guardarMensagem(msg) {
   return true;
 }
 
-async function abrirSala(salaId) {
+/**
+ * Abre a sala. `mostrar: false` só atualiza por trás, sem tirar a pessoa
+ * da tela em que está — no telefone, a lista de salas continua na frente.
+ */
+async function abrirSala(salaId, { mostrar = true } = {}) {
   estado.salaAtual = salaId;
   const sala = estado.salas.find(s => s.id === salaId);
   $('titulo-sala').textContent = sala?.titulo || '';
   $('subtitulo-sala').textContent = sala?.subtitulo || '';
-  $('tela-app').dataset.vista = 'conversa';
+  if (mostrar) $('tela-app').dataset.vista = 'conversa';
   prepararOpcoes(sala);
 
   if (!estado.carregadas.has(salaId)) {
@@ -1520,7 +1524,7 @@ async function iniciarApp() {
     // embora alguma (apagada pelo dono).
     recarregarSalas().then(() => {
       const ainda = estado.salas.some(s => s.id === estado.salaAtual);
-      abrirSala(ainda ? estado.salaAtual : (estado.salas[0]?.id || 'geral'));
+      abrirSala(ainda ? estado.salaAtual : (estado.salas[0]?.id || 'geral'), { mostrar: false });
     });
   });
 }

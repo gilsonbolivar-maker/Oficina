@@ -623,6 +623,10 @@ await celular.click('#botao-entrar');
 await celular.waitForTimeout(500);
 ok('no telefone abre na lista de salas', await celular.isVisible('#lista-salas') &&
   !(await celular.isVisible('#mensagens')));
+await celular.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+await celular.waitForTimeout(500);
+ok('voltar para a aba não pula para dentro da sala', await celular.isVisible('#lista-salas') &&
+  !(await celular.isVisible('#mensagens')));
 await celular.context().close();
 
 // ——— 30. Chat fechado para quem não é admin ———
