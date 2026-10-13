@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '3.1.3';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '3.1.4';   // precisa casar com a VERSAO do sw.js
 
 /* Área padrão, para quem ainda não carregou a configuração das áreas.
    Equipamento, motivo e medida de cada área real vêm do arquivo que fica
@@ -674,13 +674,13 @@ function desenharResumo() {
       (completa ? '<tr><td>Balança no turno</td><td>' + comUnidade(soma.balanca, 't') + '</td></tr>' : '') +
       (completa ? '<tr><td>Ácido consumido</td><td>' + mostrarNumero(soma.acido) + '</td></tr>' : '') +
       '<tr><td>Ácido médio por hora</td><td>' + mostrarNumero(c.acidoMedio) + '</td></tr>' +
-      '<tr><td>Tonelada inicial</td><td>' + comUnidade(t.toneladaInicial, 't') + '</td></tr>' +
-      '<tr><td>Tonelada final</td><td>' + comUnidade(t.toneladaFinal, 't') + '</td></tr>' +
+      '<tr><td>Balança inicial</td><td>' + comUnidade(t.toneladaInicial, 't') + '</td></tr>' +
+      '<tr><td>Balança final</td><td>' + comUnidade(t.toneladaFinal, 't') + '</td></tr>' +
       '<tr><td><b>Produção</b> (final − inicial)</td><td><b>' + comUnidade(t.producao, 't') + '</b></td></tr>' +
     '</tbody></table>' +
     (completa ? '' : '<p class="fraco pequeno">Anote a leitura inicial e a final,' +
       ' na aba Leituras, para o app somar o turno inteiro.</p>') +
-    '<div class="botoes"><button class="botao" id="editar-producao" type="button">Anotar toneladas</button></div>';
+    '<div class="botoes"><button class="botao" id="editar-producao" type="button">Anotar balança</button></div>';
   alvo.appendChild(nums);
 
   const extras = areaDe(t).extras;
@@ -1308,10 +1308,10 @@ function formToneladas(t, encerrar) {
   const valor = v => v != null ? mostrarNumero(v) : '';
   const corpo =
     '<div class="dupla-campo">' +
-      '<label class="campo">Tonelada inicial' +
+      '<label class="campo">Balança inicial' +
       '<input id="f-ton-ini" type="text" inputmode="decimal" enterkeyhint="next" value="' +
       valor(sugIni) + '"></label>' +
-      '<label class="campo">Tonelada final' +
+      '<label class="campo">Balança final' +
       '<input id="f-ton-fim" type="text" inputmode="decimal" enterkeyhint="done" value="' +
       valor(t.toneladaFinal) + '"></label>' +
     '</div>' +
@@ -1320,14 +1320,14 @@ function formToneladas(t, encerrar) {
       ? '<p class="fraco pequeno">A inicial veio da final do turno anterior. Confira.</p>' : '') +
     (encerrar ? '<p class="fraco pequeno">Pode deixar em branco e anotar depois.</p>' : '');
 
-  abrirCaixa(encerrar ? 'Encerrar turno' : 'Toneladas', corpo, async () => {
+  abrirCaixa(encerrar ? 'Encerrar turno' : 'Balança', corpo, async () => {
     const ini = lerNumero($('#f-ton-ini').value);
     const fim = lerNumero($('#f-ton-fim').value);
     if (Number.isNaN(ini) || Number.isNaN(fim)) {
-      erro('Use só dígitos e vírgula nas toneladas.'); return;
+      erro('Use só dígitos e vírgula na balança.'); return;
     }
     if (ini != null && fim != null && fim < ini) {
-      erro('A tonelada final está menor que a inicial. Confira os números.'); return;
+      erro('A balança final está menor que a inicial. Confira os números.'); return;
     }
     t.toneladaInicial = ini;
     t.toneladaFinal = fim;
@@ -1336,7 +1336,7 @@ function formToneladas(t, encerrar) {
     fecharCaixa();
     await salvar();
     const prod = t.producao != null ? ' · produção ' + mostrarNumero(t.producao) + ' t' : '';
-    avisar((encerrar ? 'Turno encerrado' : 'Toneladas anotadas') + prod + '.');
+    avisar((encerrar ? 'Turno encerrado' : 'Balança anotada') + prod + '.');
   });
 
   const atualizar = () => {
