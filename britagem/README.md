@@ -33,7 +33,7 @@ adiante. Funciona **sem internet** e tudo fica neste aparelho.
 | **Parada** | Equipamento (AA140, Primário, Rebritagem — ou **Outro…**, que abre o campo para digitar o nome), motivo, início e fim |
 | **Detector DT 1101** | Hora que acionou, hora que liberou, 👍 metal encontrado / 👎 não encontrado |
 | **Leitura inicial / final** | Hora e o número cheio do totalizador: horímetro, balança e ácido |
-| **Leitura hora a hora** | Hora, horímetro, balança, ácido — ou a marca de **usina parada**. Os campos abrem o **teclado numérico** e aceitam vírgula ou ponto. |
+| **Leitura hora a hora** | Hora, horímetro, balança, ácido — ou a marca de **fora de operação**. Os campos abrem o **teclado numérico** e aceitam vírgula ou ponto. |
 | **Turno** | Data, turno (A a E), operador, produção em toneladas |
 
 ## As áreas
