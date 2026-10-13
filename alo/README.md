@@ -218,6 +218,17 @@ param). **Abrir o chat** devolve todo mundo sozinho, sem recarregar. Quem
 manda é `aprovado()` no banco, que com o chat fechado só diz "sim" para a
 administração.
 
+## Limpar mensagens
+
+No **⋯** de qualquer sala:
+
+| Opção | Quem | Efeito |
+|---|---|---|
+| **Limpar minha tela** | todo mundo | esconde o que já está lá **só neste aparelho**; nada é apagado e as novas aparecem normalmente |
+| **Apagar todas as mensagens** | administração | apaga tudo o que foi dito na sala, **para todo mundo** |
+
+Para apagar uma só, há o "apagar" no rodapé de cada mensagem.
+
 ## Tirar alguém de uma sala privada
 
 **⋯ → Pessoas da sala → Tirar** (só quem criou). A pessoa perde o acesso
@@ -251,7 +262,7 @@ vai acontecer — e é o comportamento desejado para um pedido de remoção.
 
 ## Rodar os testes
 
-Há 127 testes de ponta a ponta em [`teste/`](teste/), que rodam sem precisar
+Há 133 testes de ponta a ponta em [`teste/`](teste/), que rodam sem precisar
 de um projeto no Supabase. Veja o [README de lá](teste/README.md).
 
 ## Moderação

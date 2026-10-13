@@ -307,6 +307,22 @@ await pagina.waitForTimeout(200);
 ok('mensagem apagada por outra pessoa some sozinha', comAna === 1 &&
   !(await pagina.$$eval('.balao-corpo', ns => ns.map(n => n.textContent))).includes('som 3000'));
 
+// ——— 20c. Limpar a própria tela ———
+await pagina.click('.sala:nth-child(2)');   // Recados
+await pagina.waitForTimeout(300);
+await pagina.click('#botao-opcoes');
+ok('quem não é admin não apaga tudo', !(await pagina.isVisible('#opcao-apagar-tudo')));
+await pagina.click('#opcao-limpar');
+await pagina.waitForTimeout(200);
+ok('limpar esvazia a tela', (await pagina.$$('.balao')).length === 0);
+ok('limpar não apaga do banco', await pagina.evaluate(() =>
+  window.__mock.mensagens.some(m => m.sala_id === 'recados')));
+await chegar(3100, 'recados', 'outro');
+await pagina.waitForTimeout(200);
+ok('mensagem nova aparece depois de limpar', (await pagina.$$('.balao')).length === 1);
+await pagina.click('.sala:nth-child(1)');
+await pagina.waitForTimeout(300);
+
 // ——— 21. Sala privada: criar, convidar, falar ———
 await pagina.evaluate(() => { window.prompt = () => 'Família'; });
 await pagina.click('#botao-nova-sala');
@@ -569,6 +585,12 @@ await admin.click('#botao-fechar-painel');
 await admin.click('.sala:nth-child(1)');
 await admin.waitForTimeout(300);
 
+await admin.click('#botao-opcoes');
+await admin.click('#opcao-apagar-tudo');
+await admin.waitForTimeout(400);
+ok('admin apaga todas as mensagens da sala', (await admin.$$('.balao')).length === 0 &&
+  await admin.evaluate(() => !window.__mock.mensagens.some(m => m.sala_id === 'geral')));
+
 await admin.screenshot({ path: path.join(AQUI, 'fotos', '6-admin.png') });
 await admin.click('#botao-admin');
 await admin.waitForTimeout(300);
@@ -592,6 +614,16 @@ ok('o link secreto vale uma vez', await secreta.evaluate(() =>
 ok('código secreto sai do endereço', !(await secreta.evaluate(() => location.hash)));
 await secreta.screenshot({ path: path.join(AQUI, 'fotos', '8-secreta.png') });
 await secreta.context().close();
+
+// ——— 29b. No telefone, o app começa pela lista de salas ———
+const celular = await novaPagina({});
+await celular.setViewportSize({ width: 390, height: 780 });
+await celular.fill('#campo-apelido', 'Celular');
+await celular.click('#botao-entrar');
+await celular.waitForTimeout(500);
+ok('no telefone abre na lista de salas', await celular.isVisible('#lista-salas') &&
+  !(await celular.isVisible('#mensagens')));
+await celular.context().close();
 
 // ——— 30. Chat fechado para quem não é admin ———
 const fora = await novaPagina({ chatFechado: true });

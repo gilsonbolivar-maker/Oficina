@@ -129,6 +129,14 @@ export function createClient(url, key) {
           return { data: perfil, error: null };
         }
         if (tabela === 'mensagens') {
+          if (b._delete && b._eqs[0]?.[0] === 'sala_id') {
+            const sala = b._eqs[0][1];
+            const apagadas = mensagens.filter(m => m.sala_id === sala).map(m => ({ id: m.id }));
+            for (let i = mensagens.length - 1; i >= 0; i -= 1) {
+              if (mensagens[i].sala_id === sala) mensagens.splice(i, 1);
+            }
+            return { data: apagadas, error: null };
+          }
           if (b._delete) {
             const id = b._eqs[0]?.[1];
             const i = mensagens.findIndex(m => m.id === id);

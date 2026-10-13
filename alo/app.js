@@ -22,6 +22,7 @@ const CHAVE_LIDO = 'alo:lido';
 const CHAVE_SOM = 'alo:som';
 const CHAVE_CONVITE = 'alo:convite';
 const CHAVE_SECRETA = 'alo:secreta';
+const CHAVE_LIMPO = 'alo:limpo';
 
 const FONTES_LIB = [
   'https://esm.sh/@supabase/supabase-js@2',
@@ -87,6 +88,7 @@ const estado = {
   vistos: new Set(),      // ids já na tela (evita duplicar com o tempo real)
   lido: lembrar(CHAVE_LIDO, {}),
   som: lembrar(CHAVE_SOM, true),
+  limpo: lembrar(CHAVE_LIMPO, {}),   // sala_id -> última mensagem escondida
   presentes: [],
   convite: null,          // código vindo de um link #convite=…
   secreta: null,          // código vindo de um link #secreta=…
@@ -695,8 +697,8 @@ function botaoSala(sala) {
     botao.append(selo);
   }
 
-  const ultimas = estado.mensagens.get(sala.id);
-  const ultima = ultimas?.[ultimas.length - 1];
+  const ultimas = visiveis(sala.id);
+  const ultima = ultimas[ultimas.length - 1];
   const resumo = el('span', 'sala-ultima');
   resumo.textContent = ultima
     ? `${ultima.autor_apelido}: ${ultima.corpo}`
@@ -751,7 +753,7 @@ function noFim(caixa) {
 function desenharMensagens(manterRolagem = false) {
   const caixa = $('mensagens');
   const colado = manterRolagem ? noFim(caixa) : true;
-  const lista = estado.mensagens.get(estado.salaAtual) || [];
+  const lista = visiveis(estado.salaAtual);
 
   caixa.replaceChildren();
 
@@ -815,6 +817,12 @@ function desenharMensagens(manterRolagem = false) {
   }
 
   if (colado) caixa.scrollTop = caixa.scrollHeight;
+}
+
+/** Mensagens da sala, menos as que a pessoa limpou da própria tela. */
+function visiveis(salaId) {
+  const ate = estado.limpo[salaId] || 0;
+  return (estado.mensagens.get(salaId) || []).filter(m => m.id < 0 || m.id > ate);
 }
 
 function guardarMensagem(msg) {
@@ -1215,9 +1223,41 @@ function prepararOpcoes(sala) {
   $('opcao-sair').textContent = individual ? 'Fechar a conversa' : 'Sair da sala';
   $('opcao-apagar').hidden = !souDono;
   $('opcao-apagar').textContent = individual ? 'Apagar a conversa' : 'Apagar a sala';
+  $('opcao-apagar-tudo').hidden = !estado.eu.admin;
 
   const algum = [...$('opcoes-sala').children].some(b => !b.hidden);
-  $('menu-sala').hidden = tipo === 'publica' || !algum;
+  $('menu-sala').hidden = !sala || !algum;
+}
+
+/* ——— Limpar mensagens ————————————————————————————————————————— */
+
+/** Esconde, só neste aparelho, o que já está na sala. Não apaga nada. */
+function limparMinhaTela() {
+  fecharOpcoes();
+  const lista = estado.mensagens.get(estado.salaAtual) || [];
+  const ultima = lista.filter(m => m.id > 0).pop();
+  if (!ultima) return;
+  estado.limpo[estado.salaAtual] = ultima.id;
+  guardar(CHAVE_LIMPO, estado.limpo);
+  desenharMensagens();
+  desenharSalas();
+  avisar('Tela limpa. As mensagens continuam para os outros; as novas aparecem normalmente.', 'bom');
+}
+
+/** Administração: apaga tudo o que foi dito na sala, para todo mundo. */
+async function apagarTodasAsMensagens() {
+  fecharOpcoes();
+  const sala = salaAtual();
+  if (!sala) return;
+  if (!confirm(`Apagar TODAS as mensagens de "${sala.titulo}" para todo mundo? Não dá para desfazer.`)) return;
+
+  const { data, error } = await estado.sb
+    .from('mensagens').delete().eq('sala_id', sala.id).select('id');
+  if (error) { avisar(error.message || 'Não consegui apagar.'); return; }
+  estado.mensagens.set(sala.id, []);
+  desenharMensagens();
+  desenharSalas();
+  avisar(`${data?.length || 0} mensagens apagadas.`, 'bom');
 }
 
 /* ——— Pessoas de uma sala privada (C) —————————————————————————— */
@@ -1382,14 +1422,22 @@ async function iniciarApp() {
   ouvirMensagens();
   if (!estado.eu.reservado) ouvirPresenca();
 
-  let primeira = estado.abrirPrimeiro || estado.salas[0]?.id || 'geral';
+  // Veio por um link (conversa secreta ou convite)? Abre direto nela.
+  let pedida = estado.abrirPrimeiro;
+  let primeira = pedida || estado.salas[0]?.id || 'geral';
   estado.abrirPrimeiro = null;
   if (estado.convite && !estado.eu.reservado) {
-    primeira = (await entrarPorConvite(estado.convite)) || primeira;
+    pedida = await entrarPorConvite(estado.convite);
+    primeira = pedida || primeira;
     estado.convite = null;
     guardar(CHAVE_CONVITE, null);
   }
   await abrirSala(primeira);
+  // No telefone (e no iPad em pé), sem sala pedida, começa pela lista de
+  // salas — a página inicial do app — e não dentro da Geral.
+  if (!pedida && matchMedia('(max-width: 760px)').matches) {
+    $('tela-app').dataset.vista = 'salas';
+  }
   if (estado.avisoGuardado) { avisar(estado.avisoGuardado); estado.avisoGuardado = ''; }
 
   const campo = $('campo-mensagem');
@@ -1416,6 +1464,8 @@ async function iniciarApp() {
   $('botao-nova-sala').addEventListener('click', criarSala);
   $('botao-som').addEventListener('click', alternarSom);
   $('opcao-membros').addEventListener('click', abrirMembros);
+  $('opcao-limpar').addEventListener('click', limparMinhaTela);
+  $('opcao-apagar-tudo').addEventListener('click', apagarTodasAsMensagens);
   $('botao-fechar-membros').addEventListener('click', () => $('painel-membros').close());
   if (estado.eu.admin) {
     $('botao-admin').hidden = false;
