@@ -841,3 +841,25 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
 .opcoes button { padding: 14px 14px; font-size: 16px; }
 
 .acao { min-height: 40px; padding: 8px 14px; }
+
+/* ——— Topo mais baixo e ícones 25% maiores (pedido do Gilson) ——— */
+.lateral-topo,
+.conversa-topo {
+  padding-top: calc(var(--seguro-topo) + 28px);
+  padding-bottom: 16px;
+  min-height: calc(var(--seguro-topo) + 100px);
+}
+
+.icone {
+  width: 55px; height: 55px;
+  border-radius: 15px;
+  font-size: 25px;
+}
+
+.mais {
+  width: 45px; height: 45px;
+  border-radius: 12px;
+  font-size: 25px;
+}
+
+.selo { top: -8px; right: -8px; min-width: 22px; font-size: 13px; line-height: 20px; }
