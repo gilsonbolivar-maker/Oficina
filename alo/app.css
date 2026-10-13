@@ -789,3 +789,42 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
   color: var(--apagado);
   vertical-align: middle;
 }
+
+/* ——— Topo longe da barra de status, e botões do tamanho do dedo ———
+   Aberto pelo ícone da Tela de Início, o app desenha por baixo da barra
+   de status do iPhone/iPad (viewport-fit=cover + barra translúcida).
+   O topo de cada tela desce o quanto o aparelho pede, e os botões têm
+   44 px — o mínimo que a Apple recomenda para o toque. */
+:root {
+  --seguro-topo: env(safe-area-inset-top, 0px);
+  --seguro-esq: env(safe-area-inset-left, 0px);
+  --seguro-dir: env(safe-area-inset-right, 0px);
+}
+
+.lateral-topo,
+.conversa-topo {
+  padding-top: calc(var(--seguro-topo) + 14px);
+  padding-bottom: 14px;
+  min-height: calc(var(--seguro-topo) + 72px);
+}
+
+.lateral-topo { padding-left: calc(var(--seguro-esq) + 16px); }
+.conversa-topo { padding-right: calc(var(--seguro-dir) + 16px); }
+
+.tela { padding-top: calc(var(--seguro-topo) + 24px); }
+
+.icone {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  font-size: 20px;
+}
+
+.mais {
+  width: 36px; height: 36px;
+  font-size: 20px;
+}
+
+.opcoes { min-width: 270px; }
+.opcoes button { padding: 14px 14px; font-size: 16px; }
+
+.acao { min-height: 40px; padding: 8px 14px; }

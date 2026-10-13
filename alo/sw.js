@@ -10,7 +10,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.1.0';   // precisa casar com a VERSAO do app.js
+const VERSAO = '1.1.1';   // precisa casar com a VERSAO do app.js
 const CACHE = 'alo-' + VERSAO;
 
 const ARQUIVOS = [

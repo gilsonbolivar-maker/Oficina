@@ -312,6 +312,7 @@ await pagina.click('.sala:nth-child(2)');   // Recados
 await pagina.waitForTimeout(300);
 await pagina.click('#botao-opcoes');
 ok('quem não é admin não apaga tudo', !(await pagina.isVisible('#opcao-apagar-tudo')));
+ok('sala aberta não tem "sair"', !(await pagina.isVisible('#opcao-sair')));
 await pagina.click('#opcao-limpar');
 await pagina.waitForTimeout(200);
 ok('limpar esvazia a tela', (await pagina.$$('.balao')).length === 0);

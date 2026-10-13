@@ -15,7 +15,7 @@
 
 /* ——— Ajustes ——————————————————————————————————————————————— */
 
-const VERSAO = '1.1.0';     // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.1.1';     // precisa casar com a VERSAO do sw.js
 const HISTORICO = 80;        // mensagens carregadas ao abrir uma sala
 const LIMITE_CORPO = 500;    // igual à constraint do banco
 const CHAVE_CONFIG = 'alo:config';
@@ -1317,7 +1317,7 @@ function prepararOpcoes(sala) {
   // Quem criou não sai: apaga. Senão a sala ficaria sem ninguém para
   // trocar o link de convite. Quem veio por conversa secreta também não
   // sai: ficaria sem conversa nenhuma.
-  $('opcao-sair').hidden = souDono || !!estado.eu.reservado;
+  $('opcao-sair').hidden = tipo === 'publica' || souDono || !!estado.eu.reservado;
   $('opcao-sair').textContent = individual ? 'Fechar a conversa' : 'Sair da sala';
   $('opcao-apagar').hidden = !souDono;
   $('opcao-apagar').textContent = individual ? 'Apagar a conversa' : 'Apagar a sala';
