@@ -1,19 +1,32 @@
 /* ————————————————————————————————————————————————————————————
    Alô — aparência.
-   Mesma paleta da Oficina: fundo #0b1220, cartões #141d2e,
-   linhas #2b3a56, destaque #ffb020.
+   Tema abóbora e branco areia. Todas as cores moram aqui em cima;
+   o resto da folha só usa as variáveis. Os pares de texto e fundo
+   passam de 4,5:1 de contraste (o mínimo para ler com folga).
    ———————————————————————————————————————————————————————————— */
 
 :root {
-  color-scheme: dark;
-  --fundo: #0b1220;
-  --alto: #141d2e;
-  --linha: #2b3a56;
-  --texto: #e8edf7;
-  --apagado: #93a1bd;
-  --destaque: #ffb020;
-  --minha: #1d4ed8;
-  --perigo: #f87171;
+  color-scheme: light;
+  --fundo: #F6EFE3;          /* branco areia */
+  --alto: #FFFAF2;           /* cartões e barras, um tom mais claro */
+  --linha: #E3D5BF;
+  --suave: #F1E5D2;          /* sala apontada, hover */
+  --texto: #2E2117;
+  --apagado: #6E5D4C;
+  --destaque: #C2500C;       /* abóbora */
+  --destaque-texto: #A8440A; /* abóbora para texto pequeno sobre areia */
+  --sobre-destaque: #FFFFFF;
+  --minha: #F9DCC2;          /* balão das minhas mensagens */
+  --perigo: #B3261E;
+  --perigo-fundo: #FBE7E3;
+  --perigo-texto: #8C1D16;
+  --ok: #1E7A4F;
+  --ok-fundo: #E4F3EA;
+  --ok-texto: #155C3A;
+  --sobre-avatar: #FFFFFF;
+  --sombra: rgb(70 45 20 / 0.18);
+  --veu: rgb(46 33 23 / 0.45);
+  --brilho: rgb(194 80 12 / 0.2);
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --raio: 14px;
 }
@@ -83,7 +96,7 @@ body {
 }
 
 .ajuda.rodape { margin-top: 4px; }
-.ajuda a { color: var(--destaque); }
+.ajuda a { color: var(--destaque-texto); }
 
 .cartao label {
   font-size: 13px;
@@ -112,7 +125,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
 .principal {
   padding: 13px 16px;
   background: var(--destaque);
-  color: #24170a;
+  color: var(--sobre-destaque);
   border: 0;
   border-radius: var(--raio);
   font: inherit;
@@ -199,10 +212,10 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
   cursor: pointer;
 }
 
-.sala:hover { background: #1b2740; }
+.sala:hover { background: var(--suave); }
 
 .sala[aria-current="true"] {
-  background: #1b2740;
+  background: var(--suave);
   border-color: var(--destaque);
 }
 
@@ -223,7 +236,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
   min-width: 22px;
   padding: 2px 7px;
   background: var(--destaque);
-  color: #24170a;
+  color: var(--sobre-destaque);
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
@@ -303,15 +316,15 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
   cursor: pointer;
 }
 
-.pessoa-botao:hover { background: #1b2740; color: var(--texto); }
+.pessoa-botao:hover { background: var(--suave); color: var(--texto); }
 
 .avatar {
   display: grid;
   place-content: center;
   width: 28px; height: 28px;
   border-radius: 50%;
-  background: #24314d;
-  color: var(--texto);
+  background: var(--suave);
+  color: var(--sobre-avatar);
   font-size: 12px;
   font-weight: 700;
   flex: none;
@@ -327,7 +340,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
 }
 
 .sinal { color: var(--perigo); font-size: 22px; line-height: 1; }
-.sinal.ligado { color: #34d399; }
+.sinal.ligado { color: var(--ok); }
 
 /* ——— Conversa ————————————————————————————————————————————— */
 
@@ -360,7 +373,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
   background: var(--alto);
   border: 1px solid var(--linha);
   border-radius: 12px;
-  box-shadow: 0 10px 30px rgb(0 0 0 / 0.4);
+  box-shadow: 0 10px 30px var(--sombra);
 }
 
 .opcoes button {
@@ -375,7 +388,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
   cursor: pointer;
 }
 
-.opcoes button:hover { background: #1b2740; }
+.opcoes button:hover { background: var(--suave); }
 .opcoes .perigo { color: var(--perigo); }
 .conversa-topo p { margin: 0; font-size: 13px; color: var(--apagado); }
 
@@ -421,7 +434,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
   margin: 0 0 3px;
   font-size: 12px;
   font-weight: 700;
-  color: var(--destaque);
+  color: var(--destaque-texto);
 }
 
 .balao-corpo { margin: 0; white-space: pre-wrap; }
@@ -434,7 +447,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
   text-align: right;
 }
 
-.balao.minha .balao-hora { color: #c7d7ff; }
+.balao.minha .balao-hora { color: var(--apagado); }
 
 .balao-rodape {
   display: flex;
@@ -490,7 +503,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
   width: 44px; height: 44px;
   flex: none;
   background: var(--destaque);
-  color: #24170a;
+  color: var(--sobre-destaque);
   border: 0;
   border-radius: 50%;
   font-size: 17px;
@@ -502,16 +515,16 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
 .aviso {
   margin: 0;
   padding: 9px 16px;
-  background: #3b1d1d;
+  background: var(--perigo-fundo);
   border-top: 1px solid var(--perigo);
-  color: #fecaca;
+  color: var(--perigo-texto);
   font-size: 14px;
 }
 
 .aviso.bom {
-  background: #10291f;
-  border-top-color: #34d399;
-  color: #bbf7d0;
+  background: var(--ok-fundo);
+  border-top-color: var(--ok);
+  color: var(--ok-texto);
 }
 
 /* ——— Conversa secreta: só a conversa aparece ——————————————— */
@@ -523,10 +536,10 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
 .faixa {
   margin: 8px;
   padding: 8px 12px;
-  background: #3b1d1d;
+  background: var(--perigo-fundo);
   border: 1px solid var(--perigo);
   border-radius: 10px;
-  color: #fecaca;
+  color: var(--perigo-texto);
   font-size: 13px;
 }
 
@@ -537,13 +550,13 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
   gap: 12px;
   margin: 10px 0 6px;
   padding: 12px 14px;
-  background: #10291f;
-  border: 1px solid #34d399;
+  background: var(--ok-fundo);
+  border: 1px solid var(--ok);
   border-radius: 12px;
   font-weight: 600;
 }
 
-.chave-chat.fechado { background: #3b1d1d; border-color: var(--perigo); }
+.chave-chat.fechado { background: var(--perigo-fundo); border-color: var(--perigo); }
 .chave-chat.neutra { background: var(--fundo); border-color: var(--linha); }
 
 .texto-link {
@@ -572,7 +585,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
   min-width: 18px;
   padding: 1px 5px;
   background: var(--destaque);
-  color: #24170a;
+  color: var(--sobre-destaque);
   border-radius: 999px;
   font-size: 11px;
   font-weight: 700;
@@ -589,7 +602,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
   border-radius: 18px;
 }
 
-.painel::backdrop { background: rgb(0 0 0 / 0.6); }
+.painel::backdrop { background: var(--veu); }
 
 .painel-topo {
   position: sticky;
@@ -643,7 +656,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
   cursor: pointer;
 }
 
-.acao.principal { background: var(--destaque); color: #24170a; border-color: transparent; }
+.acao.principal { background: var(--destaque); color: var(--sobre-destaque); border-color: transparent; }
 .acao.perigo { color: var(--perigo); }
 
 /* ——— Telefone ————————————————————————————————————————————— */
@@ -711,7 +724,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
   place-content: center;
   width: 32px; height: 32px;
   background: var(--destaque);
-  color: #24170a;
+  color: var(--sobre-destaque);
   border-radius: 50%;
   font-weight: 700;
 }
@@ -719,7 +732,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
 .passo-pendente .passo-numero { animation: pulsar 1.6s ease-in-out infinite; }
 
 @keyframes pulsar {
-  50% { box-shadow: 0 0 0 7px rgb(255 176 32 / 0.18); }
+  50% { box-shadow: 0 0 0 7px var(--brilho); }
 }
 
 .passo-corpo { display: grid; gap: 10px; align-content: start; min-width: 0; }
@@ -772,8 +785,8 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
 .resultado-titulo { margin: 0; font-weight: 700; }
 .resultado-detalhe { margin: 0; font-size: 14px; color: var(--apagado); }
 
-.resultado.bom  { border-color: #34d399; background: #10291f; }
-.resultado.ruim { border-color: var(--perigo); background: #3b1d1d; }
+.resultado.bom  { border-color: var(--ok); background: var(--ok-fundo); }
+.resultado.ruim { border-color: var(--perigo); background: var(--perigo-fundo); }
 
 @media (max-width: 560px) {
   .passo { padding: 16px; gap: 10px; }

@@ -15,7 +15,7 @@
 
 /* ——— Ajustes ——————————————————————————————————————————————— */
 
-const VERSAO = '1.1.1';     // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.2.0';     // precisa casar com a VERSAO do sw.js
 const HISTORICO = 80;        // mensagens carregadas ao abrir uma sala
 const LIMITE_CORPO = 500;    // igual à constraint do banco
 const CHAVE_CONFIG = 'alo:config';
