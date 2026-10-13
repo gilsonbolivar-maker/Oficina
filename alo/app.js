@@ -15,7 +15,7 @@
 
 /* ——— Ajustes ——————————————————————————————————————————————— */
 
-const VERSAO = '1.2.1';     // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.3.0';     // precisa casar com a VERSAO do sw.js
 const HISTORICO = 80;        // mensagens carregadas ao abrir uma sala
 const LIMITE_CORPO = 500;    // igual à constraint do banco
 const CHAVE_CONFIG = 'alo:config';
@@ -94,6 +94,7 @@ const estado = {
   som: lembrar(CHAVE_SOM, true),
   limpo: lembrar(CHAVE_LIMPO, {}),   // sala_id -> última mensagem escondida
   presentes: [],
+  gente: [],              // todo mundo aprovado: { id, apelido }
   convite: null,          // código vindo de um link #convite=…
   secreta: null,          // código vindo de um link #secreta=…
   abrirPrimeiro: null,    // sala a abrir quando o app começar
@@ -548,8 +549,9 @@ function ouvirPerfis() {
       carga => {
         const perfil = carga.new;
         if (!perfil?.id) return;
-        if (perfil.id === estado.eu.id) mudouMinhaSituacao(perfil);
-        else if (estado.eu.admin) chegouNaPortaria(perfil, carga.eventType);
+        if (perfil.id === estado.eu.id) { mudouMinhaSituacao(perfil); return; }
+        if (estado.appIniciado && !estado.eu.reservado) mudouGente(perfil);
+        if (estado.eu.admin) chegouNaPortaria(perfil, carga.eventType);
       })
     .on('postgres_changes',
       { event: 'UPDATE', schema: 'public', table: 'ajustes' },
@@ -1098,32 +1100,79 @@ function anunciarPresenca() {
   });
 }
 
+/* ——— Pessoas: todo mundo aprovado, quem está online primeiro ——— */
+
+/** Quem já foi aceito. O banco só mostra os que a pessoa pode ver. */
+async function carregarGente() {
+  const { data, error } = await estado.sb
+    .from('perfis').select('id, apelido, situacao, reservado').order('apelido');
+  if (error) return;
+  estado.gente = (data || [])
+    .filter(p => p.situacao === 'aprovado' && !p.reservado)
+    .map(p => ({ id: p.id, apelido: p.apelido }));
+  desenharPresenca();
+}
+
+/** Alguém entrou, foi aprovado, bloqueado ou trocou de apelido. */
+function mudouGente(perfil) {
+  const resto = estado.gente.filter(p => p.id !== perfil.id);
+  if (perfil.situacao === 'aprovado' && !perfil.reservado) {
+    resto.push({ id: perfil.id, apelido: perfil.apelido });
+  }
+  estado.gente = resto;
+  desenharPresenca();
+}
+
+/** Abre a Geral com "@Nome " já escrito, para chamar a pessoa lá. */
+async function chamarNoGeral(pessoa) {
+  await abrirSala(estado.salas.find(s => s.id === 'geral')?.id || estado.salas[0]?.id);
+  const campo = $('campo-mensagem');
+  campo.value = `@${pessoa.apelido} `;
+  ajustarAltura();
+  campo.focus();
+}
+
 function desenharPresenca() {
   const alvo = $('lista-presenca');
   alvo.replaceChildren();
   $('contagem-presenca').textContent = String(estado.presentes.length);
 
-  for (const pessoa of estado.presentes) {
+  // Todo mundo aceito, mais quem está online e ainda não veio na lista.
+  const online = new Map(estado.presentes.map(p => [p.id, p]));
+  const todos = new Map(estado.gente.map(p => [p.id, { ...p }]));
+  for (const p of estado.presentes) if (!todos.has(p.id)) todos.set(p.id, { id: p.id, apelido: p.apelido });
+  const lista = [...todos.values()].sort((a, b) =>
+    (online.has(b.id) - online.has(a.id)) || a.apelido.localeCompare(b.apelido, 'pt-BR'));
+
+  for (const pessoa of lista) {
+    const agora = online.get(pessoa.id);
     const item = el('li', 'pessoa');
+    if (agora) item.classList.add('online');
+
     const marca = el('span', 'avatar');
     marca.textContent = iniciais(pessoa.apelido);
     marca.style.background = corDe(pessoa.apelido);
 
-    const nome = el('span');
-    const sala = estado.salas.find(s => s.id === pessoa.sala);
-    nome.textContent = sala
-      ? `${pessoa.apelido} · ${sala.titulo}`
-      : pessoa.apelido;
+    const nome = el('span', 'pessoa-nome');
+    const sala = agora && estado.salas.find(s => s.id === agora.sala);
+    nome.textContent = (agora?.apelido || pessoa.apelido) +
+      (pessoa.id === estado.eu.id ? ' (você)' : '') +
+      (sala ? ` · ${sala.titulo}` : '');
+    item.append(marca, nome);
 
-    if (pessoa.id === estado.eu.id) {
-      item.append(marca, nome);
-    } else {
-      const botao = el('button', 'pessoa-botao');
-      botao.type = 'button';
-      botao.title = `Conversar a sós com ${pessoa.apelido}`;
-      botao.append(marca, nome);
-      botao.addEventListener('click', () => abrirConversa(pessoa.id));
-      item.append(botao);
+    if (pessoa.id !== estado.eu.id) {
+      const aSos = el('button', 'pessoa-botao');
+      aSos.type = 'button';
+      aSos.textContent = 'A sós';
+      aSos.setAttribute('aria-label', `Conversar a sós com ${pessoa.apelido}`);
+      aSos.addEventListener('click', () => abrirConversa(pessoa.id));
+
+      const noGeral = el('button', 'pessoa-geral');
+      noGeral.type = 'button';
+      noGeral.textContent = 'No Geral';
+      noGeral.setAttribute('aria-label', `Chamar ${pessoa.apelido} na sala Geral`);
+      noGeral.addEventListener('click', () => chamarNoGeral(pessoa));
+      item.append(aSos, noGeral);
     }
     alvo.append(item);
   }
@@ -1518,7 +1567,7 @@ async function iniciarApp() {
   await carregarSalas();
   desenharSalas();
   ouvirMensagens();
-  if (!estado.eu.reservado) ouvirPresenca();
+  if (!estado.eu.reservado) { ouvirPresenca(); carregarGente(); }
 
   // Veio por um link (conversa secreta ou convite)? Abre direto nela.
   let pedida = estado.abrirPrimeiro;

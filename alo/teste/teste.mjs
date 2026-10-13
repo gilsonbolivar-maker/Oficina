@@ -398,6 +398,11 @@ await pagina.waitForTimeout(400);
 ok('conversa a sós tem o nome da pessoa', (await pagina.textContent('#titulo-sala')) === 'Ana');
 ok('conversa a sós aparece na lista dela', (await pagina.textContent('#lista-conversas')).includes('Ana'));
 ok('não dá para conversar consigo mesmo', (await pagina.$$('.pessoa-botao')).length === 1);
+await pagina.click('.pessoa-geral');
+await pagina.waitForTimeout(300);
+ok('"No Geral" abre a sala Geral', (await pagina.textContent('#titulo-sala')) === 'Geral');
+ok('"No Geral" já escreve o @nome', (await pagina.inputValue('#campo-mensagem')) === '@Ana ');
+await pagina.fill('#campo-mensagem', '');
 
 // Mensagem de uma conversa que ainda não está na lista traz a sala.
 await pagina.evaluate(() => {
@@ -544,6 +549,10 @@ await admin.click('#botao-entrar');
 await admin.waitForSelector('#tela-app:not([hidden])', { timeout: 5000 });
 await admin.waitForTimeout(400);
 ok('admin vê a portaria', await admin.isVisible('#botao-admin'));
+const nomes = await admin.textContent('#lista-presenca');
+ok('lista mostra quem já foi aceito, mesmo fora do ar', nomes.includes('João'));
+ok('lista não mostra quem ainda espera', !nomes.includes('Maria'));
+ok('quem está online vem primeiro', (await admin.$eval('#lista-presenca .pessoa', n => n.textContent)).includes('Chefe'));
 ok('selo conta quem espera', (await admin.textContent('#selo-portaria')) === '1');
 
 await admin.click('#botao-admin');
