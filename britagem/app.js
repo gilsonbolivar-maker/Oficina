@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '3.7.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '3.7.1';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -1848,40 +1848,33 @@ function blocosDoRelatorio(t, modo = 'hora') {
   const dist = modo === 'distribuido' ? distribuicaoBalanca(t) : null;
   if (t.leituras.length && modo !== 'resumo') {
     const ordenadas = t.leituras.slice().sort((a, b) => new Date(a.hora) - new Date(b.hora));
-    // No distribuído, a balança ganha duas colunas: a lida e a distribuída.
+    // No distribuído, a coluna da balança traz o valor distribuído.
     const cols = [];
     medidas.forEach(m => {
       if (dist && m.chave === 'balanca') {
-        cols.push({ titulo: 'Balança lida (t)', valor: l => mostrarNumero(l.balanca) });
-        cols.push({ titulo: 'Distribuída (t)', valor: l => mostrarNumero(dist.valores[l.id]) });
+        cols.push({ titulo: 'Balança distribuída (t)', valor: l => mostrarNumero(dist.valores[l.id]) });
       } else {
         cols.push({ titulo: m.rotulo + (unidadeHora(m) ? ' (' + unidadeHora(m) + ')' : ''), valor: l => mostrarNumero(l[m.chave]) });
       }
     });
-    const larg = Math.floor((dist ? 349 : 339) / cols.length);
+    const larg = Math.floor(339 / cols.length);
     B.push({ tipo: 'h2', texto: 'Hora a hora' });
     const linhas = ordenadas.map(l => l.parada
       ? [hhmm(l.hora)].concat(cols.map(() => '—')).concat([l.obs || 'Parada.'])
       : [hhmm(l.hora)].concat(cols.map(c => c.valor(l))).concat([l.obs || '']));
     if (dist) {
-      linhas.push(['TOTAL'].concat(medidas.flatMap(m => m.chave === 'balanca'
-        ? [comUnidade(dist.soma, 't'), comUnidade(dist.total, 't')] : [''])).concat(['']));
+      linhas.push(['TOTAL'].concat(medidas.map(m => m.chave === 'balanca' ? comUnidade(dist.total, 't') : '')).concat(['']));
     }
-    B.push({ tipo: 'tabela', colunas: [dist ? 60 : 70].concat(cols.map(() => larg)).concat([dist ? 80 : 90]),
+    B.push({ tipo: 'tabela', colunas: [70].concat(cols.map(() => larg)).concat([90]),
       cabecalho: ['Hora'].concat(cols.map(c => c.titulo)).concat(['Observação']),
       linhas });
-    if (dist) {
-      B.push({ tipo: 'pequeno', texto: 'Balança distribuída: a diferença dos totalizadores (final - inicial = ' +
-        comUnidade(dist.total, 't') + ') repartida na proporção das leituras hora a hora (soma ' +
-        comUnidade(dist.soma, 't') + '; fator ' + mostrarNumero(+dist.fator.toFixed(4)) + ').' });
-    }
   }
 
 
   const linhasFim = [['Duração do turno', duracao(c.duracaoTurno)]];
   const horimetroRodado = soma.horimetro != null ? soma.horimetro : c.horimetro;
   if (horimetroRodado != null) linhasFim.push(['Horímetro rodado', comUnidade(horimetroRodado, 'h')]);
-  if (modo !== 'resumo' && balancaAcumulada(t) != null) {
+  if (modo === 'hora' && balancaAcumulada(t) != null) {
     linhasFim.push(['Balança acumulada (soma hora a hora)', comUnidade(balancaAcumulada(t), 't')]);
   }
   if (dist) linhasFim.push(['Balança distribuída (soma)', comUnidade(dist.total, 't')]);
