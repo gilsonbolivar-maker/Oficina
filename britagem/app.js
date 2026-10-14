@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '3.6.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '3.6.1';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -118,8 +118,21 @@ function doCampo(hora, turno) {
   const base = new Date(turno ? turno.inicio : agora());
   const d = new Date(base);
   d.setHours(h, m, 0, 0);
-  if (turno && d.getTime() < base.getTime() - 3600000) d.setDate(d.getDate() + 1);
-  return d.toISOString();
+  if (!turno) return d.toISOString();
+  // Só a hora foi digitada: o dia é o da véspera, o do início ou o seguinte,
+  // o que ficar mais perto de agora (ou do fim, num turno encerrado). Assim
+  // 01h40 num turno das 22h cai no dia seguinte, e 01h40 num turno aberto
+  // às 03h30 (ou com o início corrigido depois) fica no mesmo dia.
+  const ref = new Date(relogio(turno)).getTime();
+  const inicio = base.getTime();
+  let melhor = null;
+  [-1, 0, 1].forEach(dias => {
+    const c = new Date(d);
+    c.setDate(c.getDate() + dias);
+    if (c.getTime() < inicio - 12 * 3600000) return;
+    if (!melhor || Math.abs(c.getTime() - ref) < Math.abs(melhor.getTime() - ref)) melhor = c;
+  });
+  return (melhor || d).toISOString();
 }
 
 const minutos = (a, b) => (!a || !b) ? null : Math.max(0, Math.round((new Date(b) - new Date(a)) / 60000));

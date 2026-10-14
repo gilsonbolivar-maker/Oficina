@@ -26,7 +26,7 @@ const PDF = (() => {
   const TROCAS = [
     [/[→➡]/g, '->'], [/[←]/g, '<-'],
     [/[‘’]/g, "'"], [/[“”]/g, '"'],
-    [/[–—]/g, '-'], [/…/g, '...'],
+    [/[–—−]/g, '-'], [/…/g, '...'],
     [/ /g, ' '], [/•/g, '·'], [/Σ/g, 'Total'],
     [/³/g, '3'], [/²/g, '2'],
     [/[₀-₉]/g, c => String(c.charCodeAt(0) - 0x2080)],
@@ -179,10 +179,10 @@ const PDF = (() => {
     const total = paginas.length;
     const conteudos = paginas.map((p, i) => {
       const rodape = 'BT /F1 7.5 Tf 0.45 0.52 0.62 rg 1 0 0 1 ' + MARGEM + ' 40 Tm (' +
-        escapar(limpar(rodapeTexto || '')) + ') Tj ET' +
+        escapar(limpar(rodapeTexto || '')) + ') Tj ET\n' +
         'BT /F1 7.5 Tf 0.45 0.52 0.62 rg 1 0 0 1 ' +
         (L - MARGEM - largura('Pagina ' + (i + 1) + ' de ' + total, 7.5, false)).toFixed(2) +
-        ' 40 Tm (Pagina ' + (i + 1) + ' de ' + total + ') Tj ET' +
+        ' 40 Tm (Pagina ' + (i + 1) + ' de ' + total + ') Tj ET\n' +
         '0.79 0.83 0.90 rg ' + MARGEM + ' 52 ' + UTIL.toFixed(2) + ' 0.4 re f';
       return p.join('\n') + '\n' + rodape;
     });
