@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '3.5.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '3.6.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -605,6 +605,7 @@ function desenharLeituras() {
     const corpo = document.createElement('tbody');
 
     let anterior = null;
+    let somaBalanca = 0;
     ordenadas.forEach(l => {
       const tr = document.createElement('tr');
       if (l.parada) tr.className = 'parada';
@@ -623,7 +624,13 @@ function desenharLeituras() {
       } else {
         td[1].innerHTML = mostrarNumero(l.horimetro) +
           (delta != null ? ' <span class="delta">+' + mostrarNumero(+delta.toFixed(2)) + '</span>' : '');
-        td[2].textContent = mostrarNumero(l.balanca);
+        if (l.balanca != null) {
+          somaBalanca = +(somaBalanca + l.balanca).toFixed(2);
+          td[2].innerHTML = mostrarNumero(l.balanca) +
+            ' <span class="delta">Σ ' + mostrarNumero(somaBalanca) + '</span>';
+        } else {
+          td[2].textContent = '—';
+        }
         td[3].textContent = mostrarNumero(l.acido);
       }
       tr.querySelector('button').addEventListener('click', () => formLeitura(t, l));
@@ -631,7 +638,20 @@ function desenharLeituras() {
       if (!l.parada) anterior = l;
     });
     tab.appendChild(corpo);
+    const acumulada = balancaAcumulada(t);
+    if (acumulada != null) {
+      const pe = document.createElement('tfoot');
+      pe.innerHTML = '<tr class="acumulado"><td>Σ</td><td></td><td></td><td></td><td></td></tr>';
+      pe.querySelectorAll('td')[2].textContent = comUnidade(acumulada, 't');
+      tab.appendChild(pe);
+    }
     horarias.appendChild(tab);
+    if (acumulada != null) {
+      const nota = document.createElement('p');
+      nota.className = 'fraco pequeno';
+      nota.textContent = 'Σ balança: soma das leituras hora a hora, sem o totalizador da leitura inicial.';
+      horarias.appendChild(nota);
+    }
   }
   alvo.appendChild(horarias);
 
@@ -645,6 +665,15 @@ function desenharLeituras() {
 function comUnidade(v, unidade) {
   const n = mostrarNumero(v);
   return (n === '—' || !unidade) ? n : n + ' ' + unidade;
+}
+
+/**
+ * Balança acumulada: a soma das leituras hora a hora (o que passou em cada
+ * hora). A inicial e a final ficam de fora — são o totalizador, não a hora.
+ */
+function balancaAcumulada(t) {
+  const valores = t.leituras.filter(l => !l.parada && l.balanca != null).map(l => l.balanca);
+  return valores.length ? +valores.reduce((a, b) => a + b, 0).toFixed(2) : null;
 }
 
 /** Diferença entre o que o totalizador marcava no fim e no começo. */
@@ -779,6 +808,8 @@ function desenharResumo() {
       '<tr><td>Horímetro rodado</td><td>' +
         comUnidade(soma.horimetro != null ? soma.horimetro : c.horimetro, 'h') + '</td></tr>' +
       (completa ? '<tr><td>Balança no turno</td><td>' + comUnidade(soma.balanca, 't') + '</td></tr>' : '') +
+      (balancaAcumulada(t) != null ? '<tr><td>Balança acumulada <span class="fraco">(soma hora a hora)</span></td><td>' +
+        comUnidade(balancaAcumulada(t), 't') + '</td></tr>' : '') +
       '<tr><td>Ácido médio <span class="fraco">(hora a hora)</span></td><td>' + comUnidade(c.acidoMedio, 'm³/h') + '</td></tr>' +
       linhasAcido(t, c, soma).map(([r, v]) => '<tr><td>' + r + '</td><td>' + v + '</td></tr>').join('') +
       '<tr><td>Balança inicial</td><td>' + comUnidade(t.toneladaInicial, 't') + '</td></tr>' +
@@ -1621,6 +1652,7 @@ function relatorioTexto(t) {
   if (t.producao != null) L.push('PRODUÇÃO: ' + mostrarNumero(t.producao) + ' t');
   const horimetroRodado = soma.horimetro != null ? soma.horimetro : c.horimetro;
   if (horimetroRodado != null) L.push('Horímetro rodado: ' + comUnidade(horimetroRodado, 'h'));
+  if (balancaAcumulada(t) != null) L.push('Balança acumulada (soma hora a hora): ' + comUnidade(balancaAcumulada(t), 't'));
   if (c.acidoMedio != null) L.push('Ácido médio (hora a hora): ' + comUnidade(c.acidoMedio, 'm³/h'));
   linhasAcido(t, c, soma).forEach(([r, v]) => L.push(r + ': ' + v));
   return L.join('\n');
@@ -1768,6 +1800,7 @@ function blocosDoRelatorio(t) {
   const linhasFim = [['Duração do turno', duracao(c.duracaoTurno)]];
   const horimetroRodado = soma.horimetro != null ? soma.horimetro : c.horimetro;
   if (horimetroRodado != null) linhasFim.push(['Horímetro rodado', comUnidade(horimetroRodado, 'h')]);
+  if (balancaAcumulada(t) != null) linhasFim.push(['Balança acumulada (soma hora a hora)', comUnidade(balancaAcumulada(t), 't')]);
   if (c.acidoMedio != null) linhasFim.push(['Ácido médio (hora a hora)', comUnidade(c.acidoMedio, 'm³/h')]);
   linhasAcido(t, c, soma).forEach(l => linhasFim.push(l));
   if (t.producao != null) linhasFim.push(['Produção', mostrarNumero(t.producao) + ' t']);
@@ -1837,6 +1870,11 @@ function baixarCsv(t) {
     L.push(['somatoria', '', '', '', '', '', '', 'final menos inicial',
       soma.horimetro, soma.balanca, soma.acido, '']);
   }
+  if (balancaAcumulada(t) != null) {
+    L.push(['balanca_acumulada', '', '', '', '', '', '', 'soma das leituras hora a hora',
+      '', balancaAcumulada(t), '', '']);
+  }
+
   // A produção vai na coluna da balança, que é de onde ela sai.
   areaDe(t).extras.forEach(e => {
     const v = (t.extras || {})[e.chave];

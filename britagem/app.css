@@ -547,3 +547,4 @@ body {
 :root[data-tema="claro"] .seletor-tema [data-tema-opcao="claro"] {
   color: #10192a; background: var(--acento); border-color: var(--acento); font-weight: 600;
 }
+.tabela tfoot .acumulado td { font-weight: 700; border-top: 2px solid var(--borda); }

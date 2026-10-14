@@ -154,6 +154,11 @@ toque de um botão.
 As leituras **hora a hora** continuam como estavam: ali a balança e o ácido são
 a marcação do momento, não o totalizador.
 
+**Balança acumulada (Σ):** na hora a hora, cada balança mostra ao lado a soma
+até ali, e o rodapé da tabela traz o total. A soma usa só as leituras hora a hora —
+o totalizador da leitura inicial fica de fora. O total também sai nos Números do
+turno, no relatório, no PDF e no CSV (linha `balanca_acumulada`).
+
 ## Acúmulo de tempo parado
 
 No alto da tela do turno fica a faixa com **quanto já parou**, somado, e a
