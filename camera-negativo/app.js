@@ -5,20 +5,29 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.3.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.6.0';   // precisa casar com a VERSAO do sw.js
 const CHAVE = 'camera-negativo:v1';
 const LIMITE_CARRETEL = 24;   // fotos guardadas na memória da sessão
 const ZOOM_MAX = 6;           // além disso o recorte não tem mais pixel para dar
 
+// Largura de trabalho de cada modo: a lupa precisa de pixel para ler texto,
+// a vibração precisa de velocidade — ninguém lê um borrão em 4K a 30 quadros.
+const LARGURA_LUPA = 1280;
+const LARGURA_VIBRACAO = 640;
+const LARGURA_CONTRASTE = 960;
+const LARGURA_NOITE = 960;
+
 const el = id => document.getElementById(id);
 
 const video = el('video');
+const tela = el('tela');
 const recado = el('recado');
 const recadoTexto = el('recado-texto');
 const painelFoto = el('painel-foto');
 const painelCarretel = el('painel-carretel');
 const painelAjustes = el('painel-ajustes');
-const paineis = [painelFoto, painelCarretel, painelAjustes];
+const painelModos = el('painel-modos');
+const paineis = [painelFoto, painelCarretel, painelAjustes, painelModos];
 const fundoPainel = el('fundo-painel');
 const avisoEl = el('aviso');
 
@@ -36,10 +45,46 @@ const FILTROS = [
   { id: 'normal',      nome: 'Normal',        cinza: 0, inverter: 0, contraste: 1 }
 ];
 
+/* ——— modos ————————————————————————————————————————————————
+   A câmera tem quatro jeitos de olhar. "Foto" é a câmera de sempre;
+   os outros três processam quadro a quadro para mostrar o que o olho
+   sozinho não alcança — ruído somado, movimento amplificado, e o que
+   mudou desde a última ronda.
+   ———————————————————————————————————————————————————————————— */
+const MODOS = [
+  { id: 'foto',     nome: 'Foto',     processa: false, cor: true },
+  { id: 'lupa',     nome: 'Lupa',     processa: true,  cor: true },
+  // A vibração já pinta o movimento de laranja e azul: inverter por cima
+  // trocaria o sentido das cores e só atrapalharia a leitura.
+  { id: 'vibracao', nome: 'Vibração', processa: true,  cor: false },
+  // A paleta do modo Noite já é a escolha de cor: um filtro por cima
+  // viraria o verde em magenta e só confundiria.
+  { id: 'noite',     nome: 'Noite',     processa: true, cor: false },
+  { id: 'contraste', nome: 'Contraste', processa: true, cor: true },
+  { id: 'comparar', nome: 'Comparar', processa: false, cor: true }
+];
+
+// Três jeitos de esticar o contraste, do mais fiel ao mais radical.
+const CONTRASTES = [
+  { id: 'auto',    nome: 'Auto' },
+  { id: 'extremo', nome: 'Extremo' },
+  { id: 'traco',   nome: 'Traço' }
+];
+
 /* ——— estado guardado ——— */
 const padrao = () => ({
+  modo: 'foto',
   filtro: 'negativo',
   zoom: 1,
+  quadros: 8,        // quantos quadros a lupa soma
+  ganho: 20,         // quanto a vibração amplifica
+  fantasma: 45,      // opacidade da referência, em %
+  nitidez: true,     // realce de bordas na lupa
+  contraste: 'auto', // auto | extremo | traco
+  forcaContraste: 85,
+  paleta: 'verde',   // cinza | verde | cor
+  ganhoNoite: 6,
+  noiteQuadros: 8,
   forca: 100,        // % da inversão
   tempo: 0,          // segundos do temporizador
   frontal: false,
@@ -57,6 +102,9 @@ function carregar() {
     const lido = Object.assign(padrao(), JSON.parse(bruto));
     if (!FILTROS.some(f => f.id === lido.filtro)) lido.filtro = 'negativo';
     lido.zoom = Math.min(ZOOM_MAX, Math.max(1, Number(lido.zoom) || 1));
+    if (!MODOS.some(m => m.id === lido.modo)) lido.modo = 'foto';
+    if (!CONTRASTES.some(c => c.id === lido.contraste)) lido.contraste = 'auto';
+    if (!['cinza', 'verde', 'cor'].includes(lido.paleta)) lido.paleta = 'verde';
     return lido;
   } catch (e) {
     return padrao();
@@ -136,6 +184,7 @@ async function ligarCamera() {
   prepararZoom();
   aplicarAparencia();
   aplicarZoom();
+  tocarLaco();
 }
 
 function desligarCamera() {
@@ -148,6 +197,7 @@ function desligarCamera() {
   el('btn-foto').disabled = true;
   el('btn-lanterna').hidden = true;
   el('btn-lanterna').setAttribute('aria-pressed', 'false');
+  tocarLaco();
 }
 
 function explicarErro(erro) {
@@ -308,6 +358,623 @@ function distanciaDedos() {
   return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
 }
 
+/* ——— o laço que processa os quadros ————————————————————————
+   Lupa e Vibração desenham no canvas em vez de mostrar o vídeo. As
+   duas trabalham sobre o mesmo recorte que o zoom já escolheu, em
+   resolução reduzida para caber nos 30 quadros por segundo — e o
+   filtro de cor continua por conta do CSS, igual ao vídeo.
+   ———————————————————————————————————————————————————————————— */
+const ctxTela = tela.getContext('2d', { willReadFrequently: true });
+
+let laco = 0;              // id do requestAnimationFrame
+let somados = 0;           // quadros já somados pela lupa
+let acumulado = null;      // soma dos quadros (lupa)
+let fundoLento = null;     // média que anda devagar (vibração)
+let ultimoNivel = 0;
+
+const trabalho = document.createElement('canvas');
+const ctxTrabalho = trabalho.getContext('2d', { willReadFrequently: true });
+
+function modoAtual() {
+  return MODOS.find(m => m.id === dados.modo) || MODOS[0];
+}
+
+// Recorte que o zoom escolheu, reduzido ao tamanho de trabalho do modo.
+function medidasDeTrabalho(larguraAlvo) {
+  const larg = video.videoWidth, alt = video.videoHeight;
+  if (!larg || !alt) return null;
+
+  const z = Math.max(1, zoomDigital);
+  const rl = Math.max(16, Math.round(larg / z));
+  const ra = Math.max(16, Math.round(alt / z));
+  const escala = Math.min(1, larguraAlvo / rl);
+  return {
+    rx: Math.round((larg - rl) / 2), ry: Math.round((alt - ra) / 2), rl, ra,
+    w: Math.max(16, Math.round(rl * escala)),
+    h: Math.max(16, Math.round(ra * escala))
+  };
+}
+
+function zerarAcumuladores() {
+  somados = 0;
+  acumulado = null;
+  fundoLento = null;
+  faixaTons = null;
+  somaNoturna = null;
+  ultimoNivel = 0;
+  atualizarMedidas();
+}
+
+function pegarQuadro(m) {
+  if (trabalho.width !== m.w || trabalho.height !== m.h) {
+    trabalho.width = m.w;
+    trabalho.height = m.h;
+    zerarAcumuladores();
+  }
+  ctxTrabalho.setTransform(1, 0, 0, 1, 0, 0);
+  if (dados.frontal && dados.espelhar) {
+    ctxTrabalho.translate(m.w, 0);
+    ctxTrabalho.scale(-1, 1);
+  }
+  ctxTrabalho.drawImage(video, m.rx, m.ry, m.rl, m.ra, 0, 0, m.w, m.h);
+  ctxTrabalho.setTransform(1, 0, 0, 1, 0, 0);
+  return ctxTrabalho.getImageData(0, 0, m.w, m.h);
+}
+
+function prepararTela(m) {
+  if (tela.width !== m.w || tela.height !== m.h) {
+    tela.width = m.w;
+    tela.height = m.h;
+  }
+}
+
+/* ——— Lupa: soma quadros para matar o chuvisco ———
+   Cada pixel do sensor tem ruído próprio, diferente a cada quadro; a
+   média de N quadros divide esse ruído por raiz de N e o texto
+   pequeno sai do chuvisco. Só vale com a cena parada: se o quadro
+   mudar demais, a soma recomeça em vez de borrar tudo.            */
+function passoLupa() {
+  const m = medidasDeTrabalho(LARGURA_LUPA);
+  if (!m) return;
+  prepararTela(m);
+
+  const quadro = pegarQuadro(m);
+  const px = quadro.data;
+  const n = m.w * m.h * 4;
+
+  if (!acumulado || acumulado.length !== n) {
+    acumulado = new Float32Array(n);
+    somados = 0;
+  }
+
+  // Mudou muito? É a cena que mudou, não ruído: recomeça a soma.
+  if (somados > 0 && mudouDemais(px, n)) somados = 0;
+
+  if (somados === 0) acumulado.set(px);
+  else for (let i = 0; i < n; i++) acumulado[i] += px[i];
+  somados++;
+
+  const teto = Math.max(2, dados.quadros);
+  if (somados > teto) {
+    // Janela cheia: vai soltando o peso do passado em vez de travar.
+    for (let i = 0; i < n; i++) acumulado[i] -= acumulado[i] / teto;
+    somados = teto;
+  }
+
+  const media = somados;
+  for (let i = 0; i < n; i += 4) {
+    px[i]     = acumulado[i] / media;
+    px[i + 1] = acumulado[i + 1] / media;
+    px[i + 2] = acumulado[i + 2] / media;
+    px[i + 3] = 255;
+  }
+
+  ctxTela.putImageData(quadro, 0, 0);
+  if (dados.nitidez) realcarBordas(m);
+  atualizarMedidas();
+}
+
+let anterior = null;
+function mudouDemais(px, n) {
+  if (!anterior || anterior.length !== n) {
+    anterior = new Uint8ClampedArray(px);
+    return false;
+  }
+  let soma = 0, contados = 0;
+  for (let i = 0; i < n; i += 64) {      // amostra: não precisa olhar tudo
+    soma += Math.abs(px[i] - anterior[i]);
+    contados++;
+  }
+  anterior.set(px);
+  return (soma / contados) > 12;
+}
+
+// Unsharp leve: devolve a borda que a média arredondou.
+function realcarBordas(m) {
+  const imagem = ctxTela.getImageData(0, 0, m.w, m.h);
+  const px = imagem.data;
+  const copia = new Uint8ClampedArray(px);
+  const w = m.w, h = m.h;
+
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const i = (y * w + x) * 4;
+      for (let c = 0; c < 3; c++) {
+        const meio = copia[i + c];
+        const volta = copia[i - 4 + c] + copia[i + 4 + c] +
+                      copia[i - w * 4 + c] + copia[i + w * 4 + c];
+        const v = meio + (meio * 4 - volta) * 0.35;
+        px[i + c] = v < 0 ? 0 : v > 255 ? 255 : v;
+      }
+    }
+  }
+  ctxTela.putImageData(imagem, 0, 0);
+}
+
+/* ——— Noite: junta a luz de vários quadros —————————————————
+   No escuro o sensor até registra alguma luz, mas ela vem afogada no
+   chuvisco — e o chuvisco é diferente a cada quadro, enquanto a cena é
+   a mesma. Somando quadros, a cena se reforça e o ruído se cancela;
+   só então o ganho vale a pena, porque amplia imagem em vez de
+   amplificar chuvisco. Depois os tons são esticados e, se quiser, a
+   imagem vai para o verde — onde o olho separa mais tons no escuro.
+   ———————————————————————————————————————————————————————————— */
+let somaNoturna = null;
+let luzDaCena = 0;
+
+function passoNoite() {
+  const m = medidasDeTrabalho(LARGURA_NOITE);
+  if (!m) return;
+  prepararTela(m);
+
+  const quadro = pegarQuadro(m);
+  const px = quadro.data;
+  const n = m.w * m.h * 4;
+  const pontos = m.w * m.h;
+
+  if (!somaNoturna || somaNoturna.length !== n) {
+    somaNoturna = new Float32Array(n);
+    somaNoturna.set(px);
+  }
+
+  // Média que anda: quanto mais quadros, mais limpa a imagem e mais ela
+  // arrasta o que se mexe. Sem reinício por movimento — no escuro, o
+  // próprio ruído dispararia o reinício a todo quadro.
+  const alfa = 1 / Math.max(1, dados.noiteQuadros);
+  let luz = 0;
+  for (let p = 0; p < pontos; p++) {
+    const i = p * 4;
+    somaNoturna[i]     += (px[i]     - somaNoturna[i]) * alfa;
+    somaNoturna[i + 1] += (px[i + 1] - somaNoturna[i + 1]) * alfa;
+    somaNoturna[i + 2] += (px[i + 2] - somaNoturna[i + 2]) * alfa;
+    luz += 0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2];
+  }
+  luzDaCena = luzDaCena * 0.8 + (luz / pontos) * 0.2;
+
+  const ganho = dados.ganhoNoite;
+  for (let i = 0; i < n; i += 4) {
+    px[i]     = limite(somaNoturna[i] * ganho);
+    px[i + 1] = limite(somaNoturna[i + 1] * ganho);
+    px[i + 2] = limite(somaNoturna[i + 2] * ganho);
+  }
+
+  // Com a luz já junta, esticar os tons custa pouco e rende muito.
+  estirarTons(px, pontos, 1, false);
+
+  if (dados.paleta !== 'cor') pintarPaleta(px, pontos, dados.paleta);
+
+  ctxTela.putImageData(quadro, 0, 0);
+  atualizarMedidas();
+}
+
+function pintarPaleta(px, pontos, paleta) {
+  for (let p = 0; p < pontos; p++) {
+    const i = p * 4;
+    const v = 0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2];
+    if (paleta === 'verde') {
+      px[i] = v * 0.18; px[i + 1] = v; px[i + 2] = v * 0.38;
+    } else {
+      px[i] = px[i + 1] = px[i + 2] = v;
+    }
+  }
+}
+
+/* ——— Contraste: usa a faixa de tons inteira ————————————————
+   Uma etiqueta desbotada ou um display apagado ocupam um pedacinho
+   da escala de brilho — digamos, tudo entre 90 e 130. "Auto" descobre
+   esse pedaço e o estica até 0–255; "Extremo" ainda curva o meio para
+   afastar claro de escuro; "Traço" larga o tom e compara cada ponto
+   com a vizinhança, que é o que faz aparecer número gravado em metal
+   mesmo com a luz batendo torta.
+   ———————————————————————————————————————————————————————————— */
+function passoContraste() {
+  const m = medidasDeTrabalho(LARGURA_CONTRASTE);
+  if (!m) return;
+  prepararTela(m);
+
+  const quadro = pegarQuadro(m);
+  const px = quadro.data;
+  const pontos = m.w * m.h;
+  const mistura = dados.forcaContraste / 100;
+
+  if (dados.contraste === 'traco') limiarLocal(px, m, mistura);
+  else estirarTons(px, pontos, mistura, dados.contraste === 'extremo');
+
+  ctxTela.putImageData(quadro, 0, 0);
+  atualizarMedidas();
+}
+
+// Onde a cena começa e termina na escala de brilho, ignorando as pontas
+// (2% de cada lado) para um reflexo ou um pixel queimado não mandarem.
+let faixaTons = null;
+
+function estirarTons(px, pontos, mistura, extremo) {
+  const histograma = new Uint32Array(256);
+  const passo = Math.max(1, Math.floor(pontos / 20000));   // amostra basta
+  let amostras = 0;
+
+  for (let p = 0; p < pontos; p += passo) {
+    const i = p * 4;
+    const luz = (0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2]) | 0;
+    histograma[luz < 0 ? 0 : luz > 255 ? 255 : luz]++;
+    amostras++;
+  }
+
+  const corte = Math.max(1, Math.round(amostras * 0.02));
+  let baixo = 0, alto = 255, soma = 0;
+  for (let v = 0; v < 256; v++) { soma += histograma[v]; if (soma >= corte) { baixo = v; break; } }
+  soma = 0;
+  for (let v = 255; v >= 0; v--) { soma += histograma[v]; if (soma >= corte) { alto = v; break; } }
+  if (alto - baixo < 8) { alto = Math.min(255, baixo + 8); }
+
+  // Suaviza a faixa no tempo: senão a imagem pulsa a cada quadro.
+  if (!faixaTons) faixaTons = { baixo, alto };
+  faixaTons.baixo += (baixo - faixaTons.baixo) * 0.25;
+  faixaTons.alto += (alto - faixaTons.alto) * 0.25;
+
+  const b = faixaTons.baixo;
+  const escala = 255 / Math.max(8, faixaTons.alto - b);
+
+  for (let p = 0; p < pontos; p++) {
+    const i = p * 4;
+    for (let c = 0; c < 3; c++) {
+      let v = (px[i + c] - b) * escala;
+      // Extremo: depois de esticar, abre ainda mais a partir do meio. O que
+      // passa das pontas vira preto ou branco puro — é esse estouro que faz
+      // aparecer o traço fraco que o tom médio escondia.
+      if (extremo) v = (v - 128) * 2.4 + 128;
+      px[i + c] = limite(px[i + c] + (v - px[i + c]) * mistura);
+    }
+  }
+}
+
+/* ——— Traço: preto no branco, comparando com a vizinhança ———
+   A média de cada vizinhança sai de uma tabela de somas acumuladas
+   (imagem integral): com ela, a média de qualquer janela custa quatro
+   leituras, e não um laço por pixel — é o que cabe nos 30 quadros.  */
+let somasAcumuladas = null;
+
+function limiarLocal(px, m, mistura) {
+  const w = m.w, h = m.h, pontos = w * h;
+  const largura = w + 1;
+  const precisa = largura * (h + 1);
+  if (!somasAcumuladas || somasAcumuladas.length !== precisa) {
+    somasAcumuladas = new Float64Array(precisa);
+  }
+  const soma = somasAcumuladas;
+
+  const luzes = new Uint8ClampedArray(pontos);
+  for (let p = 0; p < pontos; p++) {
+    const i = p * 4;
+    luzes[p] = 0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2];
+  }
+
+  for (let y = 0; y < h; y++) {
+    let linha = 0;
+    for (let x = 0; x < w; x++) {
+      linha += luzes[y * w + x];
+      soma[(y + 1) * largura + x + 1] = soma[y * largura + x + 1] + linha;
+    }
+  }
+
+  // A vizinhança precisa ser maior que a espessura do traço: se a janela
+  // couber inteira dentro da letra, a média vira a própria letra e não
+  // sobra diferença para medir.
+  const raio = Math.max(8, Math.round(w / 24));
+
+  // Em vez de cortar num limiar fixo, cada ponto é medido CONTRA a sua
+  // vizinhança e a diferença é multiplicada. Assim tanto faz a luz estar
+  // batendo torta, nem se o traço é mais claro ou mais escuro que o fundo:
+  // some o fundo, fica o traço. Com força alta a conta satura sozinha e o
+  // resultado vira quase preto no branco.
+  const ganho = 2 + mistura * 18;
+
+  for (let y = 0; y < h; y++) {
+    const y0 = Math.max(0, y - raio), y1 = Math.min(h - 1, y + raio);
+    for (let x = 0; x < w; x++) {
+      const x0 = Math.max(0, x - raio), x1 = Math.min(w - 1, x + raio);
+      const area = (y1 - y0 + 1) * (x1 - x0 + 1);
+      const total = soma[(y1 + 1) * largura + x1 + 1] - soma[y0 * largura + x1 + 1]
+                  - soma[(y1 + 1) * largura + x0] + soma[y0 * largura + x0];
+      const p = y * w + x;
+      const v = limite(128 + (luzes[p] - total / area) * ganho);
+      const i = p * 4;
+      px[i] = px[i + 1] = px[i + 2] = v;
+    }
+  }
+}
+
+/* ——— Vibração: amplifica o que mal se mexe ———
+   Um fundo que acompanha a cena devagar guarda "como as coisas
+   estão paradas"; o que foge dele é movimento. Multiplicado, um
+   tremor de um pixel vira uma faixa colorida bem visível.        */
+function passoVibracao() {
+  const m = medidasDeTrabalho(LARGURA_VIBRACAO);
+  if (!m) return;
+  prepararTela(m);
+
+  const quadro = pegarQuadro(m);
+  const px = quadro.data;
+  const pontos = m.w * m.h;
+
+  if (!fundoLento || fundoLento.length !== pontos) {
+    fundoLento = new Float32Array(pontos);
+    for (let p = 0; p < pontos; p++) {
+      fundoLento[p] = 0.2126 * px[p * 4] + 0.7152 * px[p * 4 + 1] + 0.0722 * px[p * 4 + 2];
+    }
+  }
+
+  const ganho = dados.ganho;
+  let soma = 0;
+
+  for (let p = 0; p < pontos; p++) {
+    const i = p * 4;
+    const luz = 0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2];
+    const desvio = luz - fundoLento[p];
+    fundoLento[p] += desvio * 0.08;      // o fundo anda devagar atrás da cena
+    soma += Math.abs(desvio);
+
+    const base = luz * 0.45;             // cena apagada, realce por cima
+    const forca = desvio * ganho;
+    px[i]     = limite(base + (forca > 0 ? forca : 0));
+    px[i + 1] = limite(base + Math.abs(forca) * 0.35);
+    px[i + 2] = limite(base + (forca < 0 ? -forca : 0));
+  }
+
+  ctxTela.putImageData(quadro, 0, 0);
+
+  // Nível suavizado, para o número não ficar pulando.
+  const agora = Math.min(100, (soma / pontos) * 12);
+  ultimoNivel = ultimoNivel * 0.85 + agora * 0.15;
+  atualizarMedidas();
+}
+
+const limite = v => v < 0 ? 0 : v > 255 ? 255 : v;
+
+function girar() {
+  laco = 0;
+  if (!modoAtual().processa || !fluxo) return;
+  if (video.readyState >= 2) {
+    if (dados.modo === 'lupa') passoLupa();
+    else if (dados.modo === 'vibracao') passoVibracao();
+    else if (dados.modo === 'contraste') passoContraste();
+    else if (dados.modo === 'noite') passoNoite();
+  }
+  laco = requestAnimationFrame(girar);
+}
+
+function tocarLaco() {
+  const processa = modoAtual().processa && Boolean(fluxo);
+  tela.hidden = !processa;
+  video.style.visibility = processa ? 'hidden' : '';
+  if (processa && !laco) {
+    zerarAcumuladores();
+    laco = requestAnimationFrame(girar);
+  }
+  if (!processa && laco) {
+    cancelAnimationFrame(laco);
+    laco = 0;
+  }
+}
+
+function atualizarMedidas() {
+  if (dados.modo === 'lupa') {
+    const alvo = Math.max(2, dados.quadros);
+    el('medida-lupa').textContent = somados >= alvo
+      ? 'estabilizado · ' + alvo + ' quadros somados'
+      : 'somando ' + somados + ' de ' + alvo + '…';
+    el('medida-lupa').classList.toggle('forte', somados >= alvo);
+  }
+  if (dados.modo === 'noite') {
+    const pc = Math.round(luzDaCena / 255 * 100);
+    el('medida-noite').textContent = pc < 1
+      ? 'escuro demais — nem o sensor pega luz aqui'
+      : pc < 6 ? 'luz muito baixa · ' + pc + '% — apoie o aparelho e some mais quadros'
+      : pc < 20 ? 'pouca luz · ' + pc + '% — é aqui que o modo rende'
+      : 'luz suficiente · ' + pc + '% — a câmera normal já dá conta';
+    el('medida-noite').classList.toggle('forte', pc >= 1 && pc < 20);
+  }
+  if (dados.modo === 'contraste') {
+    const c = CONTRASTES.find(x => x.id === dados.contraste);
+    el('medida-contraste').textContent = dados.contraste === 'traco'
+      ? 'Traço · compara cada ponto com a vizinhança'
+      : faixaTons
+        ? c.nome + ' · tons de ' + Math.round(faixaTons.baixo) + ' a ' +
+          Math.round(faixaTons.alto) + ' esticados para 0–255'
+        : c.nome + ' · medindo a cena…';
+    el('medida-contraste').classList.toggle('forte', dados.forcaContraste > 0);
+  }
+  if (dados.modo === 'vibracao') {
+    const n = Math.round(ultimoNivel);
+    el('nivel-barra').style.width = Math.min(100, n) + '%';
+    el('medida-vibracao').textContent = n < 3 ? 'parado'
+      : n < 15 ? 'tremor leve · nível ' + n
+      : n < 40 ? 'tremor claro · nível ' + n
+      : 'movimento forte · nível ' + n;
+    el('medida-vibracao').classList.toggle('forte', n >= 15);
+  }
+}
+
+/* ——— trocar de modo ——— */
+function definirModo(id) {
+  if (!MODOS.some(m => m.id === id)) return;
+  dados.modo = id;
+  gravar();
+  aplicarModo();
+}
+
+function aplicarModo() {
+  const m = modoAtual();
+  el('btn-modo').textContent = m.nome;
+  el('btn-modo').classList.toggle('ativo', m.id !== 'foto');
+
+  // Onde a cor já carrega informação, o filtro sai da frente.
+  el('filtros').hidden = !m.cor;
+  tela.style.filter = m.cor ? '' : 'none';
+
+  el('controles-noite').hidden = m.id !== 'noite';
+  el('controles-contraste').hidden = m.id !== 'contraste';
+  el('controles-lupa').hidden = m.id !== 'lupa';
+  el('controles-vibracao').hidden = m.id !== 'vibracao';
+  el('controles-comparar').hidden = m.id !== 'comparar';
+
+  document.querySelectorAll('[data-modo]').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.modo === m.id));
+  });
+
+  mostrarContraste();
+  mostrarNoite();
+  ajustarCameraParaNoite();
+  mostrarFantasma();
+  tocarLaco();
+  atualizarMedidas();
+}
+
+el('btn-modo').addEventListener('click', () => abrirPainel(painelModos));
+document.querySelectorAll('[data-modo]').forEach(b => {
+  b.addEventListener('click', () => {
+    definirModo(b.dataset.modo);
+    fecharPaineis();
+    mostrarAviso('Modo ' + modoAtual().nome);
+  });
+});
+
+el('ajuste-quadros').addEventListener('input', ev => {
+  dados.quadros = Number(ev.target.value);
+  el('valor-quadros').textContent = dados.quadros;
+  gravar();
+  zerarAcumuladores();
+});
+el('ajuste-ganho').addEventListener('input', ev => {
+  dados.ganho = Number(ev.target.value);
+  el('valor-ganho').textContent = dados.ganho + '×';
+  gravar();
+});
+
+function mostrarContraste() {
+  document.querySelectorAll('[data-contraste]').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.contraste === dados.contraste));
+  });
+  el('valor-contraste').textContent = dados.forcaContraste + '%';
+  el('ajuste-contraste').value = dados.forcaContraste;
+}
+
+document.querySelectorAll('[data-contraste]').forEach(b => {
+  b.addEventListener('click', () => {
+    dados.contraste = b.dataset.contraste;
+    gravar();
+    faixaTons = null;
+    mostrarContraste();
+    atualizarMedidas();
+  });
+});
+
+el('ajuste-contraste').addEventListener('input', ev => {
+  dados.forcaContraste = Number(ev.target.value);
+  gravar();
+  mostrarContraste();
+});
+
+function mostrarNoite() {
+  document.querySelectorAll('[data-paleta]').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.paleta === dados.paleta));
+  });
+  el('valor-ganho-noite').textContent = dados.ganhoNoite + '×';
+  el('ajuste-ganho-noite').value = dados.ganhoNoite;
+  el('valor-noite-quadros').textContent = dados.noiteQuadros;
+  el('ajuste-noite-quadros').value = dados.noiteQuadros;
+}
+
+document.querySelectorAll('[data-paleta]').forEach(b => {
+  b.addEventListener('click', () => {
+    dados.paleta = b.dataset.paleta;
+    gravar();
+    mostrarNoite();
+  });
+});
+
+el('ajuste-ganho-noite').addEventListener('input', ev => {
+  dados.ganhoNoite = Number(ev.target.value);
+  gravar();
+  mostrarNoite();
+});
+el('ajuste-noite-quadros').addEventListener('input', ev => {
+  dados.noiteQuadros = Number(ev.target.value);
+  gravar();
+  mostrarNoite();
+});
+
+/* ——— pedir ao hardware mais tempo de exposição ———
+   Com menos quadros por segundo, cada quadro fica aberto mais tempo e
+   entra mais luz — é o jeito de ganhar sensibilidade antes de qualquer
+   conta. Nem toda câmera aceita; quando recusa, o modo segue só com a
+   soma de quadros, que é o que o iPhone faz.                        */
+let cameraNaNoite = false;
+
+async function ajustarCameraParaNoite() {
+  const querNoite = dados.modo === 'noite';
+  if (!trilha || querNoite === cameraNaNoite) return;
+  cameraNaNoite = querNoite;
+  try {
+    await trilha.applyConstraints(querNoite
+      ? { frameRate: { ideal: 10, max: 15 } }
+      : { frameRate: { ideal: 30 } });
+  } catch (e) {
+    // Câmera não deixa mexer no tempo de exposição: segue no software.
+  }
+}
+
+/* ——— Comparar: a foto antiga por cima do visor ——— */
+let referencia = null;
+
+function mostrarFantasma() {
+  const liga = dados.modo === 'comparar' && referencia;
+  el('fantasma').hidden = !liga;
+  if (liga) el('fantasma').src = referencia.url;
+  document.documentElement.style.setProperty('--fantasma', dados.fantasma / 100);
+
+  el('valor-fantasma').textContent = dados.fantasma + '%';
+  el('ajuste-fantasma').value = dados.fantasma;
+  el('medida-comparar').textContent = referencia
+    ? 'Referência: ' + hora(referencia.quando) + ' — mire até as bordas sumirem.'
+    : 'Sem referência — abra uma foto e toque em Referência.';
+  el('medida-comparar').classList.toggle('forte', Boolean(referencia));
+}
+
+el('ajuste-fantasma').addEventListener('input', ev => {
+  dados.fantasma = Number(ev.target.value);
+  gravar();
+  mostrarFantasma();
+});
+
+el('btn-referencia').addEventListener('click', () => {
+  if (!fotoAberta) return;
+  referencia = fotoAberta;
+  definirModo('comparar');
+  fecharPaineis();
+  mostrarAviso('Referência marcada — mire e fotografe para ver o que mudou.');
+});
+
 /* ——— tirar a foto ————————————————————————————————————————————
    O visor é CSS, mas a foto precisa ser desenhada. Onde o navegador
    aceita ctx.filter (Safari 17+, Chrome, Firefox) é ele quem faz o
@@ -342,32 +1009,42 @@ async function tirarFoto() {
   const alt = video.videoHeight;
   if (!larg || !alt) return mostrarAviso('A câmera ainda está aquecendo, tente de novo.');
 
-  // O zoom digital vira recorte central, no mesmo formato do quadro:
-  // a foto guarda um pouco mais das laterais do que cabe no visor,
-  // nunca menos, e sai no tamanho real dos pixels — sem esticar nada.
-  const z = Math.max(1, zoomDigital);
-  const rl = Math.max(16, Math.round(larg / z));
-  const ra = Math.max(16, Math.round(alt / z));
-  const rx = Math.round((larg - rl) / 2);
-  const ry = Math.round((alt - ra) / 2);
+  // Nos modos que processam, a foto é o que o canvas já montou — o visor
+  // deixou de ser o vídeo cru e a imagem salva acompanha. Nos outros, o
+  // zoom digital vira recorte central do quadro, no tamanho real dos pixels.
+  const processado = modoAtual().processa && tela.width > 0;
 
-  const tela = document.createElement('canvas');
-  tela.width = rl;
-  tela.height = ra;
-  const ctx = tela.getContext('2d');
+  let rl, ra, rx = 0, ry = 0;
+  if (processado) {
+    rl = tela.width;
+    ra = tela.height;
+  } else {
+    const z = Math.max(1, zoomDigital);
+    rl = Math.max(16, Math.round(larg / z));
+    ra = Math.max(16, Math.round(alt / z));
+    rx = Math.round((larg - rl) / 2);
+    ry = Math.round((alt - ra) / 2);
+  }
+
+  const folha = document.createElement('canvas');
+  folha.width = rl;
+  folha.height = ra;
+  const ctx = folha.getContext('2d');
 
   // A foto espelhada acompanha o visor: o que se vê é o que sai.
-  if (dados.frontal && dados.espelhar) {
+  // (No canvas processado o espelho já foi aplicado lá atrás.)
+  if (!processado && dados.frontal && dados.espelhar) {
     ctx.translate(rl, 0);
     ctx.scale(-1, 1);
   }
 
   const f = filtroAtual();
-  const receita = receitaCss(f);
+  const receita = modoAtual().cor ? receitaCss(f) : 'none';
   const filtroNativo = ('filter' in ctx) && receita !== 'none';
   if (filtroNativo) ctx.filter = receita;
 
-  ctx.drawImage(video, rx, ry, rl, ra, 0, 0, rl, ra);
+  if (processado) ctx.drawImage(tela, 0, 0);
+  else ctx.drawImage(video, rx, ry, rl, ra, 0, 0, rl, ra);
 
   ctx.filter = 'none';
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -375,10 +1052,90 @@ async function tirarFoto() {
 
   piscar();
 
-  const blob = await new Promise(ok => tela.toBlob(ok, 'image/jpeg', 0.92));
+  const blob = await new Promise(ok => folha.toBlob(ok, 'image/jpeg', 0.92));
   if (!blob) return mostrarAviso('Não deu para salvar esta foto.');
 
-  guardarFoto(blob, f);
+  const foto = guardarFoto(blob, f);
+
+  // No Comparar, a foto nova rende uma segunda imagem: o que mudou.
+  if (dados.modo === 'comparar') {
+    if (!referencia) {
+      mostrarAviso('Foto tirada. Marque uma referência para ver o que mudou.');
+      return;
+    }
+    try {
+      const diferenca = await imagemDaDiferenca(referencia, foto);
+      if (diferenca) {
+        const marcada = guardarFoto(diferenca.blob, f, {
+          rotulo: 'Diferença', mudanca: diferenca.mudanca
+        });
+        abrirFoto(marcada);
+      }
+    } catch (e) {
+      mostrarAviso('Não deu para comparar com a referência.');
+    }
+  }
+}
+
+/* ——— o que mudou entre duas fotos ————————————————————————————
+   A referência é redesenhada no tamanho da foto nova, as duas viram
+   luminância e o que difere acima do ruído acende em vermelho sobre a
+   cena apagada. Serve para ronda: mesma cena, dois horários.
+   ———————————————————————————————————————————————————————————— */
+const LIMIAR_MUDANCA = 18;   // abaixo disso é ruído de sensor, não mudança
+
+function carregarImagem(endereco) {
+  return new Promise((ok, falhou) => {
+    const img = new Image();
+    img.onload = () => ok(img);
+    img.onerror = falhou;
+    img.src = endereco;
+  });
+}
+
+async function imagemDaDiferenca(antes, depois) {
+  const [a, b] = await Promise.all([carregarImagem(antes.url), carregarImagem(depois.url)]);
+  const w = b.naturalWidth, h = b.naturalHeight;
+  if (!w || !h) return null;
+
+  const folhaA = document.createElement('canvas');
+  folhaA.width = w; folhaA.height = h;
+  folhaA.getContext('2d').drawImage(a, 0, 0, w, h);
+
+  const folhaB = document.createElement('canvas');
+  folhaB.width = w; folhaB.height = h;
+  const ctxB = folhaB.getContext('2d', { willReadFrequently: true });
+  ctxB.drawImage(b, 0, 0);
+
+  const pa = folhaA.getContext('2d', { willReadFrequently: true })
+                   .getImageData(0, 0, w, h).data;
+  const saida = ctxB.getImageData(0, 0, w, h);
+  const pb = saida.data;
+
+  let mudados = 0;
+  const pontos = w * h;
+
+  for (let p = 0; p < pontos; p++) {
+    const i = p * 4;
+    const luzA = 0.2126 * pa[i] + 0.7152 * pa[i + 1] + 0.0722 * pa[i + 2];
+    const luzB = 0.2126 * pb[i] + 0.7152 * pb[i + 1] + 0.0722 * pb[i + 2];
+    const dif = Math.abs(luzA - luzB);
+    const base = luzB * 0.4;
+
+    if (dif > LIMIAR_MUDANCA) {
+      mudados++;
+      const forca = Math.min(255, (dif - LIMIAR_MUDANCA) * 3);
+      pb[i]     = limite(base + forca);
+      pb[i + 1] = limite(base + forca * 0.15);
+      pb[i + 2] = limite(base + forca * 0.15);
+    } else {
+      pb[i] = pb[i + 1] = pb[i + 2] = base;
+    }
+  }
+
+  ctxB.putImageData(saida, 0, 0);
+  const blob = await new Promise(ok => folhaB.toBlob(ok, 'image/jpeg', 0.92));
+  return blob ? { blob, mudanca: (mudados / pontos) * 100 } : null;
 }
 
 // A mesma receita do CSS, feita à mão: cinza → inverter → contraste.
@@ -431,7 +1188,7 @@ function piscar() {
 /* ——— carretel da sessão ————————————————————————————————————— */
 const carretel = [];   // { id, blob, url, nome, quando }
 
-function guardarFoto(blob, f) {
+function guardarFoto(blob, f, extra) {
   const quando = new Date();
   const foto = {
     id: 'f' + Date.now().toString(36),
@@ -439,8 +1196,10 @@ function guardarFoto(blob, f) {
     url: URL.createObjectURL(blob),
     nome: 'negativo-' + carimbo(quando) + '.jpg',
     quando,
-    filtro: f.nome,
-    zoom: dados.zoom
+    filtro: modoAtual().cor ? f.nome : 'sem filtro',
+    zoom: dados.zoom,
+    modo: (extra && extra.rotulo) || modoAtual().nome,
+    mudanca: extra && extra.mudanca
   };
   carretel.unshift(foto);
 
@@ -449,7 +1208,8 @@ function guardarFoto(blob, f) {
   }
 
   desenharCarretel();
-  mostrarAviso('Foto tirada — toque na miniatura para salvar.');
+  if (!extra) mostrarAviso('Foto tirada — toque na miniatura para salvar.');
+  return foto;
 }
 
 function carimbo(d) {
@@ -499,8 +1259,11 @@ function abrirFoto(foto) {
   fotoAberta = foto;
   el('previa-img').src = foto.url;
   const comZoom = foto.zoom > 1.05 ? ' · ' + foto.zoom.toFixed(1) + '×' : '';
-  el('previa-legenda').textContent = foto.filtro + comZoom + ' · ' + hora(foto.quando) +
-    ' · ' + foto.nome;
+  const comModo = foto.modo && foto.modo !== 'Foto' ? foto.modo + ' · ' : '';
+  const comMudanca = typeof foto.mudanca === 'number'
+    ? ' · ' + foto.mudanca.toFixed(1) + '% da imagem mudou' : '';
+  el('previa-legenda').textContent = comModo + foto.filtro + comZoom + comMudanca +
+    ' · ' + hora(foto.quando) + ' · ' + foto.nome;
   abrirPainel(painelFoto);
 }
 
@@ -805,6 +1568,11 @@ function aplicarAparencia() {
   el('ajuste-espelhar').checked = dados.espelhar;
   el('ajuste-grade').checked = dados.grade;
   el('ajuste-clarao').checked = dados.clarao;
+  el('ajuste-nitidez').checked = dados.nitidez;
+  el('valor-quadros').textContent = dados.quadros;
+  el('ajuste-quadros').value = dados.quadros;
+  el('valor-ganho').textContent = dados.ganho + '×';
+  el('ajuste-ganho').value = dados.ganho;
 }
 
 el('ajuste-forca').addEventListener('input', ev => {
@@ -818,7 +1586,7 @@ el('ajuste-tempo').addEventListener('input', ev => {
   gravar();
 });
 for (const [id, campo] of [['ajuste-espelhar', 'espelhar'], ['ajuste-grade', 'grade'],
-                           ['ajuste-clarao', 'clarao']]) {
+                           ['ajuste-clarao', 'clarao'], ['ajuste-nitidez', 'nitidez']]) {
   el(id).addEventListener('change', ev => {
     dados[campo] = ev.target.checked;
     aplicarAparencia();
@@ -838,6 +1606,7 @@ function mostrarAviso(texto) {
 /* ——— início ——— */
 desenharFiltros();
 aplicarAparencia();
+aplicarModo();
 desenharCarretel();
 mostrarRecado('Toque em Ligar a câmera e autorize o acesso.', true);
 ligarCamera();
@@ -850,8 +1619,7 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('pagehide', desligarCamera);
 
 /* ——— versão e atualização ——— */
-el('versao').textContent = 'v' + VERSAO;
-el('versao-topo').textContent = 'v' + VERSAO;
+document.querySelectorAll('[data-versao]').forEach(e => { e.textContent = 'v' + VERSAO; });
 
 // A versão no visor também é atalho para os ajustes, onde está o resto.
 el('versao-topo').addEventListener('click', () => abrirPainel(painelAjustes));

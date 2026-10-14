@@ -20,6 +20,8 @@
 <!-- ————————————————— visor ————————————————— -->
 <main class="visor" id="visor">
   <video id="video" playsinline autoplay muted disablepictureinpicture></video>
+  <canvas id="tela" hidden></canvas>
+  <img id="fantasma" alt="" hidden>
   <div class="grade" id="grade" hidden aria-hidden="true"></div>
   <div class="clarao" id="clarao" aria-hidden="true"></div>
   <p class="contagem" id="contagem" hidden aria-hidden="true"></p>
@@ -35,10 +37,12 @@
   <button class="icone" id="btn-ajustes" type="button" aria-label="Ajustes">
     <span aria-hidden="true">⚙</span>
   </button>
+  <button class="icone modo-atalho" id="btn-modo" type="button"
+          aria-label="Modo da câmera">Foto</button>
   <div class="centro">
     <p class="estado" id="estado" role="status" aria-live="polite">Negativo</p>
     <button class="versao-topo" id="versao-topo" type="button"
-            aria-label="Versão do app — abre os ajustes">v—</button>
+            aria-label="Versão do app — abre os ajustes" data-versao>v—</button>
   </div>
   <button class="icone zoom-atalho" id="btn-zoom" type="button"
           aria-label="Zoom — toque para ampliar">1.0×</button>
@@ -46,6 +50,62 @@
     <span aria-hidden="true">🔦</span>
   </button>
 </header>
+
+<!-- ————————————————— controles do modo ————————————————— -->
+<section class="controles" id="controles-lupa" hidden aria-label="Controles da lupa">
+  <label class="controle">
+    Quadros somados <b id="valor-quadros">8</b>
+    <input type="range" id="ajuste-quadros" min="2" max="16" step="1">
+  </label>
+  <p class="medida" id="medida-lupa">somando…</p>
+</section>
+
+<section class="controles" id="controles-vibracao" hidden aria-label="Controles da vibração">
+  <label class="controle">
+    Amplificação <b id="valor-ganho">20×</b>
+    <input type="range" id="ajuste-ganho" min="5" max="60" step="1">
+  </label>
+  <div class="nivel"><div class="nivel-barra" id="nivel-barra"></div></div>
+  <p class="medida" id="medida-vibracao">parado</p>
+</section>
+
+<section class="controles" id="controles-noite" hidden aria-label="Controles do modo noite">
+  <div class="tipos" id="paletas-noite">
+    <button class="tipo" data-paleta="cinza" type="button">Cinza</button>
+    <button class="tipo" data-paleta="verde" type="button">Verde</button>
+    <button class="tipo" data-paleta="cor" type="button">Cor</button>
+  </div>
+  <label class="controle">
+    Ganho de luz <b id="valor-ganho-noite">6×</b>
+    <input type="range" id="ajuste-ganho-noite" min="1" max="16" step="1">
+  </label>
+  <label class="controle">
+    Quadros somados <b id="valor-noite-quadros">8</b>
+    <input type="range" id="ajuste-noite-quadros" min="1" max="24" step="1">
+  </label>
+  <p class="medida" id="medida-noite">medindo a luz…</p>
+</section>
+
+<section class="controles" id="controles-contraste" hidden aria-label="Controles do contraste">
+  <div class="tipos" id="tipos-contraste">
+    <button class="tipo" data-contraste="auto" type="button">Auto</button>
+    <button class="tipo" data-contraste="extremo" type="button">Extremo</button>
+    <button class="tipo" data-contraste="traco" type="button">Traço</button>
+  </div>
+  <label class="controle">
+    Força <b id="valor-contraste">70%</b>
+    <input type="range" id="ajuste-contraste" min="0" max="100" step="5">
+  </label>
+  <p class="medida" id="medida-contraste">—</p>
+</section>
+
+<section class="controles" id="controles-comparar" hidden aria-label="Controles da comparação">
+  <label class="controle">
+    Fantasma da referência <b id="valor-fantasma">45%</b>
+    <input type="range" id="ajuste-fantasma" min="0" max="80" step="5">
+  </label>
+  <p class="medida" id="medida-comparar">Sem referência — abra uma foto e toque em Referência.</p>
+</section>
 
 <!-- ————————————————— filtros ————————————————— -->
 <nav class="filtros" id="filtros" aria-label="Filtro de cor"></nav>
@@ -85,6 +145,7 @@
 
   <div class="acoes">
     <button class="botao" id="btn-transcrever" type="button">Transcrever</button>
+    <button class="botao" id="btn-referencia" type="button">Referência</button>
     <button class="botao perigo" id="btn-descartar" type="button">Descartar</button>
   </div>
 
@@ -110,6 +171,50 @@
   <p class="vazio" id="carretel-vazio" hidden>Nenhuma foto ainda.</p>
   <p class="rodape">As fotos ficam só na memória do app: <b>fechar apaga</b>.
     Salve as que importam.</p>
+</section>
+
+<!-- ————————————————— painel: modos ————————————————— -->
+<section class="painel" id="painel-modos" hidden aria-label="Modo da câmera">
+  <div class="painel-topo">
+    <h2>Modo</h2>
+    <button class="botao discreto" data-fechar type="button">Fechar</button>
+  </div>
+
+  <div class="destinos">
+    <button class="destino" data-modo="foto" type="button">
+      <b>Foto</b>
+      <small>a câmera normal, com os filtros de cor</small>
+    </button>
+    <button class="destino" data-modo="lupa" type="button">
+      <b>Lupa estabilizada</b>
+      <small>soma vários quadros: tira o chuvisco e firma o tremor, para ler
+        etiqueta, tag e display de longe</small>
+    </button>
+    <button class="destino" data-modo="vibracao" type="button">
+      <b>Vibração</b>
+      <small>amplifica o movimento pequeno demais para o olho: mostra se a
+        bomba, o motor ou a tubulação estão tremendo</small>
+    </button>
+    <button class="destino" data-modo="noite" type="button">
+      <b>Noite</b>
+      <small>junta a luz de vários quadros e amplifica: enxerga onde a tela
+        da câmera comum fica só no chuvisco</small>
+    </button>
+    <button class="destino" data-modo="contraste" type="button">
+      <b>Contraste</b>
+      <small>estica a faixa de tons até o limite: lê display apagado, etiqueta
+        desbotada e número gravado em metal</small>
+    </button>
+    <button class="destino" data-modo="comparar" type="button">
+      <b>Comparar</b>
+      <small>põe uma foto antiga por cima do visor para você mirar igual, e
+        destaca o que mudou entre as duas</small>
+    </button>
+  </div>
+
+  <p class="rodape">Apoie o aparelho em algo firme na <b>Lupa</b> e na
+    <b>Vibração</b>: as duas somam quadros ao longo do tempo e a mão tremendo
+    atrapalha a conta.</p>
 </section>
 
 <!-- ————————————————— painel: ajustes ————————————————— -->
@@ -152,6 +257,11 @@
     Clarão na tela ao fotografar
   </label>
 
+  <label class="opcao">
+    <input type="checkbox" id="ajuste-nitidez">
+    Realçar bordas na Lupa
+  </label>
+
   <details class="ajuda">
     <summary>Como usar</summary>
     <p><b>1.</b> Toque em <b>Ligar a câmera</b> e autorize o acesso. A permissão é
@@ -167,6 +277,14 @@
     <p><b>4.</b> Em <b>Salvar / Enviar</b> a foto vai para Fotos, WhatsApp, e-mail ou
        o download do computador. O botão <b>PDF</b> gera uma folha A4 com a foto e a
        data — bom para arquivar ou anexar num relatório.</p>
+    <p><b>4b.</b> No modo <b>Contraste</b>: <b>Auto</b> estica os tons da cena,
+       <b>Extremo</b> vai até o limite e <b>Traço</b> deixa só preto e branco,
+       comparando cada ponto com a vizinhança — é o que faz aparecer número
+       gravado em metal e texto em superfície suja.</p>
+    <p><b>4c.</b> No modo <b>Noite</b>: apoie o aparelho e espere. Ele soma a luz
+       de vários quadros — quanto mais quadros, mais claro e menos chuvisco, mas
+       o que se mexer borra. Precisa de alguma luz: no breu total não há o que
+       somar.</p>
     <p><b>5.</b> <b>Transcrever</b> é para fotos de tela, painel ou documento:
        envia a imagem com o pedido de transcrição já escrito, e o texto volta
        organizado por área, com os campos vazios marcados. O app não lê o texto
@@ -175,7 +293,7 @@
        as cores certas — serve para ver filmes antigos.</p>
   </details>
 
-  <p class="rodape">Câmera Negativo <b id="versao">—</b> · funciona sem internet ·
+  <p class="rodape">Câmera Negativo <b id="versao" data-versao>—</b> · funciona sem internet ·
     nenhuma imagem sai do aparelho.</p>
   <p class="rodape" id="estado-versao">Procurando atualização…</p>
 </section>
