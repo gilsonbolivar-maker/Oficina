@@ -1,0 +1,49 @@
+# Compila o APK do Alarme GPS e publica em
+# https://github.com/gilsonbolivar-maker/Oficina/releases/download/alarme-gps-apk/alarme-gps.apk
+# O APK abre a página do site; só precisa recompilar quando o código Android muda.
+name: APK do Alarme GPS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'alarme-gps/android/**'
+      - '.github/workflows/apk-alarme-gps.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk-alarme-gps
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Compilar
+        working-directory: alarme-gps/android
+        run: gradle --no-daemon assembleRelease
+
+      - name: Publicar o APK
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cp alarme-gps/android/app/build/outputs/apk/release/app-release.apk alarme-gps.apk
+          gh release delete alarme-gps-apk --yes --cleanup-tag || true
+          gh release create alarme-gps-apk alarme-gps.apk \
+            --title "Alarme GPS para Android" \
+            --notes "APK do Alarme GPS: vigia o GPS com a tela apagada e toca o alarme do aparelho. Compilado de ${GITHUB_SHA::7}." \
+            --target "$GITHUB_SHA"

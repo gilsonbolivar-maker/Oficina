@@ -1,0 +1,47 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'io.github.gilsonbolivar.alarmegps'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'io.github.gilsonbolivar.alarmegps'
+        minSdk 24
+        targetSdk 34
+        // versionCode sobe a cada APK novo; versionName acompanha o app do site.
+        versionCode 1
+        versionName '2.2.0'
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+
+    signingConfigs {
+        // Chave fixa: o APK novo instala por cima do antigo sem desinstalar.
+        oficina {
+            storeFile file('../assinatura.jks')
+            storePassword 'alarmegps'
+            keyAlias 'alarmegps'
+            keyPassword 'alarmegps'
+        }
+    }
+
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.oficina
+        }
+    }
+
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+}

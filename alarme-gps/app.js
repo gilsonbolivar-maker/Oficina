@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '2.1.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '2.2.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -109,6 +109,11 @@ let relogio = null;
 let mapa = null;
 let editando = null;         // ponto em edição (ou rascunho novo)
 let promessaInstalar = null;
+
+/* No app Android (APK), a página ganha window.AlarmeNativo: a vigilância passa
+   para um serviço do sistema, que segue o GPS e toca com a tela apagada. */
+const nativo = window.AlarmeNativo || null;
+let vigiaNativa = false;     // o serviço do Android está vigiando este ponto
 
 /* ————————————————— utilidades ————————————————— */
 
@@ -223,7 +228,17 @@ function armar(id) {
     timeout: 30000
   });
 
-  segurarTela();
+  vigiaNativa = false;
+  if (nativo) {
+    try {
+      vigiaNativa = nativo.vigiar(JSON.stringify({
+        lat: p.lat, lon: p.lon, raio: p.raio, nome: p.nome,
+        som: config.som, vibrar: config.vibrar, aviso: config.aviso
+      }));
+    } catch (e) { vigiaNativa = false; }
+  }
+
+  if (!vigiaNativa) segurarTela();
   clearInterval(relogio);
   relogio = setInterval(atualizarIdade, 1000);
 
@@ -234,7 +249,9 @@ function armar(id) {
   el.vBarra.style.width = '0%';
   definirEstado('Procurando o GPS…');
   renderizarLista();
-  avisar('Vigiando. Deixe o app aberto na tela.');
+  avisar(vigiaNativa
+    ? 'Vigiando. Pode apagar a tela: o alarme toca mesmo assim.'
+    : 'Vigiando. Deixe o app aberto na tela.');
 }
 
 function desarmar() {
@@ -244,6 +261,8 @@ function desarmar() {
   }
   clearInterval(relogio);
   relogio = null;
+  if (vigiaNativa) { try { nativo.parar(); } catch (e) { /* ignora */ } }
+  vigiaNativa = false;
   vigiado = null;
   disparado = false;
   distanciaInicial = null;
@@ -300,16 +319,19 @@ function atualizarIdade() {
   if (!ultimaPos) { el.vIdade.textContent = '—'; return; }
   const s = Math.round((Date.now() - ultimaPos.timestamp) / 1000);
   el.vIdade.textContent = s < 60 ? `há ${s}s` : `há ${Math.round(s / 60)} min`;
-  el.avisoTela.textContent = s > 90
-    ? 'O GPS parou de responder. A tela precisa ficar acesa e o app visível.'
-    : (travaTela ? 'Tela travada acesa enquanto vigia.' : '');
+  el.avisoTela.textContent = vigiaNativa
+    ? 'O Android vigia mesmo com a tela apagada.'
+    : s > 90
+      ? 'O GPS parou de responder. A tela precisa ficar acesa e o app visível.'
+      : (travaTela ? 'Tela travada acesa enquanto vigia.' : '');
 }
 
 /* ————————————————— disparo ————————————————— */
 
 function disparar(p, d) {
   disparado = true;
-  Alarme.tocar({ som: config.som, vibrar: config.vibrar });
+  // Com o serviço do Android vigiando, o som é o alarme dele — não toca dois.
+  if (!vigiaNativa) Alarme.tocar({ som: config.som, vibrar: config.vibrar });
 
   el.aNome.textContent = p.nome;
   el.aTexto.textContent = `Você está a ${formatarDistancia(d)} do ponto.`;
@@ -326,6 +348,30 @@ function pararAlarme() {
     avisar('Alarme desligado.');
   }
 }
+
+/**
+ * O app Android chama isto ao voltar para a frente: o alarme pode ter tocado
+ * (a página mostra a tela vermelha) ou ter sido parado pela notificação.
+ */
+window.aoVoltarDoNativo = () => {
+  if (!vigiaNativa) return;
+  let ativo = true, tocou = false;
+  try { ativo = nativo.ativo(); tocou = nativo.disparado(); } catch (e) { return; }
+  if (!ativo) {
+    Alarme.parar();
+    el.alarme.hidden = true;
+    desarmar();
+    return;
+  }
+  const p = pontoPorId(vigiado);
+  if (tocou && !disparado && p) {
+    disparado = true;
+    el.aNome.textContent = p.nome;
+    el.aTexto.textContent = 'Você chegou ao ponto.';
+    el.alarme.hidden = false;
+    definirEstado('ALARME — ' + p.nome, 'erro');
+  }
+};
 
 function pedirNotificacao() {
   if (!('Notification' in window)) return;
@@ -631,6 +677,9 @@ el.instalar.addEventListener('click', async () => {
 });
 
 window.addEventListener('appinstalled', () => { el.instalar.hidden = true; });
+
+// No Android, pelo navegador, oferece o APK, que vigia com a tela apagada.
+if (!nativo && /Android/i.test(navigator.userAgent)) $('btn-apk').hidden = false;
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

@@ -20,6 +20,24 @@ no raio escolhido, a tela fica vermelha, o celular vibra e a sirene toca até vo
 tocar em **Parar alarme**. Com o bipe de aproximação ligado, um sinal curto avisa
 quando falta o dobro do raio.
 
+### App Android (APK) — vigia com a tela apagada
+
+Baixe em
+<https://github.com/gilsonbolivar-maker/Oficina/releases/download/alarme-gps-apk/alarme-gps.apk>
+(o botão **Baixar o app Android** aparece nos Ajustes quando o site é aberto num Android).
+
+| | Pelo navegador | App Android (APK) |
+|---|---|---|
+| Tela | precisa ficar acesa | **pode apagar** |
+| Quem vigia | a página | um serviço do Android, com notificação fixa |
+| Som | sirene da página | **alarme do aparelho**, por cima da tela de bloqueio |
+
+O APK abre a mesma página do site (atualiza sozinho com ela) e entrega a vigilância
+ao `VigiaService` pela ponte `window.AlarmeNativo`. O código fica em `android/` e o
+GitHub Actions (`.github/workflows/apk-alarme-gps.yml`) compila e publica o APK quando
+essa pasta muda. A chave de assinatura (`android/assinatura.jks`) fica no repositório
+para que cada APK novo instale por cima do anterior.
+
 ### Instalar no Android
 
 Abra o site no Chrome e use **Instalar app** (ou "Adicionar à tela inicial") no menu
