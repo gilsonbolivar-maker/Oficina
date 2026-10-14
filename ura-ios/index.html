@@ -13,6 +13,18 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icones/icone-192.png" sizes="192x192">
 <link rel="apple-touch-icon" sizes="180x180" href="icones/icone-180.png">
+<script>
+/* Tema antes do CSS pintar, para não piscar. A escolha fica em Ajustes. */
+(function () {
+  var t = 'escuro';
+  try { if (localStorage.getItem('ura-ios:tema') === 'claro') t = 'claro'; } catch (e) {}
+  document.documentElement.dataset.tema = t;
+  if (t === 'claro') {
+    document.querySelector('meta[name="theme-color"]').content = '#f2f4f8';
+    document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').content = 'default';
+  }
+})();
+</script>
 <link rel="stylesheet" href="app.css">
 </head>
 <body>

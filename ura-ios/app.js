@@ -5,10 +5,43 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.1.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.2.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
+
+/* ————— tema: escuro (o padrão) ou claro —————
+   O script no <head> do index.html já aplicou a escolha guardada antes de
+   pintar; aqui ficam a troca na hora e o seletor "Tema: [Escuro] [Claro]". */
+const CHAVE_TEMA = 'ura-ios:tema';
+const HTML_TEMA =
+  '<div class="seletor-tema" role="group" aria-label="Tema"><span>Tema:</span>' +
+  '<button type="button" data-tema-opcao="escuro">Escuro</button>' +
+  '<button type="button" data-tema-opcao="claro">Claro</button></div>';
+
+function aplicarTema(tema) {
+  tema = tema === 'claro' ? 'claro' : 'escuro';
+  document.documentElement.dataset.tema = tema;
+  const cor = document.querySelector('meta[name="theme-color"]');
+  if (cor) cor.content = tema === 'claro' ? '#f2f4f8' : '#0b1220';
+  const barra = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+  if (barra) barra.content = tema === 'claro' ? 'default' : 'black-translucent';
+  try { localStorage.setItem(CHAVE_TEMA, tema); } catch (e) {}
+  marcarTema();
+}
+
+/** Marca no(s) seletor(es) qual tema está valendo. */
+function marcarTema() {
+  const atual = document.documentElement.dataset.tema === 'claro' ? 'claro' : 'escuro';
+  for (const b of document.querySelectorAll('[data-tema-opcao]')) {
+    b.setAttribute('aria-pressed', String(b.dataset.temaOpcao === atual));
+  }
+}
+
+document.addEventListener('click', ev => {
+  const b = ev.target.closest && ev.target.closest('[data-tema-opcao]');
+  if (b) aplicarTema(b.dataset.temaOpcao);
+});
 
 const $ = s => document.querySelector(s);
 const esc = s => Busca.escapar(s);
@@ -297,6 +330,8 @@ function telaAjustes() {
         <b>${base.siglas.length}</b> siglas · <b>${base.perguntas.length}</b> perguntas</div>
       <div class="fonte">${esc(base.nomeArquivo || 'base')} · gerada em ${esc(base.gerado || '—')}</div>
     </div>
+    <p class="grupo-titulo">Aparência</p>
+    ${HTML_TEMA}
     <p class="grupo-titulo">Importar PDFs</p>
     <p class="fraco pequeno">IO revisada ou nova? Escolha o PDF dela. IO com o mesmo código é
       trocada; as outras continuam. Tudo é lido aqui, sem internet.</p>
@@ -318,6 +353,7 @@ function telaAjustes() {
       IOs da URA ${VERSAO}. Consulta e treino sobre documentos com controle de cópias:
       confira sempre a revisão vigente antes de executar qualquer procedimento.</p>`;
 
+  marcarTema();
   $('#arquivo-troca').addEventListener('change', ev => carregar(ev.target.files[0], true));
   $('#pdfs-troca').addEventListener('change', ev => importarPDFs(ev.target.files, '#estado-pdfs'));
   $('#btn-baixar').addEventListener('click', baixarBase);

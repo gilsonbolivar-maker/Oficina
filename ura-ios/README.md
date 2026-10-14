@@ -9,6 +9,8 @@ iPhone, sem internet.
   Tocar num passo marca como feito, para acompanhar a execução.
 - **Treinar** — perguntas montadas a partir das próprias IOs, com a fonte da
   resposta e um resumo de onde você mais erra.
+- **Ajustes** — a base do aparelho e o tema: **Escuro** (padrão) ou **Claro**,
+  guardado neste aparelho.
 
 ## O conteúdo não fica aqui
 

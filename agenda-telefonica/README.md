@@ -25,7 +25,7 @@ Para trocar por uma lista mais nova ou apagar tudo do aparelho:
 | **Contatos** | Buscar por nome, ramal, matrícula, sigla da área ou unidade; filtrar por unidade; pular pelo índice A–Z. |
 | **Favoritos** | Os contatos que você marcou com ★, sempre à mão. |
 | **Áreas** | Ver as áreas com a quantidade de pessoas e abrir a lista de cada uma. |
-| **Ajustes** | Escolher como discar, trocar ou apagar a base, exportar para a agenda do aparelho e procurar atualização. |
+| **Ajustes** | Escolher como discar, trocar ou apagar a base, exportar para a agenda do aparelho, trocar o tema (**Escuro** ou **Claro**) e procurar atualização. |
 
 Tocar em um contato abre a ficha com **nome, área, unidade, matrícula** e os
 telefones. Cada telefone é um botão de ligação (`tel:`), além de **Copiar** e
@@ -103,7 +103,7 @@ com o tipo sendo `r` (ramal), `c` (celular), `f` (fixo) ou `o` (outro).
 | Arquivo | O que faz |
 | ------- | --------- |
 | `index.html` | Tela de partida, as quatro telas e a ficha do contato. |
-| `app.css` | Visual escuro, alvos grandes para o toque. |
+| `app.css` | Visual escuro (ou claro, à escolha), alvos grandes para o toque. |
 | `dados.js` | Guarda e valida a base no IndexedDB, e guarda à parte o que você acrescenta. |
 | `busca.js` | Índice de busca (ignora acento e caixa), agrupamento A–Z e leitura dos números digitados. |
 | `app.js` | Telas, ficha, favoritos, exportação e registro do service worker. |

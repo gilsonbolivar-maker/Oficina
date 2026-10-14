@@ -9,7 +9,8 @@
   --texto: #e8edf7;
   --texto-fraco: #93a1bd;
   --acento: #ffb020;
-  --acento-texto: #201400;
+  --acento-texto: #201400;   /* letra SOBRE o acento */
+  --acento-letra: #ffb020;   /* acento usado como letra (no claro, mais escuro) */
   --certo: #35d07f;
   --errado: #ff6b6b;
   --raio: 14px;
@@ -121,7 +122,7 @@ mark { background: rgba(255,176,32,0.28); color: inherit; border-radius: 3px; pa
   display: inline-block;
   margin-bottom: 5px;
   font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
-  color: var(--acento);
+  color: var(--acento-letra);
 }
 .cartao .fonte { margin-top: 6px; font-size: 12px; color: var(--texto-fraco); }
 
@@ -140,7 +141,7 @@ mark { background: rgba(255,176,32,0.28); color: inherit; border-radius: 3px; pa
   padding: 7px 16px;
   background: var(--fundo);
   font-size: 13px; font-weight: 700; letter-spacing: 0.06em;
-  color: var(--acento);
+  color: var(--acento-letra);
 }
 
 /* ——— leitor ——— */
@@ -222,7 +223,7 @@ mark { background: rgba(255,176,32,0.28); color: inherit; border-radius: 3px; pa
   cursor: pointer;
 }
 .aba span { font-size: 19px; line-height: 1.1; }
-.aba.ativa { color: var(--acento); }
+.aba.ativa { color: var(--acento-letra); }
 
 /* ——— tela de carga ——— */
 .vazio { justify-content: center; padding: 24px; }
@@ -252,4 +253,37 @@ mark { background: rgba(255,176,32,0.28); color: inherit; border-radius: 3px; pa
 .versao-solta { margin-top: 10px; font-size: 12px; opacity: 0.6; }
 
 /* ————— link de texto (a base .json pronta, na tela inicial) ————— */
-.ligacao { color: var(--acento); text-decoration: underline; cursor: pointer; }
+.ligacao { color: var(--acento-letra); text-decoration: underline; cursor: pointer; }
+
+/* ————— tema claro (escolhido em Ajustes; o padrão é o escuro) ————— */
+:root[data-tema="claro"] {
+  color-scheme: light;
+  --fundo: #f2f4f8;
+  --superficie: #ffffff;
+  --superficie-alta: #e8ecf3;
+  --borda: #c3cddc;
+  --texto: #142033;
+  --texto-fraco: #4d5b75;
+  --acento: #ffb020;          /* o mesmo âmbar nos preenchimentos */
+  --acento-letra: #8f5300;    /* âmbar escuro para letra sobre fundo claro */
+  --certo: #1f9d57;
+  --errado: #c0392b;
+}
+
+/* ————— seletor de tema: Tema: [Escuro] [Claro] ————— */
+.seletor-tema { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.seletor-tema > span { margin-right: 4px; font-size: 15px; }
+.seletor-tema button {
+  min-width: 88px;
+  padding: 9px 16px;
+  font: inherit; font-size: 15px;
+  color: var(--texto);
+  background: var(--superficie-alta);
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  cursor: pointer;
+}
+:root:not([data-tema="claro"]) .seletor-tema [data-tema-opcao="escuro"],
+:root[data-tema="claro"] .seletor-tema [data-tema-opcao="claro"] {
+  color: var(--acento-texto); background: var(--acento); border-color: var(--acento); font-weight: 600;
+}

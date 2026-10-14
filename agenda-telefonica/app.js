@@ -5,10 +5,41 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.2.1';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.3.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
+
+/* ————— tema: escuro (o padrão) ou claro —————
+   O script no <head> do index.html já aplicou a escolha guardada antes de
+   pintar; aqui fica a troca na hora, pelo seletor "Tema: [Escuro] [Claro]" de Ajustes. */
+const CHAVE_TEMA = 'agenda-telefonica:tema';
+
+function aplicarTema(tema) {
+  tema = tema === 'claro' ? 'claro' : 'escuro';
+  document.documentElement.dataset.tema = tema;
+  const cor = document.querySelector('meta[name="theme-color"]');
+  if (cor) cor.content = tema === 'claro' ? '#f2f4f8' : '#0b1220';
+  const barra = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+  if (barra) barra.content = tema === 'claro' ? 'default' : 'black-translucent';
+  try { localStorage.setItem(CHAVE_TEMA, tema); } catch (e) {}
+  marcarTema();
+}
+
+/** Marca no(s) seletor(es) qual tema está valendo. */
+function marcarTema() {
+  const atual = document.documentElement.dataset.tema === 'claro' ? 'claro' : 'escuro';
+  for (const b of document.querySelectorAll('[data-tema-opcao]')) {
+    b.setAttribute('aria-pressed', String(b.dataset.temaOpcao === atual));
+  }
+}
+
+document.addEventListener('click', ev => {
+  const b = ev.target.closest && ev.target.closest('[data-tema-opcao]');
+  if (b) aplicarTema(b.dataset.temaOpcao);
+});
+marcarTema();
+
 const LOTE = 80;          // contatos desenhados por vez, para a rolagem não travar
 
 // Guardado antes de tudo: diz se já havia uma versão no comando desta aba.
