@@ -69,6 +69,19 @@
   <p class="medida" id="medida-vibracao">parado</p>
 </section>
 
+<section class="controles" id="controles-contraste" hidden aria-label="Controles do contraste">
+  <div class="tipos" id="tipos-contraste">
+    <button class="tipo" data-contraste="auto" type="button">Auto</button>
+    <button class="tipo" data-contraste="extremo" type="button">Extremo</button>
+    <button class="tipo" data-contraste="traco" type="button">Traço</button>
+  </div>
+  <label class="controle">
+    Força <b id="valor-contraste">70%</b>
+    <input type="range" id="ajuste-contraste" min="0" max="100" step="5">
+  </label>
+  <p class="medida" id="medida-contraste">—</p>
+</section>
+
 <section class="controles" id="controles-comparar" hidden aria-label="Controles da comparação">
   <label class="controle">
     Fantasma da referência <b id="valor-fantasma">45%</b>
@@ -165,6 +178,11 @@
       <small>amplifica o movimento pequeno demais para o olho: mostra se a
         bomba, o motor ou a tubulação estão tremendo</small>
     </button>
+    <button class="destino" data-modo="contraste" type="button">
+      <b>Contraste</b>
+      <small>estica a faixa de tons até o limite: lê display apagado, etiqueta
+        desbotada e número gravado em metal</small>
+    </button>
     <button class="destino" data-modo="comparar" type="button">
       <b>Comparar</b>
       <small>põe uma foto antiga por cima do visor para você mirar igual, e
@@ -237,6 +255,10 @@
     <p><b>4.</b> Em <b>Salvar / Enviar</b> a foto vai para Fotos, WhatsApp, e-mail ou
        o download do computador. O botão <b>PDF</b> gera uma folha A4 com a foto e a
        data — bom para arquivar ou anexar num relatório.</p>
+    <p><b>4b.</b> No modo <b>Contraste</b>: <b>Auto</b> estica os tons da cena,
+       <b>Extremo</b> vai até o limite e <b>Traço</b> deixa só preto e branco,
+       comparando cada ponto com a vizinhança — é o que faz aparecer número
+       gravado em metal e texto em superfície suja.</p>
     <p><b>5.</b> <b>Transcrever</b> é para fotos de tela, painel ou documento:
        envia a imagem com o pedido de transcrição já escrito, e o texto volta
        organizado por área, com os campos vazios marcados. O app não lê o texto
