@@ -6,11 +6,14 @@
   --superficie: #fffdf7;
   --borda: #e0d8c4;
   --texto: #1d1a14;
-  --texto-fraco: #7c7566;
-  --acento: #c8791a;
+  --texto-fraco: #6b6457;
+  --acento: #a35f0f;
   --acento-texto: #fff;
   --perigo: #b3261e;
   --pauta: #ded3ba;
+  --aviso-fundo: #1d1a14;
+  --aviso-texto: #fff;
+  --aviso-borda: transparent;
   --raio-borda: 14px;
 
   /* ajustados pelo app.js */
@@ -18,7 +21,8 @@
   --linha: 48px;
 }
 
-html[data-tema="noite"] {
+/* tema Escuro (antigo "Modo noite"); o Claro é o :root acima */
+:root[data-tema="escuro"] {
   color-scheme: dark;
   --fundo: #0b1220;
   --superficie: #141d2e;
@@ -29,6 +33,9 @@ html[data-tema="noite"] {
   --acento-texto: #201400;
   --perigo: #ff6b6b;
   --pauta: #22304a;
+  --aviso-fundo: #1e2a41;
+  --aviso-texto: #e8edf7;
+  --aviso-borda: var(--borda);
 }
 
 * { box-sizing: border-box; }
@@ -302,6 +309,15 @@ html[data-pauta="on"] .papel {
 }
 .opcao input { width: 21px; height: 21px; flex: none; accent-color: var(--acento); }
 
+/* seletor de tema: Tema: [Escuro] [Claro] */
+.tema-seletor { cursor: default; flex-wrap: wrap; }
+.tema-seletor .botao { padding: 9px 18px; min-height: 44px; }
+.tema-seletor .botao[aria-pressed="true"] {
+  background: var(--acento);
+  border-color: var(--acento);
+  color: var(--acento-texto);
+}
+
 .ajuda { margin-top: 20px; color: var(--texto-fraco); font-size: 14px; }
 .ajuda summary { cursor: pointer; padding: 8px 0; color: var(--texto); font-weight: 600; }
 .ajuda p { margin: 8px 0; }
@@ -319,13 +335,13 @@ html[data-pauta="on"] .papel {
   max-width: calc(100% - 32px);
   padding: 12px 18px;
   border-radius: 99px;
-  background: #1d1a14;
-  color: #fff;
+  background: var(--aviso-fundo);
+  color: var(--aviso-texto);
+  border: 1px solid var(--aviso-borda);
   font-size: 14px;
   text-align: center;
   box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
 }
-html[data-tema="noite"] .aviso { background: #1e2a41; border: 1px solid var(--borda); }
 
 .aviso-acao {
   display: flex;

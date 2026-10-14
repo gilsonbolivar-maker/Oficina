@@ -6,8 +6,38 @@
 <title>Oficina</title>
 <meta name="description" content="Oficina de desenvolvimento — projetos e soluções.">
 <meta name="theme-color" content="#0b1220">
+<script>
+  // Tema salvo (Escuro/Claro) antes de pintar, para não piscar.
+  (function () {
+    var t = null;
+    try { t = localStorage.getItem('oficina:tema'); } catch (e) {}
+    if (t !== 'claro') t = 'escuro';
+    document.documentElement.dataset.tema = t;
+    document.querySelector('meta[name="theme-color"]')
+      .setAttribute('content', t === 'claro' ? '#f3f5f9' : '#0b1220');
+  })();
+</script>
 <style>
-  :root { color-scheme: dark; }
+  :root {
+    color-scheme: dark;
+    --fundo: #0b1220;
+    --superficie: #141d2e;
+    --borda: #2b3a56;
+    --texto: #e8edf7;
+    --texto-fraco: #93a1bd;
+    --acento: #ffb020;          /* contorno e foco */
+    --acento-texto: #ffb020;    /* acento usado como cor de texto */
+  }
+  :root[data-tema="claro"] {
+    color-scheme: light;
+    --fundo: #f3f5f9;
+    --superficie: #ffffff;
+    --borda: #c9d2e0;
+    --texto: #142033;
+    --texto-fraco: #4f5c74;
+    --acento: #c27a00;
+    --acento-texto: #8f5300;
+  }
   body {
     margin: 0;
     min-height: 100dvh;
@@ -15,12 +45,12 @@
     place-content: center;
     gap: 28px;
     padding: 32px;
-    background: #0b1220;
-    color: #e8edf7;
+    background: var(--fundo);
+    color: var(--texto);
     font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
   h1 { margin: 0; font-size: 28px; letter-spacing: -0.01em; }
-  p { margin: 6px 0 0; color: #93a1bd; }
+  p { margin: 6px 0 0; color: var(--texto-fraco); }
   ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
   li { display: flex; gap: 8px; max-width: 540px; }
   a {
@@ -28,13 +58,13 @@
     flex: 1;
     min-width: 0;
     padding: 18px 20px;
-    border: 1px solid #2b3a56;
+    border: 1px solid var(--borda);
     border-radius: 14px;
-    background: #141d2e;
+    background: var(--superficie);
     color: inherit;
     text-decoration: none;
   }
-  a:hover { border-color: #ffb020; }
+  a:hover { border-color: var(--acento); }
   .enviar {
     flex: none;
     width: 76px;
@@ -42,19 +72,33 @@
     place-content: center;
     gap: 2px;
     padding: 0;
-    border: 1px solid #2b3a56;
+    border: 1px solid var(--borda);
     border-radius: 14px;
-    background: #141d2e;
-    color: #ffb020;
+    background: var(--superficie);
+    color: var(--acento-texto);
     font: inherit;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
   }
   .enviar span { font-size: 20px; line-height: 1; }
-  .enviar:hover { border-color: #ffb020; }
-  .enviar:focus-visible { outline: 2px solid #ffb020; outline-offset: 2px; }
+  .enviar:hover { border-color: var(--acento); }
+  .enviar:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
   b { font-size: 18px; }
+  .tema { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--texto-fraco); }
+  .tema button {
+    min-height: 40px;
+    padding: 6px 16px;
+    border: 1px solid var(--borda);
+    border-radius: 99px;
+    background: var(--superficie);
+    color: var(--texto);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .tema button[aria-pressed="true"] { background: var(--acento-texto); border-color: var(--acento-texto); color: var(--fundo); }
+  .tema button:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -112,7 +156,29 @@
       </a>
     </li>
   </ul>
+  <footer class="tema" role="group" aria-label="Tema">
+    <span>Tema:</span>
+    <button type="button" data-tema-opcao="escuro" aria-pressed="true">Escuro</button>
+    <button type="button" data-tema-opcao="claro" aria-pressed="false">Claro</button>
+  </footer>
 <script>
+  // Tema: Escuro / Claro, troca na hora e fica guardado no aparelho.
+  function mostrarTema(tema) {
+    document.documentElement.dataset.tema = tema;
+    document.querySelector('meta[name="theme-color"]')
+      .setAttribute('content', tema === 'claro' ? '#f3f5f9' : '#0b1220');
+    for (const b of document.querySelectorAll('[data-tema-opcao]')) {
+      b.setAttribute('aria-pressed', String(b.dataset.temaOpcao === tema));
+    }
+  }
+  for (const b of document.querySelectorAll('[data-tema-opcao]')) {
+    b.addEventListener('click', () => {
+      mostrarTema(b.dataset.temaOpcao);
+      try { localStorage.setItem('oficina:tema', b.dataset.temaOpcao); } catch (e) {}
+    });
+  }
+  mostrarTema(document.documentElement.dataset.tema);
+
   // Um botão "Enviar" ao lado de cada projeto. Feito aqui, e não no HTML
   // de cada cartão, para que projeto novo já nasça com o botão.
   for (const cartao of document.querySelectorAll('ul > li > a')) {

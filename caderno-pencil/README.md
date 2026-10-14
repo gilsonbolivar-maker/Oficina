@@ -29,7 +29,7 @@ Ou seja: **não precisa de internet e nada sai do seu iPad.**
 | **Enviar** | Escolhe o destino: WhatsApp, e-mail, Mensagens ou a lista de apps do iPad. |
 | **⠿ Arrastar** | Alça: segure e arraste a nota direto para outro app aberto ao lado. |
 | **↶** | Desfaz o último trecho escrito. |
-| **Aa** | Tamanho da letra, espaço entre linhas, pauta, modo noite. |
+| **Aa** | Tamanho da letra, espaço entre linhas, pauta e **Tema: Escuro / Claro** (fica salvo no aparelho; quem usava o modo noite já abre no Escuro). |
 | **☰** | Lista das notas guardadas. |
 | **＋** | Folha nova. |
 
@@ -73,6 +73,7 @@ já na nova; as notas continuam onde estavam.
 
 | Versão | O que mudou |
 | ------ | ----------- |
+| 1.3.0 | Seletor **Tema: Escuro / Claro** no lugar do “Modo noite” (a escolha antiga é mantida). |
 | 1.2.0 | Alça para arrastar a nota; número de versão e aviso de atualização. |
 | 1.1.0 | Escolha do destino no botão **Enviar**. |
 | 1.0.0 | Folha, notas, copiar, compartilhar, ajustes, modo offline. |

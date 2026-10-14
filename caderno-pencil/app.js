@@ -5,11 +5,12 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.2.1';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.3.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
 const CHAVE = 'caderno-pencil:v1';
+const CHAVE_TEMA = 'caderno-pencil:tema';
 
 const el = id => document.getElementById(id);
 
@@ -31,7 +32,6 @@ const padrao = () => ({
   fonte: 22,
   pauta: 22,      // décimos: 22 = 2,2× o tamanho da letra
   linhas: true,
-  noite: false,
   juntar: false
 });
 
@@ -42,6 +42,8 @@ function carregar() {
     const bruto = localStorage.getItem(CHAVE);
     if (!bruto) return padrao();
     const lido = JSON.parse(bruto);
+    // O antigo "Modo noite" virou o tema Escuro (chave própria, lida no <head>).
+    try { if (localStorage.getItem(CHAVE_TEMA)) delete lido.noite; } catch (e) {}
     return Object.assign(padrao(), lido, {
       notas: Array.isArray(lido.notas) ? lido.notas : []
     });
@@ -358,17 +360,12 @@ function aplicarAparencia() {
   raiz.style.setProperty('--fonte', dados.fonte + 'px');
   raiz.style.setProperty('--linha', Math.round(dados.fonte * dados.pauta / 10) + 'px');
   raiz.dataset.pauta = dados.linhas ? 'on' : 'off';
-  raiz.dataset.tema = dados.noite ? 'noite' : 'papel';
-
-  const cor = document.querySelector('meta[name="theme-color"]');
-  if (cor) cor.setAttribute('content', dados.noite ? '#0b1220' : '#faf6ec');
 
   el('valor-fonte').textContent = dados.fonte + ' px';
   el('valor-pauta').textContent = (dados.pauta / 10).toFixed(1).replace('.', ',') + '×';
   el('ajuste-fonte').value = dados.fonte;
   el('ajuste-pauta').value = dados.pauta;
   el('ajuste-linhas').checked = dados.linhas;
-  el('ajuste-noite').checked = dados.noite;
   el('ajuste-juntar').checked = dados.juntar;
 }
 
@@ -382,14 +379,34 @@ el('ajuste-pauta').addEventListener('input', ev => {
   aplicarAparencia();
   gravar();
 });
-for (const [id, campo] of [['ajuste-linhas', 'linhas'], ['ajuste-noite', 'noite'],
-                           ['ajuste-juntar', 'juntar']]) {
+for (const [id, campo] of [['ajuste-linhas', 'linhas'], ['ajuste-juntar', 'juntar']]) {
   el(id).addEventListener('change', ev => {
     dados[campo] = ev.target.checked;
     aplicarAparencia();
     gravar(true);
   });
 }
+
+/* ——— tema: Escuro / Claro ——— */
+// O <head> já pôs o tema salvo antes de pintar; aqui só a troca na hora.
+const CORES_TEMA = { escuro: '#0b1220', claro: '#faf6ec' };
+const botoesTema = document.querySelectorAll('[data-tema-opcao]');
+
+function aplicarTema(tema) {
+  if (!(tema in CORES_TEMA)) tema = 'claro';
+  document.documentElement.dataset.tema = tema;
+  const cor = document.querySelector('meta[name="theme-color"]');
+  if (cor) cor.setAttribute('content', CORES_TEMA[tema]);
+  for (const b of botoesTema) b.setAttribute('aria-pressed', String(b.dataset.temaOpcao === tema));
+}
+
+for (const b of botoesTema) {
+  b.addEventListener('click', () => {
+    aplicarTema(b.dataset.temaOpcao);
+    try { localStorage.setItem(CHAVE_TEMA, b.dataset.temaOpcao); } catch (e) {}
+  });
+}
+aplicarTema(document.documentElement.dataset.tema);
 
 /* ——— aviso flutuante ——— */
 let avisoPendente = 0;

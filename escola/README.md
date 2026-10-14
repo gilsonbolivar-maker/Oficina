@@ -5,6 +5,9 @@ Caderno Pencil** — são pastas separadas.
 
 <https://gilsonbolivar-maker.github.io/Oficina/escola/>
 
+Embaixo do botão há o seletor **Tema: Escuro / Claro**; a escolha fica
+guardada no aparelho. A versão aparece no rodapé (“Escola v1.1.0”).
+
 ## O arquivo da aula
 
 Só um: [`index.html`](index.html). Ele tem tudo — aparência, tela e ação — e
@@ -24,3 +27,8 @@ encanamento que faz o app abrir sem internet e virar ícone na Tela de Início.
 O `sw.js` da Escola busca da rede antes do cache — ao contrário do Caderno. É
 de propósito: uma mudança publicada aparece **na hora** ao recarregar, sem
 cache velho atrapalhando a aula. Sem internet, o cache assume.
+
+## Versão
+
+Sem `app.js` aqui: a constante `VERSAO` mora no `<script>` do `index.html` e
+no `sw.js`, com o mesmo valor (o cache leva o número no nome).

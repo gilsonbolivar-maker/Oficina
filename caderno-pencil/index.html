@@ -1,11 +1,31 @@
 <!doctype html>
-<html lang="pt-BR" data-tema="papel">
+<html lang="pt-BR" data-tema="claro">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <title>Caderno Pencil</title>
 <meta name="description" content="Escreva à mão com a Apple Pencil, o texto vira digitado e você copia com um toque.">
 <meta name="theme-color" content="#faf6ec">
+<script>
+  /* Tema (Escuro/Claro) antes de pintar, para não piscar. Leva o valor
+     antigo junto: 'noite' e o "Modo noite" da 1.2 viram 'escuro'. */
+  (function () {
+    var t = null;
+    try {
+      t = localStorage.getItem('caderno-pencil:tema');
+      if (t === 'noite') t = 'escuro';
+      if (t !== 'escuro' && t !== 'claro') {
+        var d = JSON.parse(localStorage.getItem('caderno-pencil:v1') || 'null');
+        t = d && d.noite ? 'escuro' : 'claro';
+      }
+      localStorage.setItem('caderno-pencil:tema', t);
+    } catch (e) {}
+    if (t !== 'escuro') t = 'claro';
+    document.documentElement.dataset.tema = t;
+    document.querySelector('meta[name="theme-color"]')
+      .setAttribute('content', t === 'escuro' ? '#0b1220' : '#faf6ec');
+  })();
+</script>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Caderno">
@@ -116,10 +136,11 @@
     Mostrar a pauta (linhas do caderno)
   </label>
 
-  <label class="opcao">
-    <input type="checkbox" id="ajuste-noite">
-    Modo noite
-  </label>
+  <div class="opcao tema-seletor" role="group" aria-label="Tema">
+    <span>Tema:</span>
+    <button class="botao" type="button" data-tema-opcao="escuro" aria-pressed="false">Escuro</button>
+    <button class="botao" type="button" data-tema-opcao="claro" aria-pressed="true">Claro</button>
+  </div>
 
   <label class="opcao">
     <input type="checkbox" id="ajuste-juntar">

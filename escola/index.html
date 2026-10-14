@@ -14,6 +14,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Escola</title>
 <meta name="theme-color" content="#0b1220">
+<script>
+  /* encanamento do tema: põe o tema salvo antes de pintar (não pisca) */
+  (function () {
+    var t = null;
+    try { t = localStorage.getItem('escola:tema'); } catch (e) {}
+    if (t !== 'claro') t = 'escuro';
+    document.documentElement.dataset.tema = t;
+    document.querySelector('meta[name="theme-color"]')
+      .setAttribute('content', t === 'claro' ? '#f4f6fb' : '#0b1220');
+  })();
+</script>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Escola">
@@ -24,9 +35,34 @@
 <style>
 /* ═══ PARTE 1 — APARÊNCIA ═══════════════════════════════════ */
 
+/* As cores moram em "variáveis" (os nomes com --).
+   Tema Escuro, o de sempre: */
+:root {
+  color-scheme: dark;
+  --fundo: #0b1220;         /* cor do fundo */
+  --texto: #e8edf7;         /* cor do texto */
+  --botao: #35d07f;         /* cor do botão */
+  --botao-texto: #201400;   /* cor da letra do botão */
+  --fraco: #93a1bd;         /* cor da contagem */
+  --rodape: #7d8aa5;        /* cor do rodapé */
+  --borda: #2b3a56;         /* contorno dos botões de tema */
+}
+
+/* Tema Claro: só troca as cores. */
+:root[data-tema="claro"] {
+  color-scheme: light;
+  --fundo: #f4f6fb;
+  --texto: #142033;
+  --botao: #35d07f;
+  --botao-texto: #201400;
+  --fraco: #4a5873;
+  --rodape: #5b6780;
+  --borda: #c3cbdb;
+}
+
 body {
-  background: #0b1220;      /* cor do fundo */
-  color: #e8edf7;           /* cor do texto */
+  background: var(--fundo);
+  color: var(--texto);
   font-family: system-ui, -apple-system, sans-serif;
   text-align: center;
   padding: 40px 20px;
@@ -37,10 +73,10 @@ h1 {
   margin-bottom: 40px;
 }
 
-button {
-  background: #35d07f;      /* cor do botão */
-  color: #201400;           /* cor da letra do botão */
-  font-size: 22px;          /* tamanho da letrado botão */
+#botao {
+  background: var(--botao);
+  color: var(--botao-texto);
+  font-size: 22px;          /* tamanho da letra do botão */
   font-weight: 600;
   border: 0;
   border-radius: 16px;
@@ -50,14 +86,41 @@ button {
 
 #contagem {
   font-size: 20px;
-  color: #93a1bd;           /* cor da contagem */
+  color: var(--fraco);
   margin-top: 30px;
 }
 
 .rodape {
   margin-top: 60px;
   font-size: 13px;
-  color: #5a6884;
+  color: var(--rodape);
+}
+
+/* seletor Tema: [Escuro] [Claro] */
+.tema {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 40px;
+  font-size: 15px;
+  color: var(--fraco);
+}
+.tema button {
+  min-height: 44px;
+  padding: 8px 18px;
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--texto);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tema button[aria-pressed="true"] {
+  background: var(--botao);
+  border-color: var(--botao);
+  color: var(--botao-texto);
 }
 </style>
 </head>
@@ -72,10 +135,18 @@ button {
 
 <p id="contagem">apertado 0 vezes</p>
 
-<p class="rodape">Escola v1</p>
+<div class="tema" role="group" aria-label="Tema">
+  <span>Tema:</span>
+  <button type="button" data-tema-opcao="escuro" aria-pressed="true">Escuro</button>
+  <button type="button" data-tema-opcao="claro" aria-pressed="false">Claro</button>
+</div>
+
+<p class="rodape">Escola <span data-versao>v1.1.0</span></p>
 
 <script>
 /* ═══ PARTE 3 — AÇÃO ═══════════════════════════════════════ */
+
+const VERSAO = '1.1.0';   // precisa casar com a VERSAO do sw.js
 
 let vezes = 0;                                    // começa no zero
 
@@ -86,8 +157,29 @@ document.getElementById('botao').onclick = () => {
 };
 
 
-/* daqui para baixo é o encanamento: faz o app abrir sem internet.
-   Não precisa mexer. */
+/* troca de tema: Escuro / Claro (fica guardado no aparelho) */
+function mostrarTema(tema) {
+  document.documentElement.dataset.tema = tema;
+  document.querySelector('meta[name="theme-color"]')
+    .setAttribute('content', tema === 'claro' ? '#f4f6fb' : '#0b1220');
+  for (const b of document.querySelectorAll('[data-tema-opcao]')) {
+    b.setAttribute('aria-pressed', String(b.dataset.temaOpcao === tema));
+  }
+}
+for (const b of document.querySelectorAll('[data-tema-opcao]')) {
+  b.onclick = () => {
+    mostrarTema(b.dataset.temaOpcao);
+    try { localStorage.setItem('escola:tema', b.dataset.temaOpcao); } catch (e) {}
+  };
+}
+mostrarTema(document.documentElement.dataset.tema);
+
+
+/* daqui para baixo é o encanamento: mostra a versão e faz o app
+   abrir sem internet. Não precisa mexer. */
+for (const lugar of document.querySelectorAll('[data-versao]')) {
+  lugar.textContent = 'v' + VERSAO;
+}
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js');
 }

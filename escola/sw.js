@@ -8,7 +8,8 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const CACHE = 'escola';
+const VERSAO = '1.1.0';   // precisa casar com a VERSAO do index.html
+const CACHE = 'escola-' + VERSAO;
 
 const ARQUIVOS = [
   '.',
@@ -29,7 +30,14 @@ self.addEventListener('install', ev => {
 });
 
 self.addEventListener('activate', ev => {
-  ev.waitUntil(self.clients.claim());
+  // Apaga o cache de versões anteriores.
+  ev.waitUntil(
+    caches.keys()
+      .then(nomes => Promise.all(
+        nomes.filter(n => (n === 'escola' || n.startsWith('escola-')) && n !== CACHE)
+             .map(n => caches.delete(n))))
+      .then(() => self.clients.claim())
+  );
 });
 
 self.addEventListener('fetch', ev => {
