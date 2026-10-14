@@ -205,6 +205,15 @@ turno (ou em 16h), para não inventar um total de dias.
 
 ## Passar adiante
 
+**Três PDFs**, no Resumo:
+
+| Botão | O que traz |
+|---|---|
+| **PDF com hora a hora** | O relatório inteiro, com as leituras hora a hora como foram lidas |
+| **PDF balança distribuída** | A hora a hora com duas colunas de balança: a **lida** e a **distribuída** — a diferença dos totalizadores (final − inicial) repartida na proporção de cada leitura, fechando exato no total |
+| **PDF resumo** | Sem a hora a hora |
+
+
 | Botão | Resultado |
 | ----- | --------- |
 | **Copiar relatório** | Texto pronto para colar numa mensagem ou e-mail |

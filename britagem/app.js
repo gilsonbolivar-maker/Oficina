@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '3.6.1';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '3.7.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -689,6 +689,30 @@ function balancaAcumulada(t) {
   return valores.length ? +valores.reduce((a, b) => a + b, 0).toFixed(2) : null;
 }
 
+/**
+ * Balança distribuída: a diferença dos totalizadores (final − inicial)
+ * repartida entre as leituras hora a hora, na proporção de cada uma. O
+ * arredondamento que sobra vai na última, para a soma fechar exato.
+ * Devolve null sem as duas leituras do totalizador ou sem hora a hora.
+ */
+function distribuicaoBalanca(t) {
+  const ini = t.inicial && t.inicial.balanca, fim = t.final && t.final.balanca;
+  const lidas = t.leituras.filter(l => !l.parada && l.balanca != null)
+    .sort((a, b) => new Date(a.hora) - new Date(b.hora));
+  const soma = balancaAcumulada(t);
+  if (ini == null || fim == null || !lidas.length || !soma) return null;
+  const total = +(fim - ini).toFixed(2);
+  const fator = total / soma;
+  const valores = {};
+  let parcial = 0;
+  lidas.forEach((l, i) => {
+    const v = i === lidas.length - 1 ? +(total - parcial).toFixed(2) : +(l.balanca * fator).toFixed(2);
+    valores[l.id] = v;
+    parcial = +(parcial + v).toFixed(2);
+  });
+  return { total, soma, fator, valores };
+}
+
 /** Diferença entre o que o totalizador marcava no fim e no começo. */
 function somatoria(t) {
   const ini = t.inicial || {};
@@ -861,7 +885,9 @@ function desenharResumo() {
     ' arquivar ou imprimir, ou como planilha.</p>' +
     '<div class="botoes">' +
       '<button class="botao principal" id="copiar-relatorio" type="button">Copiar relatório</button>' +
-      '<button class="botao" id="baixar-pdf" type="button">Baixar PDF</button>' +
+      '<button class="botao" id="baixar-pdf" type="button">PDF com hora a hora</button>' +
+      '<button class="botao" id="baixar-pdf-distribuido" type="button">PDF balança distribuída</button>' +
+      '<button class="botao" id="baixar-pdf-resumo" type="button">PDF resumo (sem hora a hora)</button>' +
       '<button class="botao" id="baixar-csv" type="button">Baixar CSV</button>' +
       '<button class="botao" id="fechar-turno" type="button">' +
         (t.fim ? 'Reabrir turno' : 'Encerrar turno') + '</button>' +
@@ -870,7 +896,15 @@ function desenharResumo() {
 
   $('#editar-producao').addEventListener('click', () => formToneladas(t, false));
   $('#copiar-relatorio').addEventListener('click', () => copiarRelatorio(t));
-  $('#baixar-pdf').addEventListener('click', () => baixarPdf(t));
+  $('#baixar-pdf').addEventListener('click', () => baixarPdf(t, 'hora'));
+  $('#baixar-pdf-resumo').addEventListener('click', () => baixarPdf(t, 'resumo'));
+  $('#baixar-pdf-distribuido').addEventListener('click', () => {
+    if (!distribuicaoBalanca(t)) {
+      avisar('Para distribuir, anote a balança na leitura inicial, na final e na hora a hora.');
+      return;
+    }
+    baixarPdf(t, 'distribuido');
+  });
   $('#baixar-csv').addEventListener('click', () => baixarCsv(t));
   $('#fechar-turno').addEventListener('click', async () => {
     if (t.fim) {
@@ -1710,7 +1744,19 @@ function copiarRelatorio(t) {
 }
 
 /** O mesmo relatório, em PDF, montado bloco a bloco. */
-function blocosDoRelatorio(t) {
+/**
+ * Os três PDFs do turno:
+ *  'hora'       — com as leituras hora a hora como foram lidas;
+ *  'distribuido'— com a balança hora a hora repartida pelos totalizadores;
+ *  'resumo'     — sem a hora a hora.
+ */
+const MODOS_PDF = {
+  hora: { nome: 'com hora a hora', arquivo: 'hora-a-hora' },
+  distribuido: { nome: 'balança distribuída', arquivo: 'distribuido' },
+  resumo: { nome: 'resumo', arquivo: 'resumo' }
+};
+
+function blocosDoRelatorio(t, modo = 'hora') {
   const c = contasDoTurno(t);
   const area = areaDe(t);
   const soma = somatoria(t);
@@ -1799,21 +1845,46 @@ function blocosDoRelatorio(t) {
       cabecalho: [''].concat(medidas.map(m => m.rotulo + (m.unidade ? ' (' + m.unidade + ')' : ''))),
       linhas: linhas });
   }
-  if (t.leituras.length) {
-    const colHora = [70].concat(medidas.map(() => Math.floor(339 / medidas.length))).concat([90]);
+  const dist = modo === 'distribuido' ? distribuicaoBalanca(t) : null;
+  if (t.leituras.length && modo !== 'resumo') {
+    const ordenadas = t.leituras.slice().sort((a, b) => new Date(a.hora) - new Date(b.hora));
+    // No distribuído, a balança ganha duas colunas: a lida e a distribuída.
+    const cols = [];
+    medidas.forEach(m => {
+      if (dist && m.chave === 'balanca') {
+        cols.push({ titulo: 'Balança lida (t)', valor: l => mostrarNumero(l.balanca) });
+        cols.push({ titulo: 'Distribuída (t)', valor: l => mostrarNumero(dist.valores[l.id]) });
+      } else {
+        cols.push({ titulo: m.rotulo + (unidadeHora(m) ? ' (' + unidadeHora(m) + ')' : ''), valor: l => mostrarNumero(l[m.chave]) });
+      }
+    });
+    const larg = Math.floor((dist ? 349 : 339) / cols.length);
     B.push({ tipo: 'h2', texto: 'Hora a hora' });
-    B.push({ tipo: 'tabela', colunas: colHora,
-      cabecalho: ['Hora'].concat(medidas.map(m => m.rotulo + (unidadeHora(m) ? ' (' + unidadeHora(m) + ')' : ''))).concat(['Observação']),
-      linhas: t.leituras.slice().sort((a, b) => new Date(a.hora) - new Date(b.hora))
-        .map(l => l.parada
-          ? [hhmm(l.hora)].concat(medidas.map(() => '—')).concat([l.obs || 'Parada.'])
-          : [hhmm(l.hora)].concat(medidas.map(m => mostrarNumero(l[m.chave]))).concat([l.obs || ''])) });
+    const linhas = ordenadas.map(l => l.parada
+      ? [hhmm(l.hora)].concat(cols.map(() => '—')).concat([l.obs || 'Parada.'])
+      : [hhmm(l.hora)].concat(cols.map(c => c.valor(l))).concat([l.obs || '']));
+    if (dist) {
+      linhas.push(['TOTAL'].concat(medidas.flatMap(m => m.chave === 'balanca'
+        ? [comUnidade(dist.soma, 't'), comUnidade(dist.total, 't')] : [''])).concat(['']));
+    }
+    B.push({ tipo: 'tabela', colunas: [dist ? 60 : 70].concat(cols.map(() => larg)).concat([dist ? 80 : 90]),
+      cabecalho: ['Hora'].concat(cols.map(c => c.titulo)).concat(['Observação']),
+      linhas });
+    if (dist) {
+      B.push({ tipo: 'pequeno', texto: 'Balança distribuída: a diferença dos totalizadores (final - inicial = ' +
+        comUnidade(dist.total, 't') + ') repartida na proporção das leituras hora a hora (soma ' +
+        comUnidade(dist.soma, 't') + '; fator ' + mostrarNumero(+dist.fator.toFixed(4)) + ').' });
+    }
   }
+
 
   const linhasFim = [['Duração do turno', duracao(c.duracaoTurno)]];
   const horimetroRodado = soma.horimetro != null ? soma.horimetro : c.horimetro;
   if (horimetroRodado != null) linhasFim.push(['Horímetro rodado', comUnidade(horimetroRodado, 'h')]);
-  if (balancaAcumulada(t) != null) linhasFim.push(['Balança acumulada (soma hora a hora)', comUnidade(balancaAcumulada(t), 't')]);
+  if (modo !== 'resumo' && balancaAcumulada(t) != null) {
+    linhasFim.push(['Balança acumulada (soma hora a hora)', comUnidade(balancaAcumulada(t), 't')]);
+  }
+  if (dist) linhasFim.push(['Balança distribuída (soma)', comUnidade(dist.total, 't')]);
   if (c.acidoMedio != null) linhasFim.push(['Ácido médio (hora a hora)', comUnidade(c.acidoMedio, 'm³/h')]);
   linhasAcido(t, c, soma).forEach(l => linhasFim.push(l));
   if (t.producao != null) linhasFim.push(['Produção', mostrarNumero(t.producao) + ' t']);
@@ -1833,12 +1904,13 @@ function blocosDoRelatorio(t) {
   return B;
 }
 
-function baixarPdf(t) {
+function baixarPdf(t, modo = 'hora') {
   const area = areaDe(t);
-  const blob = PDF.gerar(blocosDoRelatorio(t),
+  const blob = PDF.gerar(blocosDoRelatorio(t, modo),
     (area.codigo ? area.codigo + ' ' : '') + area.nome + ' · ' +
-    dataBonita(t.data) + ' · ' + nomeTurno(t));
-  entregarArquivo(blob, 'britagem-' + t.data + '-turno-' + t.nome.replace(/\W+/g, '') + '.pdf', 'PDF baixado.');
+    dataBonita(t.data) + ' · ' + nomeTurno(t) + ' · ' + MODOS_PDF[modo].nome);
+  entregarArquivo(blob, 'britagem-' + t.data + '-turno-' + t.nome.replace(/\W+/g, '') +
+    '-' + MODOS_PDF[modo].arquivo + '.pdf', 'PDF baixado.');
 }
 
 function csvCampo(v) {
