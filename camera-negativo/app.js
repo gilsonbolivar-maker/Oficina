@@ -5,7 +5,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.4.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.5.0';   // precisa casar com a VERSAO do sw.js
 const CHAVE = 'camera-negativo:v1';
 const LIMITE_CARRETEL = 24;   // fotos guardadas na memória da sessão
 const ZOOM_MAX = 6;           // além disso o recorte não tem mais pixel para dar
@@ -14,6 +14,7 @@ const ZOOM_MAX = 6;           // além disso o recorte não tem mais pixel para 
 // a vibração precisa de velocidade — ninguém lê um borrão em 4K a 30 quadros.
 const LARGURA_LUPA = 1280;
 const LARGURA_VIBRACAO = 640;
+const LARGURA_CONTRASTE = 960;
 
 const el = id => document.getElementById(id);
 
@@ -55,7 +56,15 @@ const MODOS = [
   // A vibração já pinta o movimento de laranja e azul: inverter por cima
   // trocaria o sentido das cores e só atrapalharia a leitura.
   { id: 'vibracao', nome: 'Vibração', processa: true,  cor: false },
+  { id: 'contraste', nome: 'Contraste', processa: true, cor: true },
   { id: 'comparar', nome: 'Comparar', processa: false, cor: true }
+];
+
+// Três jeitos de esticar o contraste, do mais fiel ao mais radical.
+const CONTRASTES = [
+  { id: 'auto',    nome: 'Auto' },
+  { id: 'extremo', nome: 'Extremo' },
+  { id: 'traco',   nome: 'Traço' }
 ];
 
 /* ——— estado guardado ——— */
@@ -67,6 +76,8 @@ const padrao = () => ({
   ganho: 20,         // quanto a vibração amplifica
   fantasma: 45,      // opacidade da referência, em %
   nitidez: true,     // realce de bordas na lupa
+  contraste: 'auto', // auto | extremo | traco
+  forcaContraste: 85,
   forca: 100,        // % da inversão
   tempo: 0,          // segundos do temporizador
   frontal: false,
@@ -85,6 +96,7 @@ function carregar() {
     if (!FILTROS.some(f => f.id === lido.filtro)) lido.filtro = 'negativo';
     lido.zoom = Math.min(ZOOM_MAX, Math.max(1, Number(lido.zoom) || 1));
     if (!MODOS.some(m => m.id === lido.modo)) lido.modo = 'foto';
+    if (!CONTRASTES.some(c => c.id === lido.contraste)) lido.contraste = 'auto';
     return lido;
   } catch (e) {
     return padrao();
@@ -379,6 +391,7 @@ function zerarAcumuladores() {
   somados = 0;
   acumulado = null;
   fundoLento = null;
+  faixaTons = null;
   ultimoNivel = 0;
   atualizarMedidas();
 }
@@ -489,6 +502,131 @@ function realcarBordas(m) {
   ctxTela.putImageData(imagem, 0, 0);
 }
 
+/* ——— Contraste: usa a faixa de tons inteira ————————————————
+   Uma etiqueta desbotada ou um display apagado ocupam um pedacinho
+   da escala de brilho — digamos, tudo entre 90 e 130. "Auto" descobre
+   esse pedaço e o estica até 0–255; "Extremo" ainda curva o meio para
+   afastar claro de escuro; "Traço" larga o tom e compara cada ponto
+   com a vizinhança, que é o que faz aparecer número gravado em metal
+   mesmo com a luz batendo torta.
+   ———————————————————————————————————————————————————————————— */
+function passoContraste() {
+  const m = medidasDeTrabalho(LARGURA_CONTRASTE);
+  if (!m) return;
+  prepararTela(m);
+
+  const quadro = pegarQuadro(m);
+  const px = quadro.data;
+  const pontos = m.w * m.h;
+  const mistura = dados.forcaContraste / 100;
+
+  if (dados.contraste === 'traco') limiarLocal(px, m, mistura);
+  else estirarTons(px, pontos, mistura, dados.contraste === 'extremo');
+
+  ctxTela.putImageData(quadro, 0, 0);
+  atualizarMedidas();
+}
+
+// Onde a cena começa e termina na escala de brilho, ignorando as pontas
+// (2% de cada lado) para um reflexo ou um pixel queimado não mandarem.
+let faixaTons = null;
+
+function estirarTons(px, pontos, mistura, extremo) {
+  const histograma = new Uint32Array(256);
+  const passo = Math.max(1, Math.floor(pontos / 20000));   // amostra basta
+  let amostras = 0;
+
+  for (let p = 0; p < pontos; p += passo) {
+    const i = p * 4;
+    const luz = (0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2]) | 0;
+    histograma[luz < 0 ? 0 : luz > 255 ? 255 : luz]++;
+    amostras++;
+  }
+
+  const corte = Math.max(1, Math.round(amostras * 0.02));
+  let baixo = 0, alto = 255, soma = 0;
+  for (let v = 0; v < 256; v++) { soma += histograma[v]; if (soma >= corte) { baixo = v; break; } }
+  soma = 0;
+  for (let v = 255; v >= 0; v--) { soma += histograma[v]; if (soma >= corte) { alto = v; break; } }
+  if (alto - baixo < 8) { alto = Math.min(255, baixo + 8); }
+
+  // Suaviza a faixa no tempo: senão a imagem pulsa a cada quadro.
+  if (!faixaTons) faixaTons = { baixo, alto };
+  faixaTons.baixo += (baixo - faixaTons.baixo) * 0.25;
+  faixaTons.alto += (alto - faixaTons.alto) * 0.25;
+
+  const b = faixaTons.baixo;
+  const escala = 255 / Math.max(8, faixaTons.alto - b);
+
+  for (let p = 0; p < pontos; p++) {
+    const i = p * 4;
+    for (let c = 0; c < 3; c++) {
+      let v = (px[i + c] - b) * escala;
+      // Extremo: depois de esticar, abre ainda mais a partir do meio. O que
+      // passa das pontas vira preto ou branco puro — é esse estouro que faz
+      // aparecer o traço fraco que o tom médio escondia.
+      if (extremo) v = (v - 128) * 2.4 + 128;
+      px[i + c] = limite(px[i + c] + (v - px[i + c]) * mistura);
+    }
+  }
+}
+
+/* ——— Traço: preto no branco, comparando com a vizinhança ———
+   A média de cada vizinhança sai de uma tabela de somas acumuladas
+   (imagem integral): com ela, a média de qualquer janela custa quatro
+   leituras, e não um laço por pixel — é o que cabe nos 30 quadros.  */
+let somasAcumuladas = null;
+
+function limiarLocal(px, m, mistura) {
+  const w = m.w, h = m.h, pontos = w * h;
+  const largura = w + 1;
+  const precisa = largura * (h + 1);
+  if (!somasAcumuladas || somasAcumuladas.length !== precisa) {
+    somasAcumuladas = new Float64Array(precisa);
+  }
+  const soma = somasAcumuladas;
+
+  const luzes = new Uint8ClampedArray(pontos);
+  for (let p = 0; p < pontos; p++) {
+    const i = p * 4;
+    luzes[p] = 0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2];
+  }
+
+  for (let y = 0; y < h; y++) {
+    let linha = 0;
+    for (let x = 0; x < w; x++) {
+      linha += luzes[y * w + x];
+      soma[(y + 1) * largura + x + 1] = soma[y * largura + x + 1] + linha;
+    }
+  }
+
+  // A vizinhança precisa ser maior que a espessura do traço: se a janela
+  // couber inteira dentro da letra, a média vira a própria letra e não
+  // sobra diferença para medir.
+  const raio = Math.max(8, Math.round(w / 24));
+
+  // Em vez de cortar num limiar fixo, cada ponto é medido CONTRA a sua
+  // vizinhança e a diferença é multiplicada. Assim tanto faz a luz estar
+  // batendo torta, nem se o traço é mais claro ou mais escuro que o fundo:
+  // some o fundo, fica o traço. Com força alta a conta satura sozinha e o
+  // resultado vira quase preto no branco.
+  const ganho = 2 + mistura * 18;
+
+  for (let y = 0; y < h; y++) {
+    const y0 = Math.max(0, y - raio), y1 = Math.min(h - 1, y + raio);
+    for (let x = 0; x < w; x++) {
+      const x0 = Math.max(0, x - raio), x1 = Math.min(w - 1, x + raio);
+      const area = (y1 - y0 + 1) * (x1 - x0 + 1);
+      const total = soma[(y1 + 1) * largura + x1 + 1] - soma[y0 * largura + x1 + 1]
+                  - soma[(y1 + 1) * largura + x0] + soma[y0 * largura + x0];
+      const p = y * w + x;
+      const v = limite(128 + (luzes[p] - total / area) * ganho);
+      const i = p * 4;
+      px[i] = px[i + 1] = px[i + 2] = v;
+    }
+  }
+}
+
 /* ——— Vibração: amplifica o que mal se mexe ———
    Um fundo que acompanha a cena devagar guarda "como as coisas
    estão paradas"; o que foge dele é movimento. Multiplicado, um
@@ -542,6 +680,7 @@ function girar() {
   if (video.readyState >= 2) {
     if (dados.modo === 'lupa') passoLupa();
     else if (dados.modo === 'vibracao') passoVibracao();
+    else if (dados.modo === 'contraste') passoContraste();
   }
   laco = requestAnimationFrame(girar);
 }
@@ -567,6 +706,16 @@ function atualizarMedidas() {
       ? 'estabilizado · ' + alvo + ' quadros somados'
       : 'somando ' + somados + ' de ' + alvo + '…';
     el('medida-lupa').classList.toggle('forte', somados >= alvo);
+  }
+  if (dados.modo === 'contraste') {
+    const c = CONTRASTES.find(x => x.id === dados.contraste);
+    el('medida-contraste').textContent = dados.contraste === 'traco'
+      ? 'Traço · compara cada ponto com a vizinhança'
+      : faixaTons
+        ? c.nome + ' · tons de ' + Math.round(faixaTons.baixo) + ' a ' +
+          Math.round(faixaTons.alto) + ' esticados para 0–255'
+        : c.nome + ' · medindo a cena…';
+    el('medida-contraste').classList.toggle('forte', dados.forcaContraste > 0);
   }
   if (dados.modo === 'vibracao') {
     const n = Math.round(ultimoNivel);
@@ -596,6 +745,7 @@ function aplicarModo() {
   el('filtros').hidden = !m.cor;
   tela.style.filter = m.cor ? '' : 'none';
 
+  el('controles-contraste').hidden = m.id !== 'contraste';
   el('controles-lupa').hidden = m.id !== 'lupa';
   el('controles-vibracao').hidden = m.id !== 'vibracao';
   el('controles-comparar').hidden = m.id !== 'comparar';
@@ -604,6 +754,7 @@ function aplicarModo() {
     b.setAttribute('aria-pressed', String(b.dataset.modo === m.id));
   });
 
+  mostrarContraste();
   mostrarFantasma();
   tocarLaco();
   atualizarMedidas();
@@ -628,6 +779,30 @@ el('ajuste-ganho').addEventListener('input', ev => {
   dados.ganho = Number(ev.target.value);
   el('valor-ganho').textContent = dados.ganho + '×';
   gravar();
+});
+
+function mostrarContraste() {
+  document.querySelectorAll('[data-contraste]').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.contraste === dados.contraste));
+  });
+  el('valor-contraste').textContent = dados.forcaContraste + '%';
+  el('ajuste-contraste').value = dados.forcaContraste;
+}
+
+document.querySelectorAll('[data-contraste]').forEach(b => {
+  b.addEventListener('click', () => {
+    dados.contraste = b.dataset.contraste;
+    gravar();
+    faixaTons = null;
+    mostrarContraste();
+    atualizarMedidas();
+  });
+});
+
+el('ajuste-contraste').addEventListener('input', ev => {
+  dados.forcaContraste = Number(ev.target.value);
+  gravar();
+  mostrarContraste();
 });
 
 /* ——— Comparar: a foto antiga por cima do visor ——— */

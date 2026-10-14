@@ -33,7 +33,7 @@ barra de endereço (computador).
 | **Modo** | Troca entre Foto, Lupa, Vibração e Comparar. |
 | **⚙** | Ajustes: zoom fino, força da inversão, temporizador, espelho, grade. |
 | **1.0×** | Zoom: toque para ciclar 1× → 2× → 3× → 5×. Fica laranja quando ampliado. |
-| **v1.4.0** | O número da versão, abaixo do nome do filtro; toque para abrir os ajustes. |
+| **v1.5.0** | O número da versão, abaixo do nome do filtro; toque para abrir os ajustes. |
 | **🔦** | Lanterna — só aparece quando a câmera de trás permite acender. |
 | Fileira de filtros | Troca o filtro; o escolhido fica aceso. |
 | Miniatura | Abre as fotos desta sessão. |
@@ -50,6 +50,7 @@ mostram o que o olho sozinho não alcança.
 | **Foto** | A câmera normal, com os filtros de cor | o uso de sempre |
 | **Lupa** | Soma vários quadros e tira a média | ler etiqueta, tag e display de longe |
 | **Vibração** | Amplifica o movimento pequeno demais para o olho | ver se bomba, motor ou tubulação estão tremendo |
+| **Contraste** | Estica a faixa de tons até o limite | display apagado, etiqueta desbotada, número gravado em metal |
 | **Comparar** | Põe uma foto antiga por cima do visor e destaca o que mudou | ronda: mesma cena, dois horários |
 
 ### Lupa
@@ -69,6 +70,38 @@ aparelho** — a mão tremendo reinicia a conta a todo instante.
 
 Combina com o zoom: aproxime até o campo encher a tela, espere estabilizar,
 fotografe. A foto sai com os quadros já somados, não é só a tela.
+
+### Contraste
+
+Uma etiqueta desbotada ou um display apagado ocupam um pedacinho da escala de
+brilho — digamos, tudo entre 99 e 129. Três jeitos de abrir esse pedaço:
+
+| Tipo | O que faz | Quando usar |
+| ---- | --------- | ----------- |
+| **Auto** | Descobre onde a cena começa e termina e estica para 0–255 | o caso comum: foto lavada, pouca luz |
+| **Extremo** | Estica e ainda abre a partir do meio, estourando as pontas | quando o Auto não basta |
+| **Traço** | Compara cada ponto com a vizinhança e some com o fundo | **luz batendo torta**, gravação em metal, texto em superfície suja |
+
+O **Traço** é o que resolve o caso difícil: ele não usa limiar fixo nem depende
+de o traço ser mais claro ou mais escuro que o fundo — mede cada ponto contra a
+sua volta e multiplica a diferença. Sombra, reflexo e gradiente de iluminação
+somem; fica o traço.
+
+Medido numa cena de propósito ruim — etiqueta cinza-claro sobre fundo cinza,
+com a luz atravessando em gradiente:
+
+| | faixa de tons |
+| --- | --- |
+| Cena original | **35** de 255 |
+| Auto | **254** |
+| Extremo | **255** (metade da imagem vira preto ou branco puro) |
+| Traço | **224**, com o gradiente removido |
+
+A **Força** mistura o resultado com a imagem original: em 0% nada muda, em 100%
+vai ao limite. O padrão é 85%.
+
+Os filtros de cor continuam valendo — **Negativo** por cima do Traço costuma
+deixar o número ainda mais legível.
 
 ### Vibração
 
@@ -198,6 +231,7 @@ Quando sai uma versão nova o app percebe sozinho: o número no visor fica
 
 | Versão | O que mudou |
 | ------ | ----------- |
+| 1.5.0 | Modo **Contraste**: Auto, Extremo e Traço, para ler o que quase não tem contraste. |
 | 1.4.0 | Modos **Lupa**, **Vibração** e **Comparar**: ver o que o olho não alcança. |
 | 1.3.0 | Botão **Transcrever**: envia a foto com o pedido de transcrição pronto. |
 | 1.2.0 | Botão **PDF**: folha A4 com a foto e a data, montada no próprio app. |

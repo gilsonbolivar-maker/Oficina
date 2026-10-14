@@ -224,6 +224,27 @@ h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
 .controle b { color: var(--texto); float: right; }
 .controle input[type="range"] { width: 100%; accent-color: var(--acento); }
 
+.tipos { display: flex; gap: 8px; }
+
+.tipo {
+  flex: 1;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  background: var(--superficie);
+  color: var(--texto-fraco);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.tipo[aria-pressed="true"] {
+  border-color: var(--acento);
+  background: var(--acento);
+  color: var(--acento-texto);
+}
+
 .medida {
   margin: 0;
   font-size: 13px;
