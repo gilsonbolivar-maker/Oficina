@@ -13,7 +13,7 @@ adiante. Funciona **sem internet** e tudo fica neste aparelho.
 | **Turno** | Os três botões de registro e a linha do tempo do que já aconteceu. |
 | **Leituras** | A leitura **inicial** e **final** dos totalizadores, a tabela hora a hora e a **somatória do turno**. |
 | **Resumo** | Tempo parado e **tempo rodando** por equipamento, números do turno e a saída do relatório. |
-| **Turnos** | Todos os turnos guardados; toque em um para voltar a ele. No fim da tela ficam as **áreas carregadas** e a **versão do app**. |
+| **Turnos** | Todos os turnos guardados; toque em um para voltar a ele. No fim da tela ficam as **áreas carregadas**, a **aparência** (tema **Escuro** ou **Claro**, guardado no aparelho) e a **versão do app**. |
 
 ## Como se usa no turno
 
@@ -252,7 +252,7 @@ recarrega sozinho, sem precisar reinstalar.
 | Arquivo | O que faz |
 | ------- | --------- |
 | `index.html` | As quatro telas e a caixa de formulário. |
-| `app.css` | Visual escuro, alvos grandes para o toque com luva. |
+| `app.css` | Visual escuro (ou claro, à escolha), alvos grandes para o toque com luva. |
 | `dados.js` | Guarda os turnos e as áreas no IndexedDB do aparelho. |
 | `pdf.js` | Gera o PDF do turno, sem depender de nada externo. |
 | `app.js` | Registros, contas de tempo, resumo e exportação. |

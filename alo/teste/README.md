@@ -1,8 +1,8 @@
 # Testes do Alô
 
-Abrem o app num Chromium de verdade e conferem 169 comportamentos: o assistente
+Abrem o app num Chromium de verdade e conferem 183 comportamentos: o assistente
 de instalação (inclusive cada passo do Supabase faltando), entrada, envio,
-tempo real, não lidas, troca de apelido, telefone e — o mais importante — que
+tempo real, não lidas, troca de apelido, telefone, tema escuro/claro e — o mais importante — que
 o HTML escrito por outra pessoa aparece como texto, nunca como marcação.
 
 Não precisam de projeto no Supabase: `mock-supabase.js` responde no lugar
@@ -24,3 +24,6 @@ CHROME=/caminho/do/chrome node teste.mjs
 
 Ao terminar, sobram `mesa.png` e `telefone.png` com a aparência nos dois
 tamanhos.
+
+Com `CAPTURAS=/uma/pasta`, também salva lá `alo-*.png` das telas principais
+nos dois temas (claro e escuro).

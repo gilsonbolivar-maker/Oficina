@@ -12,6 +12,12 @@
   --fraco: #93a1bd;
   --acento: #ffb020;
   --verde: #2fbf71;
+  --acento-letra: #ffb020;   /* acento usado como letra (no claro, mais escuro) */
+  --alerta: #ff8a6b;
+  --barra: #0e1626;
+  --veu: rgba(4, 8, 16, 0.65);
+  --sombra: rgba(0, 0, 0, 0.55);
+  --sombra-leve: rgba(0, 0, 0, 0.4);
   --topo: env(safe-area-inset-top, 0px);
   --base: env(safe-area-inset-bottom, 0px);
 }
@@ -103,7 +109,7 @@ body {
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.08em;
-  color: var(--acento);
+  color: var(--acento-letra);
   background: var(--fundo);
 }
 
@@ -126,9 +132,9 @@ body {
 .item .dados { min-width: 0; flex: 1; }
 .item .nome { display: block; font-weight: 600; }
 .item .sub { display: block; font-size: 13px; color: var(--fraco); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.item .ramal { flex: 0 0 auto; font-variant-numeric: tabular-nums; font-weight: 700; color: var(--acento); }
+.item .ramal { flex: 0 0 auto; font-variant-numeric: tabular-nums; font-weight: 700; color: var(--acento-letra); }
 .item .ramal.curto { font-size: 13px; font-weight: 600; max-width: 96px; text-align: right; }
-.item .estrela { flex: 0 0 auto; color: var(--acento); }
+.item .estrela { flex: 0 0 auto; color: var(--acento-letra); }
 
 .avatar {
   flex: 0 0 auto;
@@ -158,7 +164,7 @@ body {
 .botao.grande { display: inline-block; padding: 15px 26px; font-size: 17px; }
 .ligacao {
   padding: 0; border: 0; background: none;
-  color: var(--acento); font: inherit; text-decoration: underline; cursor: pointer;
+  color: var(--acento-letra); font: inherit; text-decoration: underline; cursor: pointer;
 }
 .fraco { color: var(--fraco); }
 .pequeno { font-size: 13px; }
@@ -192,12 +198,12 @@ body {
 .tabela-pabx { width: 100%; border-collapse: collapse; font-size: 14px; }
 .tabela-pabx th, .tabela-pabx td { padding: 7px 4px; text-align: left; border-bottom: 1px solid var(--borda); }
 .tabela-pabx th { color: var(--fraco); font-weight: 600; font-size: 13px; }
-.tabela-pabx td:first-child { font-variant-numeric: tabular-nums; color: var(--acento); }
+.tabela-pabx td:first-child { font-variant-numeric: tabular-nums; color: var(--acento-letra); }
 
 /* ————— ficha do contato ————— */
 .fundo {
   position: fixed; inset: 0;
-  background: rgba(4, 8, 16, 0.65);
+  background: var(--veu);
   backdrop-filter: blur(2px);
   z-index: 8;
 }
@@ -217,7 +223,7 @@ body {
   background: var(--cartao);
   border: 1px solid var(--borda);
   border-radius: 20px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 24px 60px var(--sombra);
   animation: aparece 0.16s ease-out;
 }
 .ficha[hidden] { display: none; }
@@ -279,7 +285,7 @@ body {
   background: var(--cartao-alto); color: var(--fraco);
   font-size: 15px; cursor: pointer;
 }
-.erro { margin: 10px 0 0; font-size: 14px; color: #ff8a6b; }
+.erro { margin: 10px 0 0; font-size: 14px; color: var(--alerta); }
 .erro[hidden] { display: none; }
 
 .telefone .tirar {
@@ -289,7 +295,7 @@ body {
   background: var(--cartao); color: var(--fraco);
   font-size: 13px; cursor: pointer;
 }
-.marca-manual { color: var(--acento); }
+.marca-manual { color: var(--acento-letra); }
 
 .acoes { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
 .acoes .botao { flex: 1 1 auto; min-width: 88px; padding: 11px 12px; text-align: center; white-space: nowrap; }
@@ -302,7 +308,7 @@ body {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   padding-bottom: var(--base);
-  background: #0e1626;
+  background: var(--barra);
   border-top: 1px solid var(--borda);
 }
 .abas[hidden] { display: none; }
@@ -315,7 +321,7 @@ body {
   font-size: 13px;
   cursor: pointer;
 }
-.aba.ativa { color: var(--acento); font-weight: 600; }
+.aba.ativa { color: var(--acento-letra); font-weight: 600; }
 
 /* ————— aviso rápido ————— */
 .aviso {
@@ -330,7 +336,7 @@ body {
   color: #10192a;
   background: var(--acento);
   border-radius: 999px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 24px var(--sombra-leve);
 }
 .aviso[hidden] { display: none; }
 
@@ -381,7 +387,7 @@ body {
 .janela-equip { margin: 0 0 4px; font-variant-numeric: tabular-nums; }
 
 /* ————— linha do tempo e fichas ————— */
-.grupo { margin: 16px 0 8px; font-size: 13px; font-weight: 700; letter-spacing: 0.06em; color: var(--acento); }
+.grupo { margin: 16px 0 8px; font-size: 13px; font-weight: 700; letter-spacing: 0.06em; color: var(--acento-letra); }
 .registro {
   display: flex; align-items: flex-start; gap: 12px;
   padding: 13px 14px; margin-bottom: 8px;
@@ -400,13 +406,13 @@ body {
 }
 .registro .acumulado {
   display: block; margin-top: 3px;
-  font-size: 13px; color: var(--acento);
+  font-size: 13px; color: var(--acento-letra);
   font-variant-numeric: tabular-nums;
 }
 .registro .dur {
-  flex: 0 0 auto; font-variant-numeric: tabular-nums; font-weight: 700; color: var(--acento);
+  flex: 0 0 auto; font-variant-numeric: tabular-nums; font-weight: 700; color: var(--acento-letra);
 }
-.registro .dur.correndo { color: #ff8a6b; }
+.registro .dur.correndo { color: var(--alerta); }
 .registro .acoes-linha { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
 .registro .acoes-linha .botao { padding: 7px 12px; font-size: 13px; }
 
@@ -415,8 +421,8 @@ body {
   font-size: 12px; font-weight: 600;
 }
 .etiqueta.sim { background: rgba(47, 191, 113, 0.18); color: var(--verde); }
-.etiqueta.nao { background: rgba(255, 138, 107, 0.18); color: #ff8a6b; }
-.etiqueta.aberta { background: rgba(255, 176, 32, 0.18); color: var(--acento); }
+.etiqueta.nao { background: rgba(255, 138, 107, 0.18); color: var(--alerta); }
+.etiqueta.aberta { background: rgba(255, 176, 32, 0.18); color: var(--acento-letra); }
 
 /* ————— tabela de leituras ————— */
 .tabela { width: 100%; border-collapse: collapse; font-size: 14px; }
@@ -445,7 +451,7 @@ body {
 .bloco-equip .tabela td:last-child { color: var(--texto); font-weight: 600; }
 
 .cartao.somatoria { border-color: var(--acento); }
-.cartao.somatoria .total { font-size: 17px; font-weight: 700; color: var(--acento); }
+.cartao.somatoria .total { font-size: 17px; font-weight: 700; color: var(--acento-letra); }
 .cartao .cabeca { margin-bottom: 8px; }
 .cartao .cabeca h2 { margin: 0; }
 
@@ -469,7 +475,7 @@ body {
   background: var(--cartao);
   border: 1px solid var(--borda);
   border-radius: 20px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 24px 60px var(--sombra);
   animation: aparece 0.16s ease-out;
 }
 .caixa[hidden] { display: none; }
@@ -486,7 +492,7 @@ body {
 .dupla-campo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .campo .agora {
   margin-top: 5px; padding: 9px 12px; font: inherit; font-size: 13px;
-  color: var(--acento); background: var(--cartao-alto);
+  color: var(--acento-letra); background: var(--cartao-alto);
   border: 1px solid var(--borda); border-radius: 10px; cursor: pointer;
 }
 .linha-hora { display: flex; gap: 8px; align-items: flex-end; }
@@ -503,3 +509,41 @@ body {
   pointer-events: none;
 }
 .versao-solta { margin-top: 10px; font-size: 12px; opacity: 0.6; }
+
+/* ————— tema claro (escolhido em Ajustes; o padrão é o escuro) ————— */
+:root[data-tema="claro"] {
+  color-scheme: light;
+  --fundo: #f2f4f8;
+  --cartao: #ffffff;
+  --cartao-alto: #e8ecf3;
+  --borda: #c3cddc;
+  --texto: #142033;
+  --fraco: #4d5b75;
+  --acento: #ffb020;          /* o mesmo âmbar nos preenchimentos */
+  --acento-letra: #8f5300;    /* âmbar escuro para letra sobre fundo claro */
+  --verde: #12783f;
+  --alerta: #b4371a;
+  --barra: #ffffff;
+  --veu: rgba(20, 32, 51, 0.38);
+  --sombra: rgba(20, 32, 51, 0.22);
+  --sombra-leve: rgba(20, 32, 51, 0.18);
+}
+:root[data-tema="claro"] input::placeholder { color: var(--fraco); }
+
+/* ————— seletor de tema: Tema: [Escuro] [Claro] ————— */
+.seletor-tema { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.seletor-tema > span { margin-right: 4px; font-size: 15px; }
+.seletor-tema button {
+  min-width: 88px;
+  padding: 9px 16px;
+  font: inherit; font-size: 15px;
+  color: var(--texto);
+  background: var(--cartao-alto);
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  cursor: pointer;
+}
+:root:not([data-tema="claro"]) .seletor-tema [data-tema-opcao="escuro"],
+:root[data-tema="claro"] .seletor-tema [data-tema-opcao="claro"] {
+  color: #10192a; background: var(--acento); border-color: var(--acento); font-weight: 600;
+}

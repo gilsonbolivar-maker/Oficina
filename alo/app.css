@@ -31,6 +31,32 @@
   --raio: 14px;
 }
 
+/* Tema escuro: a mesma abóbora sobre um marrom de brasa. Os botões cheios
+   passam a ter texto escuro (a abóbora clara pede isso para dar 4,5:1). */
+:root[data-tema="escuro"] {
+  color-scheme: dark;
+  --fundo: #1C1612;
+  --alto: #261F19;
+  --linha: #43372C;
+  --suave: #342A21;
+  --texto: #F3E9DC;
+  --apagado: #BCAA96;
+  --destaque: #E8772E;
+  --destaque-texto: #F4A068;
+  --sobre-destaque: #1C1207;
+  --minha: #4A3020;
+  --perigo: #F2786D;
+  --perigo-fundo: #3B1C18;
+  --perigo-texto: #FFB8AF;
+  --ok: #4CC38A;
+  --ok-fundo: #15301F;
+  --ok-texto: #A3E4C1;
+  --sobre-avatar: #FFFFFF;
+  --sombra: rgb(0 0 0 / 0.5);
+  --veu: rgb(0 0 0 / 0.6);
+  --brilho: rgb(232 119 46 / 0.3);
+}
+
 * { box-sizing: border-box; }
 
 html, body {
@@ -913,3 +939,44 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
 }
 
 .selo { top: -8px; right: -8px; min-width: 22px; font-size: 13px; line-height: 20px; }
+
+/* ——— Escolha do tema, no rodapé da lateral ——— */
+.lateral-rodape { flex-wrap: wrap; }
+
+.tema-escolha {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 10px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--linha);
+}
+
+.tema-rotulo {
+  margin-right: auto;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--apagado);
+}
+
+.tema-opcao {
+  min-height: 40px;
+  padding: 8px 14px;
+  background: var(--fundo);
+  color: var(--texto);
+  border: 1px solid var(--linha);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tema-opcao:hover { border-color: var(--destaque); }
+
+.tema-opcao[aria-pressed="true"] {
+  background: var(--destaque);
+  color: var(--sobre-destaque);
+  border-color: transparent;
+}

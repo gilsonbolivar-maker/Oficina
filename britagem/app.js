@@ -4,10 +4,47 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '3.3.2';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '3.5.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
+
+/* ————— tema: escuro (o padrão) ou claro —————
+   O script no <head> do index.html já aplicou a escolha guardada antes de
+   pintar; aqui ficam a troca na hora e o seletor "Tema: [Escuro] [Claro]". */
+const CHAVE_TEMA = 'britagem:tema';
+const HTML_TEMA =
+  '<div class="seletor-tema" role="group" aria-label="Tema"><span>Tema:</span>' +
+  '<button type="button" data-tema-opcao="escuro">Escuro</button>' +
+  '<button type="button" data-tema-opcao="claro">Claro</button></div>';
+
+function aplicarTema(tema) {
+  tema = tema === 'claro' ? 'claro' : 'escuro';
+  document.documentElement.dataset.tema = tema;
+  const cor = document.querySelector('meta[name="theme-color"]');
+  if (cor) cor.content = tema === 'claro' ? '#f2f4f8' : '#0b1220';
+  const barra = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+  if (barra) barra.content = tema === 'claro' ? 'default' : 'black-translucent';
+  try { localStorage.setItem(CHAVE_TEMA, tema); } catch (e) {}
+  marcarTema();
+}
+
+/** Marca no(s) seletor(es) qual tema está valendo. */
+function marcarTema() {
+  const atual = document.documentElement.dataset.tema === 'claro' ? 'claro' : 'escuro';
+  for (const b of document.querySelectorAll('[data-tema-opcao]')) {
+    b.setAttribute('aria-pressed', String(b.dataset.temaOpcao === atual));
+  }
+}
+
+document.addEventListener('click', ev => {
+  const b = ev.target.closest && ev.target.closest('[data-tema-opcao]');
+  if (b) aplicarTema(b.dataset.temaOpcao);
+});
+
+/* No app Android (APK), a página ganha window.BritagemNativo: salva arquivos
+   em Downloads (e oferece para enviar) e copia texto, o que a WebView não faz. */
+const nativo = window.BritagemNativo || null;
 
 /* Área padrão, para quem ainda não carregou a configuração das áreas.
    Equipamento, motivo e medida de cada área real vêm do arquivo que fica
@@ -837,6 +874,14 @@ function cartaoAreas() {
   return c;
 }
 
+/** Aparência: o tema escuro (padrão) ou claro. Troca na hora. */
+function cartaoAparencia() {
+  const c = document.createElement('div');
+  c.className = 'cartao';
+  c.innerHTML = '<h2>Aparência</h2>' + HTML_TEMA;
+  return c;
+}
+
 /** Versão à mostra, para dar para conferir se a atualização chegou. */
 function cartaoVersao() {
   const c = document.createElement('div');
@@ -849,6 +894,14 @@ function cartaoVersao() {
     '<div class="botoes"><button class="botao" id="procurar-atualizacao" type="button">' +
     'Procurar atualização</button></div>';
   c.querySelector('#versao-app').textContent = 'Versão ' + VERSAO + '.';
+  // No Android, pelo navegador, oferece o app instalável (APK).
+  if (!nativo && /Android/i.test(navigator.userAgent)) {
+    const apk = document.createElement('a');
+    apk.className = 'botao';
+    apk.href = 'https://github.com/gilsonbolivar-maker/Oficina/releases/download/britagem-apk/britagem.apk';
+    apk.textContent = 'Baixar o app Android (APK)';
+    c.querySelector('.botoes').appendChild(apk);
+  }
   c.querySelector('#procurar-atualizacao').addEventListener('click', procurarAtualizacao);
   return c;
 }
@@ -859,7 +912,9 @@ function desenharTurnos() {
   if (!estado.turnos.length) {
     alvo.innerHTML = '<p class="vazio">Nenhum turno ainda.</p>';
     alvo.appendChild(cartaoAreas());
+    alvo.appendChild(cartaoAparencia());
     alvo.appendChild(cartaoVersao());
+    marcarTema();
     return;
   }
   estado.turnos.slice().sort((a, b) => new Date(b.inicio) - new Date(a.inicio)).forEach(t => {
@@ -885,7 +940,9 @@ function desenharTurnos() {
     alvo.appendChild(b);
   });
   alvo.appendChild(cartaoAreas());
+  alvo.appendChild(cartaoAparencia());
   alvo.appendChild(cartaoVersao());
+  marcarTema();
 }
 
 function desenhar() {
@@ -1569,8 +1626,34 @@ function relatorioTexto(t) {
   return L.join('\n');
 }
 
+/** Baixa o arquivo; no APK, entrega ao Android. */
+function entregarArquivo(blob, nome, aviso) {
+  if (nativo) {
+    const leitor = new FileReader();
+    leitor.onload = () => {
+      const ok = nativo.salvar(nome, blob.type, String(leitor.result).split(',')[1] || '');
+      avisar(ok ? aviso : 'Não deu para salvar o arquivo.');
+    };
+    leitor.readAsDataURL(blob);
+    return;
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nome;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  avisar(aviso);
+}
+
 function copiarRelatorio(t) {
   const txt = relatorioTexto(t);
+  if (nativo) {
+    avisar(nativo.copiar(txt) ? 'Relatório copiado.' : 'Não deu para copiar.');
+    return;
+  }
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(txt).then(
       () => avisar('Relatório copiado.'),
@@ -1709,15 +1792,7 @@ function baixarPdf(t) {
   const blob = PDF.gerar(blocosDoRelatorio(t),
     (area.codigo ? area.codigo + ' ' : '') + area.nome + ' · ' +
     dataBonita(t.data) + ' · ' + nomeTurno(t));
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'britagem-' + t.data + '-turno-' + t.nome.replace(/\W+/g, '') + '.pdf';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
-  avisar('PDF baixado.');
+  entregarArquivo(blob, 'britagem-' + t.data + '-turno-' + t.nome.replace(/\W+/g, '') + '.pdf', 'PDF baixado.');
 }
 
 function csvCampo(v) {
@@ -1777,15 +1852,7 @@ function baixarCsv(t) {
   // A coluna da tag só a parada preenche; nas demais linhas ela vai vazia.
   const texto = '﻿' + L.map((linha, i) => (i === 0 || linha[0] === 'parada' ? linha : [linha[0], linha[1], ''].concat(linha.slice(2))).map(csvCampo).join(';')).join('\r\n');
   const blob = new Blob([texto], { type: 'text/csv;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'britagem-' + t.data + '-turno-' + t.nome.replace(/\W+/g, '') + '.csv';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
-  avisar('Planilha baixada.');
+  entregarArquivo(blob, 'britagem-' + t.data + '-turno-' + t.nome.replace(/\W+/g, '') + '.csv', 'Planilha baixada.');
 }
 
 /* ————————————————— navegação e partida ————————————————— */

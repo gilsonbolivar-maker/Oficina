@@ -12,6 +12,19 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Alô">
+<script>
+  /* Tema antes de pintar: lê a escolha guardada e marca o <html>, para não
+     piscar o tema errado ao abrir. O app.js cuida da troca depois. */
+  (function () {
+    var tema = 'claro';
+    try { var v = localStorage.getItem('alo:tema'); if (v === 'escuro' || v === 'claro') tema = v; } catch (e) {}
+    var raiz = document.documentElement;
+    raiz.dataset.tema = tema;
+    raiz.style.colorScheme = tema === 'escuro' ? 'dark' : 'light';
+    var cor = document.querySelector('meta[name="theme-color"]');
+    if (cor) cor.content = tema === 'escuro' ? '#1C1612' : '#F6EFE3';
+  })();
+</script>
 <link rel="stylesheet" href="app.css">
 <script src="config.js"></script>
 </head>
@@ -192,6 +205,11 @@
     </div>
 
     <footer class="lateral-rodape">
+      <div class="tema-escolha" role="group" aria-label="Tema">
+        <span class="tema-rotulo">Tema:</span>
+        <button type="button" class="tema-opcao" data-tema-opcao="escuro" aria-pressed="false">Escuro</button>
+        <button type="button" class="tema-opcao" data-tema-opcao="claro" aria-pressed="true">Claro</button>
+      </div>
       <span class="avatar" id="meu-avatar" aria-hidden="true"></span>
       <span class="meu-nome" id="meu-nome"></span>
       <button type="button" class="icone" id="botao-conta" title="Minha conta"

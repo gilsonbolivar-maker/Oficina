@@ -766,6 +766,119 @@ await fora.waitForTimeout(300);
 ok('chat fechado com o app aberto fecha na hora', !(await fora.isVisible('#tela-app')));
 await fora.context().close();
 
+// ——— 31. Tema: escuro / claro ———
+const CAPTURAS = process.env.CAPTURAS || '';
+const capturar = async (p, nome) => {
+  if (CAPTURAS) await p.screenshot({ path: path.join(CAPTURAS, `alo-${nome}.png`) });
+};
+const temaDe = p => p.evaluate(() => ({
+  tema: document.documentElement.dataset.tema,
+  cor: document.querySelector('meta[name="theme-color"]').content,
+  fundo: getComputedStyle(document.body).backgroundColor,
+  guardado: localStorage.getItem('alo:tema'),
+  escuro: document.querySelector('[data-tema-opcao="escuro"]').getAttribute('aria-pressed'),
+  claro: document.querySelector('[data-tema-opcao="claro"]').getAttribute('aria-pressed'),
+}));
+
+const tema = await novaPagina({ adminNovo: true, pessoas: [
+  { id: 'p-maria', apelido: 'Maria', situacao: 'pendente', admin: false },
+  { id: 'p-joao', apelido: 'João', situacao: 'aprovado', admin: false },
+] });
+const errosAntesDoTema = erros.length;
+let t = await temaDe(tema);
+ok('tema padrão é o claro', t.tema === 'claro' && t.cor === '#F6EFE3' && t.guardado === null);
+await capturar(tema, 'entrada-claro');
+await tema.fill('#campo-apelido', 'Chefe');
+await tema.click('#botao-entrar');
+await tema.waitForSelector('#tela-app:not([hidden])', { timeout: 5000 });
+await tema.fill('#campo-mensagem', 'Oi, gente! Testando o tema.');
+await tema.click('#botao-enviar');
+await tema.waitForTimeout(400);
+ok('seletor de tema aparece na lateral', await tema.isVisible('.lateral .tema-escolha'));
+t = await temaDe(tema);
+ok('no claro, "Claro" está marcado', t.claro === 'true' && t.escuro === 'false');
+await capturar(tema, 'app-claro');
+
+await tema.click('[data-tema-opcao="escuro"]');
+await tema.waitForTimeout(100);
+t = await temaDe(tema);
+ok('escolher escuro troca na hora', t.tema === 'escuro' && t.fundo === 'rgb(28, 22, 18)');
+ok('escuro marca o botão e o theme-color', t.escuro === 'true' && t.claro === 'false' && t.cor === '#1C1612');
+ok('escuro fica guardado', t.guardado === 'escuro');
+await capturar(tema, 'app-escuro');
+
+await tema.reload();
+await tema.waitForSelector('#tela-app:not([hidden])', { timeout: 5000 });
+await tema.waitForTimeout(300);
+t = await temaDe(tema);
+ok('escuro continua depois de recarregar', t.tema === 'escuro' && t.escuro === 'true' && t.cor === '#1C1612');
+ok('o <head> já marca o tema antes do app.js', await tema.evaluate(() =>
+  document.querySelector('head script:not([src])').textContent.includes("'alo:tema'")));
+
+await tema.click('#botao-admin');
+await tema.waitForTimeout(300);
+await capturar(tema, 'portaria-escuro');
+await tema.click('#botao-fechar-painel');
+await tema.click('#botao-conta');
+await tema.waitForTimeout(300);
+await capturar(tema, 'conta-escuro');
+await tema.click('#botao-fechar-conta');
+
+await tema.setViewportSize({ width: 390, height: 780 });
+await tema.waitForTimeout(200);
+await capturar(tema, 'telefone-conversa-escuro');
+await tema.click('#botao-voltar');
+await tema.waitForTimeout(200);
+await capturar(tema, 'telefone-salas-escuro');
+await tema.click('[data-tema-opcao="claro"]');
+await tema.waitForTimeout(100);
+t = await temaDe(tema);
+ok('voltar para o claro troca na hora', t.tema === 'claro' && t.fundo === 'rgb(246, 239, 227)' && t.guardado === 'claro');
+await capturar(tema, 'telefone-salas-claro');
+await tema.click('#lista-salas .sala');
+await tema.waitForTimeout(300);
+await capturar(tema, 'telefone-conversa-claro');
+await tema.setViewportSize({ width: 1100, height: 780 });
+await tema.click('#botao-admin');
+await tema.waitForTimeout(300);
+await capturar(tema, 'portaria-claro');
+await tema.click('#botao-fechar-painel');
+await tema.click('#botao-conta');
+await tema.waitForTimeout(300);
+await capturar(tema, 'conta-claro');
+await tema.click('#botao-fechar-conta');
+
+// Chave com lixo, ou localStorage travado: cai no claro sem erro.
+await tema.evaluate(() => localStorage.setItem('alo:tema', 'roxo'));
+await tema.reload();
+await tema.waitForSelector('#tela-app:not([hidden])', { timeout: 5000 });
+ok('valor estranho na chave cai no claro', (await temaDe(tema)).tema === 'claro');
+ok('trocar de tema não gera erro no console', erros.length === errosAntesDoTema);
+await tema.context().close();
+
+// Telas de antes do app (entrada e assistente) no escuro.
+const temaEntrada = await novaPagina({});
+await temaEntrada.evaluate(() => localStorage.setItem('alo:tema', 'escuro'));
+await temaEntrada.reload();
+await temaEntrada.waitForSelector('#tela-entrada:not([hidden])', { timeout: 5000 });
+ok('entrada já abre escura', (await temaDe(temaEntrada)).tema === 'escuro');
+await capturar(temaEntrada, 'entrada-escuro');
+await temaEntrada.context().close();
+
+for (const qual of ['claro', 'escuro']) {
+  const ctx = await navegador.newContext({ viewport: { width: 1100, height: 900 }, serviceWorkers: 'block' });
+  const p = await ctx.newPage();
+  p.on('pageerror', e => erros.push('pageerror: ' + e.message));
+  await p.addInitScript(q => { try { localStorage.setItem('alo:tema', q); } catch {} }, qual);
+  await p.route('**/config.js', rota => rota.fulfill({
+    status: 200, contentType: 'text/javascript', body: "globalThis.ALO_CONFIG = { url: '', anonKey: '' };" }));
+  await p.goto('http://localhost:4173/');
+  await p.waitForSelector('#tela-config:not([hidden])', { timeout: 5000 });
+  ok(`assistente abre no ${qual}`, (await p.evaluate(() => document.documentElement.dataset.tema)) === qual);
+  await capturar(p, 'assistente-' + qual);
+  await ctx.close();
+}
+
 console.log('\n———— RESULTADO ————');
 for (const [r, n] of passos) console.log(`${r === 'PASSOU' ? '  ok  ' : ' FALHA'} ${n}`);
 const falhas = passos.filter(p => p[0] === 'FALHOU').length;

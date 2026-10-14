@@ -15,7 +15,7 @@
 
 /* ——— Ajustes ——————————————————————————————————————————————— */
 
-const VERSAO = '1.5.1';     // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.6.0';     // precisa casar com a VERSAO do sw.js
 const HISTORICO = 80;        // mensagens carregadas ao abrir uma sala
 const LIMITE_CORPO = 500;    // igual à constraint do banco
 const CHAVE_CONFIG = 'alo:config';
@@ -79,6 +79,34 @@ function corDe(nome) {
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
+
+/* ——— Tema: claro (padrão) ou escuro ————————————————————————
+   O script no <head> do index.html já marcou o <html> antes de pintar;
+   aqui só se troca e se lembra. A chave guarda o texto puro. */
+const CHAVE_TEMA = 'alo:tema';
+const COR_DO_TEMA = { claro: '#F6EFE3', escuro: '#1C1612' };
+
+function aplicarTema(tema) {
+  if (!(tema in COR_DO_TEMA)) tema = 'claro';
+  const raiz = document.documentElement;
+  raiz.dataset.tema = tema;
+  raiz.style.colorScheme = tema === 'escuro' ? 'dark' : 'light';
+  const cor = document.querySelector('meta[name="theme-color"]');
+  if (cor) cor.content = COR_DO_TEMA[tema];
+  for (const b of document.querySelectorAll('[data-tema-opcao]')) {
+    b.setAttribute('aria-pressed', String(b.dataset.temaOpcao === tema));
+  }
+}
+
+function escolherTema(tema) {
+  aplicarTema(tema);
+  try { localStorage.setItem(CHAVE_TEMA, tema); } catch { /* modo privativo: vale só agora */ }
+}
+
+aplicarTema(document.documentElement.dataset.tema);
+for (const b of document.querySelectorAll('[data-tema-opcao]')) {
+  b.addEventListener('click', () => escolherTema(b.dataset.temaOpcao));
+}
 
 /* ——— Estado ———————————————————————————————————————————————— */
 
