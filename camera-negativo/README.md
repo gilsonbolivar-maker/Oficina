@@ -33,7 +33,7 @@ barra de endereço (computador).
 | **Modo** | Troca entre Foto, Lupa, Vibração e Comparar. |
 | **⚙** | Ajustes: zoom fino, força da inversão, temporizador, espelho, grade. |
 | **1.0×** | Zoom: toque para ciclar 1× → 2× → 3× → 5×. Fica laranja quando ampliado. |
-| **v1.5.0** | O número da versão, abaixo do nome do filtro; toque para abrir os ajustes. |
+| **v1.6.0** | O número da versão, abaixo do nome do filtro; toque para abrir os ajustes. |
 | **🔦** | Lanterna — só aparece quando a câmera de trás permite acender. |
 | Fileira de filtros | Troca o filtro; o escolhido fica aceso. |
 | Miniatura | Abre as fotos desta sessão. |
@@ -50,6 +50,7 @@ mostram o que o olho sozinho não alcança.
 | **Foto** | A câmera normal, com os filtros de cor | o uso de sempre |
 | **Lupa** | Soma vários quadros e tira a média | ler etiqueta, tag e display de longe |
 | **Vibração** | Amplifica o movimento pequeno demais para o olho | ver se bomba, motor ou tubulação estão tremendo |
+| **Noite** | Junta a luz de vários quadros e amplifica | enxergar onde a câmera comum só mostra chuvisco |
 | **Contraste** | Estica a faixa de tons até o limite | display apagado, etiqueta desbotada, número gravado em metal |
 | **Comparar** | Põe uma foto antiga por cima do visor e destaca o que mudou | ronda: mesma cena, dois horários |
 
@@ -70,6 +71,39 @@ aparelho** — a mão tremendo reinicia a conta a todo instante.
 
 Combina com o zoom: aproxime até o campo encher a tela, espere estabilizar,
 fotografe. A foto sai com os quadros já somados, não é só a tela.
+
+### Noite
+
+No escuro o sensor até registra alguma luz, mas ela vem afogada no chuvisco — e
+o chuvisco é **diferente a cada quadro**, enquanto a cena é a mesma. Somando
+quadros, a cena se reforça e o ruído se cancela; só então o ganho vale a pena,
+porque passa a ampliar imagem em vez de amplificar chuvisco.
+
+| Controle | O que faz |
+| -------- | --------- |
+| **Cinza / Verde / Cor** | O verde é tradição de visão noturna por um motivo: o olho separa mais tons de verde no escuro |
+| **Ganho de luz** | 1× a 16×, aplicado depois de somar |
+| **Quadros somados** | 1 a 24 — mais quadros, imagem mais limpa; o que se mexer borra |
+
+O app ainda pede à câmera **menos quadros por segundo** ao entrar no modo: cada
+quadro fica aberto mais tempo e entra mais luz. Nem toda câmera aceita (o iPhone
+costuma recusar) — quando recusa, o modo segue só com a soma, que é a parte que
+mais rende.
+
+A linha embaixo diz quanta luz a cena tem, de *escuro demais* a *luz suficiente*.
+
+Medido numa cena escura sintética (fundo 6, placa 13, chuvisco de ±5 por quadro
+— uma placa invisível a olho nu):
+
+| | separação placa/fundo | ruído |
+| --- | --- | --- |
+| Imagem crua | **6** níveis de 255 | 2,6 |
+| Noite, 8 quadros, 6× | **134** | 17,2 |
+| Noite, 20 quadros | **147** | 11,7 |
+| Noite, cinza, 20 quadros | **192** | 15,8 |
+
+**Limite honesto:** ele junta a luz que existe. No breu absoluto não há o que
+somar — aí só com a lanterna, ou uma fonte infravermelha externa.
 
 ### Contraste
 
@@ -231,6 +265,7 @@ Quando sai uma versão nova o app percebe sozinho: o número no visor fica
 
 | Versão | O que mudou |
 | ------ | ----------- |
+| 1.6.0 | Modo **Noite**: soma a luz de vários quadros, com ganho e paleta verde. |
 | 1.5.0 | Modo **Contraste**: Auto, Extremo e Traço, para ler o que quase não tem contraste. |
 | 1.4.0 | Modos **Lupa**, **Vibração** e **Comparar**: ver o que o olho não alcança. |
 | 1.3.0 | Botão **Transcrever**: envia a foto com o pedido de transcrição pronto. |

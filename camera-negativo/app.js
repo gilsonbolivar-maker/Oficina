@@ -5,7 +5,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.5.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.6.0';   // precisa casar com a VERSAO do sw.js
 const CHAVE = 'camera-negativo:v1';
 const LIMITE_CARRETEL = 24;   // fotos guardadas na memória da sessão
 const ZOOM_MAX = 6;           // além disso o recorte não tem mais pixel para dar
@@ -15,6 +15,7 @@ const ZOOM_MAX = 6;           // além disso o recorte não tem mais pixel para 
 const LARGURA_LUPA = 1280;
 const LARGURA_VIBRACAO = 640;
 const LARGURA_CONTRASTE = 960;
+const LARGURA_NOITE = 960;
 
 const el = id => document.getElementById(id);
 
@@ -56,6 +57,9 @@ const MODOS = [
   // A vibração já pinta o movimento de laranja e azul: inverter por cima
   // trocaria o sentido das cores e só atrapalharia a leitura.
   { id: 'vibracao', nome: 'Vibração', processa: true,  cor: false },
+  // A paleta do modo Noite já é a escolha de cor: um filtro por cima
+  // viraria o verde em magenta e só confundiria.
+  { id: 'noite',     nome: 'Noite',     processa: true, cor: false },
   { id: 'contraste', nome: 'Contraste', processa: true, cor: true },
   { id: 'comparar', nome: 'Comparar', processa: false, cor: true }
 ];
@@ -78,6 +82,9 @@ const padrao = () => ({
   nitidez: true,     // realce de bordas na lupa
   contraste: 'auto', // auto | extremo | traco
   forcaContraste: 85,
+  paleta: 'verde',   // cinza | verde | cor
+  ganhoNoite: 6,
+  noiteQuadros: 8,
   forca: 100,        // % da inversão
   tempo: 0,          // segundos do temporizador
   frontal: false,
@@ -97,6 +104,7 @@ function carregar() {
     lido.zoom = Math.min(ZOOM_MAX, Math.max(1, Number(lido.zoom) || 1));
     if (!MODOS.some(m => m.id === lido.modo)) lido.modo = 'foto';
     if (!CONTRASTES.some(c => c.id === lido.contraste)) lido.contraste = 'auto';
+    if (!['cinza', 'verde', 'cor'].includes(lido.paleta)) lido.paleta = 'verde';
     return lido;
   } catch (e) {
     return padrao();
@@ -392,6 +400,7 @@ function zerarAcumuladores() {
   acumulado = null;
   fundoLento = null;
   faixaTons = null;
+  somaNoturna = null;
   ultimoNivel = 0;
   atualizarMedidas();
 }
@@ -500,6 +509,74 @@ function realcarBordas(m) {
     }
   }
   ctxTela.putImageData(imagem, 0, 0);
+}
+
+/* ——— Noite: junta a luz de vários quadros —————————————————
+   No escuro o sensor até registra alguma luz, mas ela vem afogada no
+   chuvisco — e o chuvisco é diferente a cada quadro, enquanto a cena é
+   a mesma. Somando quadros, a cena se reforça e o ruído se cancela;
+   só então o ganho vale a pena, porque amplia imagem em vez de
+   amplificar chuvisco. Depois os tons são esticados e, se quiser, a
+   imagem vai para o verde — onde o olho separa mais tons no escuro.
+   ———————————————————————————————————————————————————————————— */
+let somaNoturna = null;
+let luzDaCena = 0;
+
+function passoNoite() {
+  const m = medidasDeTrabalho(LARGURA_NOITE);
+  if (!m) return;
+  prepararTela(m);
+
+  const quadro = pegarQuadro(m);
+  const px = quadro.data;
+  const n = m.w * m.h * 4;
+  const pontos = m.w * m.h;
+
+  if (!somaNoturna || somaNoturna.length !== n) {
+    somaNoturna = new Float32Array(n);
+    somaNoturna.set(px);
+  }
+
+  // Média que anda: quanto mais quadros, mais limpa a imagem e mais ela
+  // arrasta o que se mexe. Sem reinício por movimento — no escuro, o
+  // próprio ruído dispararia o reinício a todo quadro.
+  const alfa = 1 / Math.max(1, dados.noiteQuadros);
+  let luz = 0;
+  for (let p = 0; p < pontos; p++) {
+    const i = p * 4;
+    somaNoturna[i]     += (px[i]     - somaNoturna[i]) * alfa;
+    somaNoturna[i + 1] += (px[i + 1] - somaNoturna[i + 1]) * alfa;
+    somaNoturna[i + 2] += (px[i + 2] - somaNoturna[i + 2]) * alfa;
+    luz += 0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2];
+  }
+  luzDaCena = luzDaCena * 0.8 + (luz / pontos) * 0.2;
+
+  const ganho = dados.ganhoNoite;
+  for (let i = 0; i < n; i += 4) {
+    px[i]     = limite(somaNoturna[i] * ganho);
+    px[i + 1] = limite(somaNoturna[i + 1] * ganho);
+    px[i + 2] = limite(somaNoturna[i + 2] * ganho);
+  }
+
+  // Com a luz já junta, esticar os tons custa pouco e rende muito.
+  estirarTons(px, pontos, 1, false);
+
+  if (dados.paleta !== 'cor') pintarPaleta(px, pontos, dados.paleta);
+
+  ctxTela.putImageData(quadro, 0, 0);
+  atualizarMedidas();
+}
+
+function pintarPaleta(px, pontos, paleta) {
+  for (let p = 0; p < pontos; p++) {
+    const i = p * 4;
+    const v = 0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2];
+    if (paleta === 'verde') {
+      px[i] = v * 0.18; px[i + 1] = v; px[i + 2] = v * 0.38;
+    } else {
+      px[i] = px[i + 1] = px[i + 2] = v;
+    }
+  }
 }
 
 /* ——— Contraste: usa a faixa de tons inteira ————————————————
@@ -681,6 +758,7 @@ function girar() {
     if (dados.modo === 'lupa') passoLupa();
     else if (dados.modo === 'vibracao') passoVibracao();
     else if (dados.modo === 'contraste') passoContraste();
+    else if (dados.modo === 'noite') passoNoite();
   }
   laco = requestAnimationFrame(girar);
 }
@@ -706,6 +784,15 @@ function atualizarMedidas() {
       ? 'estabilizado · ' + alvo + ' quadros somados'
       : 'somando ' + somados + ' de ' + alvo + '…';
     el('medida-lupa').classList.toggle('forte', somados >= alvo);
+  }
+  if (dados.modo === 'noite') {
+    const pc = Math.round(luzDaCena / 255 * 100);
+    el('medida-noite').textContent = pc < 1
+      ? 'escuro demais — nem o sensor pega luz aqui'
+      : pc < 6 ? 'luz muito baixa · ' + pc + '% — apoie o aparelho e some mais quadros'
+      : pc < 20 ? 'pouca luz · ' + pc + '% — é aqui que o modo rende'
+      : 'luz suficiente · ' + pc + '% — a câmera normal já dá conta';
+    el('medida-noite').classList.toggle('forte', pc >= 1 && pc < 20);
   }
   if (dados.modo === 'contraste') {
     const c = CONTRASTES.find(x => x.id === dados.contraste);
@@ -745,6 +832,7 @@ function aplicarModo() {
   el('filtros').hidden = !m.cor;
   tela.style.filter = m.cor ? '' : 'none';
 
+  el('controles-noite').hidden = m.id !== 'noite';
   el('controles-contraste').hidden = m.id !== 'contraste';
   el('controles-lupa').hidden = m.id !== 'lupa';
   el('controles-vibracao').hidden = m.id !== 'vibracao';
@@ -755,6 +843,8 @@ function aplicarModo() {
   });
 
   mostrarContraste();
+  mostrarNoite();
+  ajustarCameraParaNoite();
   mostrarFantasma();
   tocarLaco();
   atualizarMedidas();
@@ -804,6 +894,55 @@ el('ajuste-contraste').addEventListener('input', ev => {
   gravar();
   mostrarContraste();
 });
+
+function mostrarNoite() {
+  document.querySelectorAll('[data-paleta]').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.paleta === dados.paleta));
+  });
+  el('valor-ganho-noite').textContent = dados.ganhoNoite + '×';
+  el('ajuste-ganho-noite').value = dados.ganhoNoite;
+  el('valor-noite-quadros').textContent = dados.noiteQuadros;
+  el('ajuste-noite-quadros').value = dados.noiteQuadros;
+}
+
+document.querySelectorAll('[data-paleta]').forEach(b => {
+  b.addEventListener('click', () => {
+    dados.paleta = b.dataset.paleta;
+    gravar();
+    mostrarNoite();
+  });
+});
+
+el('ajuste-ganho-noite').addEventListener('input', ev => {
+  dados.ganhoNoite = Number(ev.target.value);
+  gravar();
+  mostrarNoite();
+});
+el('ajuste-noite-quadros').addEventListener('input', ev => {
+  dados.noiteQuadros = Number(ev.target.value);
+  gravar();
+  mostrarNoite();
+});
+
+/* ——— pedir ao hardware mais tempo de exposição ———
+   Com menos quadros por segundo, cada quadro fica aberto mais tempo e
+   entra mais luz — é o jeito de ganhar sensibilidade antes de qualquer
+   conta. Nem toda câmera aceita; quando recusa, o modo segue só com a
+   soma de quadros, que é o que o iPhone faz.                        */
+let cameraNaNoite = false;
+
+async function ajustarCameraParaNoite() {
+  const querNoite = dados.modo === 'noite';
+  if (!trilha || querNoite === cameraNaNoite) return;
+  cameraNaNoite = querNoite;
+  try {
+    await trilha.applyConstraints(querNoite
+      ? { frameRate: { ideal: 10, max: 15 } }
+      : { frameRate: { ideal: 30 } });
+  } catch (e) {
+    // Câmera não deixa mexer no tempo de exposição: segue no software.
+  }
+}
 
 /* ——— Comparar: a foto antiga por cima do visor ——— */
 let referencia = null;

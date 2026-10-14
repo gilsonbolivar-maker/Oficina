@@ -69,6 +69,23 @@
   <p class="medida" id="medida-vibracao">parado</p>
 </section>
 
+<section class="controles" id="controles-noite" hidden aria-label="Controles do modo noite">
+  <div class="tipos" id="paletas-noite">
+    <button class="tipo" data-paleta="cinza" type="button">Cinza</button>
+    <button class="tipo" data-paleta="verde" type="button">Verde</button>
+    <button class="tipo" data-paleta="cor" type="button">Cor</button>
+  </div>
+  <label class="controle">
+    Ganho de luz <b id="valor-ganho-noite">6×</b>
+    <input type="range" id="ajuste-ganho-noite" min="1" max="16" step="1">
+  </label>
+  <label class="controle">
+    Quadros somados <b id="valor-noite-quadros">8</b>
+    <input type="range" id="ajuste-noite-quadros" min="1" max="24" step="1">
+  </label>
+  <p class="medida" id="medida-noite">medindo a luz…</p>
+</section>
+
 <section class="controles" id="controles-contraste" hidden aria-label="Controles do contraste">
   <div class="tipos" id="tipos-contraste">
     <button class="tipo" data-contraste="auto" type="button">Auto</button>
@@ -178,6 +195,11 @@
       <small>amplifica o movimento pequeno demais para o olho: mostra se a
         bomba, o motor ou a tubulação estão tremendo</small>
     </button>
+    <button class="destino" data-modo="noite" type="button">
+      <b>Noite</b>
+      <small>junta a luz de vários quadros e amplifica: enxerga onde a tela
+        da câmera comum fica só no chuvisco</small>
+    </button>
     <button class="destino" data-modo="contraste" type="button">
       <b>Contraste</b>
       <small>estica a faixa de tons até o limite: lê display apagado, etiqueta
@@ -259,6 +281,10 @@
        <b>Extremo</b> vai até o limite e <b>Traço</b> deixa só preto e branco,
        comparando cada ponto com a vizinhança — é o que faz aparecer número
        gravado em metal e texto em superfície suja.</p>
+    <p><b>4c.</b> No modo <b>Noite</b>: apoie o aparelho e espere. Ele soma a luz
+       de vários quadros — quanto mais quadros, mais claro e menos chuvisco, mas
+       o que se mexer borra. Precisa de alguma luz: no breu total não há o que
+       somar.</p>
     <p><b>5.</b> <b>Transcrever</b> é para fotos de tela, painel ou documento:
        envia a imagem com o pedido de transcrição já escrito, e o texto volta
        organizado por área, com os campos vazios marcados. O app não lê o texto
