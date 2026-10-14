@@ -4,10 +4,33 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '2.2.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '2.3.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
+
+// Tema Escuro / Claro: o <head> já aplicou o salvo; aqui fica a troca pelos Ajustes.
+(() => {
+  const CHAVE_TEMA = 'alarme-gps:tema';
+  const COR_BARRA = { escuro: '#0b1220', claro: '#f3f5f9' };
+  const botoes = document.querySelectorAll('[data-tema-opcao]');
+
+  function aplicarTema(tema) {
+    if (tema !== 'claro') tema = 'escuro';
+    document.documentElement.dataset.tema = tema;
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', COR_BARRA[tema]);
+    for (const b of botoes) b.setAttribute('aria-pressed', String(b.dataset.temaOpcao === tema));
+  }
+
+  aplicarTema(document.documentElement.dataset.tema);
+  for (const b of botoes) {
+    b.addEventListener('click', () => {
+      aplicarTema(b.dataset.temaOpcao);
+      try { localStorage.setItem(CHAVE_TEMA, b.dataset.temaOpcao); } catch (e) { /* modo privado */ }
+    });
+  }
+})();
 
 (() => {
 

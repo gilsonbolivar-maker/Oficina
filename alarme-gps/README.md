@@ -20,6 +20,9 @@ no raio escolhido, a tela fica vermelha, o celular vibra e a sirene toca até vo
 tocar em **Parar alarme**. Com o bipe de aproximação ligado, um sinal curto avisa
 quando falta o dobro do raio.
 
+Em **Ajustes**, *Tema: Escuro / Claro* troca o visual na hora e fica guardado no aparelho
+(vale também dentro do APK); a tela de alarme continua vermelha nos dois.
+
 ### App Android (APK) — vigia com a tela apagada
 
 Baixe em

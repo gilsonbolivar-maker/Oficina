@@ -5,7 +5,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.6.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.7.0';   // precisa casar com a VERSAO do sw.js
 const CHAVE = 'camera-negativo:v1';
 const LIMITE_CARRETEL = 24;   // fotos guardadas na memória da sessão
 const ZOOM_MAX = 6;           // além disso o recorte não tem mais pixel para dar
@@ -1620,6 +1620,27 @@ window.addEventListener('pagehide', desligarCamera);
 
 /* ——— versão e atualização ——— */
 document.querySelectorAll('[data-versao]').forEach(e => { e.textContent = 'v' + VERSAO; });
+
+/* ——— tema Escuro / Claro ———————————————————————————————————
+   O <head> já aplicou o tema salvo antes de pintar; aqui fica a troca
+   pelos Ajustes. O visor continua escuro nos dois — é uma câmera.
+   ———————————————————————————————————————————————————————————— */
+const CHAVE_TEMA = 'camera-negativo:tema';
+const botoesTema = document.querySelectorAll('[data-tema-opcao]');
+
+function aplicarTema(tema) {
+  if (tema !== 'claro') tema = 'escuro';
+  document.documentElement.dataset.tema = tema;
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', tema === 'claro' ? '#f3f5f9' : '#0b1220');
+  botoesTema.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.temaOpcao === tema)));
+}
+
+aplicarTema(document.documentElement.dataset.tema);
+botoesTema.forEach(b => b.addEventListener('click', () => {
+  aplicarTema(b.dataset.temaOpcao);
+  try { localStorage.setItem(CHAVE_TEMA, b.dataset.temaOpcao); } catch (e) { /* modo privado */ }
+}));
 
 // A versão no visor também é atalho para os ajustes, onde está o resto.
 el('versao-topo').addEventListener('click', () => abrirPainel(painelAjustes));

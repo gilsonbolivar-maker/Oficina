@@ -10,12 +10,43 @@
   --acento: #ffb020;
   --acento-texto: #201400;
   --perigo: #ff6b6b;
+  --acento-forte: #ffb020;   /* destaque usado como cor de texto */
+  --obturador: #fff;
+  --sombra: rgba(0,0,0,.5);
   --raio-borda: 14px;
 
   /* ajustados pelo app.js */
   --filtro: invert(1);
   --espelho: 1;
   --zoom: 1;
+}
+
+/* ——— tema claro (escolhido em Ajustes): barras, painéis e textos ——— */
+:root[data-tema="claro"] {
+  color-scheme: light;
+  --fundo: #f3f5f9;
+  --superficie: #ffffff;
+  --borda: #c9d2e0;
+  --texto: #142033;
+  --texto-fraco: #4f5c74;
+  --perigo: #c62828;
+  --acento-forte: #9a5a00;
+  --obturador: #142033;
+  --sombra: rgba(20,32,51,.18);
+}
+
+/* O visor e o que flutua sobre ele continuam escuros nos dois temas. */
+:root[data-tema="claro"] .visor,
+:root[data-tema="claro"] .topo {
+  color-scheme: dark;
+  --fundo: #0b1220;
+  --superficie: #141d2e;
+  --borda: #2b3a56;
+  --texto: #e8edf7;
+  --texto-fraco: #93a1bd;
+  --perigo: #ff6b6b;
+  --acento-forte: #ffb020;
+  color: var(--texto);
 }
 
 * { box-sizing: border-box; }
@@ -205,6 +236,8 @@ h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
 .icone.modo-atalho.ativo { border-color: var(--acento); color: var(--acento); }
 .icone.zoom-atalho.ativo { border-color: var(--acento); color: var(--acento); }
 .icone[aria-pressed="true"] { background: var(--acento); color: var(--acento-texto); }
+/* Na barra de baixo (fora do visor) o ícone acompanha o tema. */
+:root[data-tema="claro"] .barra .icone { border-color: var(--borda); background: var(--superficie); color: var(--texto); }
 
 /* ——— controles do modo ——— */
 .controles {
@@ -251,7 +284,7 @@ h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
   font-weight: 600;
   color: var(--texto-fraco);
 }
-.medida.forte { color: var(--acento); }
+.medida.forte { color: var(--acento-forte); }
 
 .nivel {
   height: 8px;
@@ -342,7 +375,7 @@ h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
   width: 76px;
   height: 76px;
   padding: 0;
-  border: 4px solid #fff;
+  border: 4px solid var(--obturador);
   border-radius: 50%;
   background: transparent;
   cursor: pointer;
@@ -355,7 +388,7 @@ h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
   width: 58px;
   height: 58px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--obturador);
   transition: transform .12s ease, background .12s ease;
 }
 .obturador:active .obturador-anel { transform: scale(.86); background: var(--acento); }
@@ -453,7 +486,7 @@ h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
 .destino b { font-size: 15px; }
 .destino small { color: var(--texto-fraco); line-height: 1.4; }
 .destino[aria-pressed="true"] { border-color: var(--acento); }
-.destino[aria-pressed="true"] b { color: var(--acento); }
+.destino[aria-pressed="true"] b { color: var(--acento-forte); }
 
 .carretel {
   list-style: none;
@@ -483,7 +516,7 @@ h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
 .ajuda b { color: var(--texto); }
 
 .rodape { margin: 0; font-size: 13px; color: var(--texto-fraco); }
-.rodape.nova, #estado-versao.nova { color: var(--acento); font-weight: 600; }
+.rodape.nova, #estado-versao.nova { color: var(--acento-forte); font-weight: 600; }
 
 /* ——— aviso flutuante ——— */
 .aviso {
@@ -499,8 +532,10 @@ h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
   border: 1px solid var(--borda);
   border-radius: var(--raio-borda);
   background: var(--superficie);
-  box-shadow: 0 8px 28px rgba(0,0,0,.5);
+  box-shadow: 0 8px 28px var(--sombra);
 }
+.tema { display: grid; gap: 6px; font-size: 14px; color: var(--texto-fraco); }
+
 .aviso-acao { display: flex; align-items: center; gap: 12px; }
 
 @media (prefers-reduced-motion: reduce) {

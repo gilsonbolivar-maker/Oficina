@@ -31,9 +31,9 @@ barra de endereço (computador).
 | Botão | O que faz |
 | ----- | --------- |
 | **Modo** | Troca entre Foto, Lupa, Vibração e Comparar. |
-| **⚙** | Ajustes: zoom fino, força da inversão, temporizador, espelho, grade. |
+| **⚙** | Ajustes: zoom fino, força da inversão, temporizador, espelho, grade, tema. |
 | **1.0×** | Zoom: toque para ciclar 1× → 2× → 3× → 5×. Fica laranja quando ampliado. |
-| **v1.6.0** | O número da versão, abaixo do nome do filtro; toque para abrir os ajustes. |
+| **v1.7.0** | O número da versão, abaixo do nome do filtro; toque para abrir os ajustes. |
 | **🔦** | Lanterna — só aparece quando a câmera de trás permite acender. |
 | Fileira de filtros | Troca o filtro; o escolhido fica aceso. |
 | Miniatura | Abre as fotos desta sessão. |
@@ -265,6 +265,7 @@ Quando sai uma versão nova o app percebe sozinho: o número no visor fica
 
 | Versão | O que mudou |
 | ------ | ----------- |
+| 1.7.0 | **Tema: Escuro / Claro** nos Ajustes — o claro muda barras, menus e painéis; o visor segue escuro. |
 | 1.6.0 | Modo **Noite**: soma a luz de vários quadros, com ganho e paleta verde. |
 | 1.5.0 | Modo **Contraste**: Auto, Extremo e Traço, para ler o que quase não tem contraste. |
 | 1.4.0 | Modos **Lupa**, **Vibração** e **Comparar**: ver o que o olho não alcança. |

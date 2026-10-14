@@ -13,6 +13,17 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icones/icone-192.png" sizes="192x192">
 <link rel="apple-touch-icon" sizes="180x180" href="icones/icone-180.png">
+<script>
+  // Tema escolhido (Ajustes) aplicado antes de pintar, para não piscar.
+  (function () {
+    var t = null;
+    try { t = localStorage.getItem('camera-negativo:tema'); } catch (e) {}
+    t = t === 'claro' ? 'claro' : 'escuro';
+    document.documentElement.dataset.tema = t;
+    var m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.setAttribute('content', t === 'claro' ? '#f3f5f9' : '#0b1220');
+  })();
+</script>
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
@@ -261,6 +272,14 @@
     <input type="checkbox" id="ajuste-nitidez">
     Realçar bordas na Lupa
   </label>
+
+  <div class="tema" role="group" aria-labelledby="tema-rotulo">
+    <span id="tema-rotulo">Tema:</span>
+    <div class="tipos">
+      <button class="tipo" data-tema-opcao="escuro" type="button" aria-pressed="true">Escuro</button>
+      <button class="tipo" data-tema-opcao="claro" type="button" aria-pressed="false">Claro</button>
+    </div>
+  </div>
 
   <details class="ajuda">
     <summary>Como usar</summary>

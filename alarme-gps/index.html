@@ -13,6 +13,17 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icones/icone-192.png" sizes="192x192">
 <link rel="apple-touch-icon" sizes="180x180" href="icones/icone-180.png">
+<script>
+  // Tema escolhido (Ajustes) aplicado antes de pintar, para não piscar.
+  (function () {
+    var t = null;
+    try { t = localStorage.getItem('alarme-gps:tema'); } catch (e) {}
+    t = t === 'claro' ? 'claro' : 'escuro';
+    document.documentElement.dataset.tema = t;
+    var m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.setAttribute('content', t === 'claro' ? '#f3f5f9' : '#0b1220');
+  })();
+</script>
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
@@ -54,6 +65,11 @@
     <label class="opcao"><input type="checkbox" id="opt-vibrar" checked><span>Vibrar</span></label>
     <label class="opcao"><input type="checkbox" id="opt-aviso" checked><span>Bipe de aproximação (no dobro do raio)</span></label>
     <label class="opcao"><input type="checkbox" id="opt-tela" checked><span>Manter a tela ligada enquanto vigia</span></label>
+    <div class="tema" role="group" aria-labelledby="tema-rotulo">
+      <span id="tema-rotulo">Tema:</span>
+      <button class="tema-opcao" type="button" data-tema-opcao="escuro" aria-pressed="true">Escuro</button>
+      <button class="tema-opcao" type="button" data-tema-opcao="claro" aria-pressed="false">Claro</button>
+    </div>
     <button class="botao discreto" id="btn-testar" type="button">Testar alarme</button>
     <button class="botao discreto" id="btn-instalar" type="button" hidden>Instalar no celular</button>
     <a class="botao discreto" id="btn-apk" href="https://github.com/gilsonbolivar-maker/Oficina/releases/download/alarme-gps-apk/alarme-gps.apk" hidden>Baixar o app Android (APK) — vigia com a tela apagada</a>

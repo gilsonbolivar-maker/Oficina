@@ -10,8 +10,31 @@
   --acento: #ffb020;
   --perigo: #ff4d4d;
   --ok: #35d07f;
+  --acento-texto: #ffb020;   /* destaque usado como cor de texto */
+  --mapa-fundo: #1a2436;
+  --mapa-vidro: rgba(11, 18, 32, .85);
+  --sombra: rgba(0, 0, 0, .45);
   --raio-borda: 14px;
   --gap: 14px;
+  color-scheme: dark;
+}
+
+/* ——— tema claro (escolhido em Ajustes) ——— */
+:root[data-tema="claro"] {
+  --fundo: #f3f5f9;
+  --superficie: #ffffff;
+  --superficie-alta: #e6ebf3;
+  --borda: #c9d2e0;
+  --texto: #142033;
+  --texto-fraco: #4f5c74;
+  --acento: #ffb020;
+  --acento-texto: #9a5a00;
+  --perigo: #c62828;
+  --ok: #17803f;
+  --mapa-fundo: #e2e7ef;
+  --mapa-vidro: rgba(255, 255, 255, .9);
+  --sombra: rgba(20, 32, 51, .18);
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }
@@ -112,7 +135,7 @@ html[data-tela="editor"] .tela-editor { display: block; }
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
-  color: var(--acento);
+  color: var(--acento-texto);
 }
 .barra {
   height: 6px;
@@ -159,7 +182,7 @@ html[data-tela="editor"] .tela-editor { display: block; }
 .ponto .comandos .botao { flex: 1; padding: 10px; font-size: 14px; }
 .ponto .agora {
   font-size: 13px;
-  color: var(--acento);
+  color: var(--acento-texto);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -230,7 +253,7 @@ html[data-tela="editor"] .tela-editor { display: block; }
   margin-top: 12px;
   border-radius: 18px;
   overflow: hidden;
-  background: #1a2436;
+  background: var(--mapa-fundo);
   border: 1px solid var(--borda);
   touch-action: none;
   user-select: none;
@@ -289,7 +312,7 @@ html[data-tela="editor"] .tela-editor { display: block; }
   height: 40px;
   border-radius: 10px;
   border: 1px solid var(--borda);
-  background: rgba(11, 18, 32, .85);
+  background: var(--mapa-vidro);
   color: var(--texto);
   font-size: 19px;
   line-height: 1;
@@ -301,7 +324,7 @@ html[data-tela="editor"] .tela-editor { display: block; }
   bottom: 2px;
   margin: 0;
   font-size: 10px;
-  background: rgba(11, 18, 32, .7);
+  background: var(--mapa-vidro);
   padding: 1px 5px;
   border-radius: 5px;
   color: var(--texto-fraco);
@@ -311,7 +334,7 @@ html[data-tela="editor"] .tela-editor { display: block; }
 /* ——— editor: campos ——— */
 .campos { margin-top: 16px; display: grid; gap: 14px; }
 .campo { display: grid; gap: 7px; font-size: 14px; color: var(--texto-fraco); }
-.campo b { color: var(--acento); font-variant-numeric: tabular-nums; }
+.campo b { color: var(--acento-texto); font-variant-numeric: tabular-nums; }
 .campo input[type="text"] {
   background: var(--superficie);
   border: 1px solid var(--borda);
@@ -348,7 +371,9 @@ html[data-tela="editor"] .tela-editor { display: block; }
   display: grid;
   place-items: center;
   padding: 24px;
-  background: var(--perigo);
+  background: #ff4d4d;          /* vermelha nos dois temas */
+  color: #fff;
+  color-scheme: dark;
   animation: pulsar 1s steps(1) infinite;
 }
 @keyframes pulsar {
@@ -386,8 +411,26 @@ html[data-tela="editor"] .tela-editor { display: block; }
   border-radius: 99px;
   font-size: 14px;
   text-align: center;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .45);
+  box-shadow: 0 8px 24px var(--sombra);
 }
+
+/* ——— seletor de tema ——— */
+.tema { display: flex; align-items: center; gap: 8px; padding: 11px 0; font-size: 15px; }
+.tema span { margin-right: 4px; }
+.tema-opcao {
+  appearance: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 99px;
+  border: 1px solid var(--borda);
+  background: transparent;
+  color: var(--texto-fraco);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.tema-opcao[aria-pressed="true"] { background: var(--acento); border-color: var(--acento); color: #201400; }
 
 /* ——— versão sempre à vista, ao lado do título ——— */
 .topo h1 .versao-app { margin-left: 6px; font-size: 11px; font-weight: 400; opacity: 0.55; }
