@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Britagem</title>
+<meta name="description" content="Relatório de turno da britagem: paradas, detector de metal e leituras, offline.">
+<meta name="theme-color" content="#0b1220">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Britagem">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icones/icone-192.png" sizes="192x192">
+<link rel="apple-touch-icon" sizes="180x180" href="icones/icone-180.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<!-- ————————————————— sem turno aberto ————————————————— -->
+<section class="tela vazio-tela" id="tela-vazio">
+  <div class="vazio-caixa">
+    <h1>Britagem</h1>
+    <p class="fraco">Relatório de turno: paradas, detector de metal e leituras.
+      Tudo fica neste aparelho e funciona sem internet.</p>
+    <button class="botao principal grande" id="abrir-turno" type="button">Abrir turno</button>
+    <p class="fraco pequeno">
+      <label class="ligacao">
+        carregar as áreas
+        <input type="file" id="arquivo-areas" hidden>
+      </label>
+      — o arquivo com os equipamentos e as medidas de cada área.
+    </p>
+    <p class="fraco pequeno" id="estado-areas" role="status" aria-live="polite"></p>
+    <p class="fraco pequeno" id="dica-vazio"></p>
+  </div>
+</section>
+
+<!-- ————————————————— turno ————————————————— -->
+<section class="tela" id="tela-turno" hidden>
+  <header class="topo">
+    <div class="cabeca">
+      <div>
+        <h1 class="titulo-tela" id="turno-titulo">Turno</h1>
+        <p class="fraco pequeno" id="turno-sub"></p>
+      </div>
+      <button class="botao pequeno" id="editar-turno" type="button">Editar</button>
+    </div>
+    <div class="botoes">
+      <button class="botao principal" id="nova-parada" type="button">⏸ Parada</button>
+      <button class="botao" id="novo-detector" type="button">🧲 Detector</button>
+      <button class="botao" id="nova-leitura" type="button">📋 Leitura</button>
+    </div>
+    <p class="faixa-acumulo" id="acumulo"></p>
+  </header>
+  <div class="rolagem" id="linha-tempo"></div>
+</section>
+
+<!-- ————————————————— leituras ————————————————— -->
+<section class="tela" id="tela-leituras" hidden>
+  <header class="topo">
+    <div class="cabeca">
+      <h1 class="titulo-tela">Leituras</h1>
+      <button class="botao pequeno" id="nova-leitura-2" type="button">+ Leitura</button>
+    </div>
+  </header>
+  <div class="rolagem" id="lista-leituras"></div>
+</section>
+
+<!-- ————————————————— resumo ————————————————— -->
+<section class="tela" id="tela-resumo" hidden>
+  <header class="topo"><h1 class="titulo-tela">Resumo do turno</h1></header>
+  <div class="rolagem" id="area-resumo"></div>
+</section>
+
+<!-- ————————————————— turnos ————————————————— -->
+<section class="tela" id="tela-turnos" hidden>
+  <header class="topo">
+    <div class="cabeca">
+      <h1 class="titulo-tela">Turnos</h1>
+      <button class="botao pequeno" id="abrir-turno-2" type="button">+ Turno</button>
+    </div>
+  </header>
+  <div class="rolagem" id="lista-turnos"></div>
+</section>
+
+<!-- ————————————————— formulário ————————————————— -->
+<div class="fundo" id="fundo" hidden></div>
+<aside class="caixa" id="formulario" hidden role="dialog" aria-modal="true" aria-label="Registro"></aside>
+
+<!-- ————————————————— abas ————————————————— -->
+<nav class="abas" id="abas" hidden>
+  <button class="aba ativa" data-tela="turno" type="button">Turno</button>
+  <button class="aba" data-tela="leituras" type="button">Leituras</button>
+  <button class="aba" data-tela="resumo" type="button">Resumo</button>
+  <button class="aba" data-tela="turnos" type="button">Turnos</button>
+  <span class="versao-app" data-versao title="Versão do app"></span>
+</nav>
+
+<p class="aviso" id="aviso" role="status" aria-live="polite" hidden></p>
+
+<script src="pdf.js"></script>
+<script src="dados.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

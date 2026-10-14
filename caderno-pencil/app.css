@@ -344,3 +344,16 @@ html[data-tema="noite"] .aviso { background: #1e2a41; border: 1px solid var(--bo
 
 #estado-versao { margin-top: 4px; }
 #estado-versao.nova { color: var(--acento); }
+
+/* ——— versão sempre à vista, no meio do topo ——— */
+.topo { position: relative; }
+.topo .versao-app {
+  position: absolute;
+  bottom: 1px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  line-height: 1;
+  opacity: 0.5;
+  pointer-events: none;
+}

@@ -3,7 +3,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.2.0';   // precisa casar com a VERSAO do app.js
+const VERSAO = '1.2.1';   // precisa casar com a VERSAO do app.js
 const CACHE_APP = 'caderno-pencil-app-' + VERSAO;
 
 const ARQUIVOS = [

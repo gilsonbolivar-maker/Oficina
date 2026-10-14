@@ -4,6 +4,11 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
+const VERSAO = '2.1.0';   // precisa casar com a VERSAO do sw.js
+
+// Versão sempre à vista: cada [data-versao] da página mostra a deste app.
+for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
+
 (() => {
 
 const CHAVE_PONTOS = 'alarme-gps:pontos';

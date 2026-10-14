@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Alô</title>
 <meta name="description" content="Sala de conversa aberta: entre com um apelido e fale com quem estiver por aqui.">
-<meta name="theme-color" content="#0b1220">
+<meta name="theme-color" content="#F6EFE3">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icones/icone-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icones/icone-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Alô">
 <link rel="stylesheet" href="app.css">
 <script src="config.js"></script>
@@ -21,7 +21,7 @@
 <section id="tela-config" class="tela tela-larga" hidden>
   <div class="assistente">
     <header class="assistente-topo">
-      <div class="marca" aria-hidden="true">Alô</div>
+      <div class="marca" aria-hidden="true">Alô <small class="versao-app" data-versao></small></div>
       <h1>Vamos ligar sua sala</h1>
       <p class="ajuda">
         Quatro passos, uma vez só. O Alô guarda as conversas num banco seu,
@@ -116,7 +116,7 @@
 <!-- ——— Tela 2: escolher o apelido ——— -->
 <section id="tela-entrada" class="tela" hidden>
   <div class="cartao">
-    <div class="marca" aria-hidden="true">Alô</div>
+    <div class="marca" aria-hidden="true">Alô <small class="versao-app" data-versao></small></div>
     <h1>Como quer ser chamado?</h1>
     <p class="ajuda">
       Escolha um apelido. Ele fica reservado para você — ninguém mais
@@ -128,7 +128,21 @@
              placeholder="Seu apelido" spellcheck="false" required>
       <button type="submit" class="principal" id="botao-entrar">Entrar</button>
     </form>
+    <button type="button" class="texto-link ja-tenho-conta">Já tenho conta (e-mail e senha)</button>
     <p id="erro-entrada" class="erro" role="alert" hidden></p>
+  </div>
+</section>
+
+<!-- ——— Tela 2b: esperando a portaria ——— -->
+<section id="tela-espera" class="tela" hidden>
+  <div class="cartao">
+    <div class="marca" aria-hidden="true">Alô <small class="versao-app" data-versao></small></div>
+    <h1 id="espera-titulo">Pedido enviado</h1>
+    <p class="ajuda" id="espera-texto"></p>
+    <p class="erro" id="erro-espera" hidden></p>
+    <button type="button" class="principal" id="botao-conferir">Conferir agora</button>
+    <button type="button" class="texto-link" id="botao-sou-admin">Sou da administração</button>
+    <button type="button" class="texto-link ja-tenho-conta">Já tenho conta (e-mail e senha)</button>
   </div>
 </section>
 
@@ -137,21 +151,53 @@
 
   <aside class="lateral" id="lateral">
     <header class="lateral-topo">
-      <div class="marca-pequena">Alô</div>
+      <div class="marca-pequena">Alô <small class="versao-app" data-versao></small></div>
+      <button type="button" class="icone com-selo" id="botao-admin" hidden
+              title="Portaria: quem entra e quem fica de fora" aria-label="Portaria">🛡️<span
+              class="selo" id="selo-portaria" hidden></span></button>
       <button type="button" class="icone" id="botao-sair" title="Trocar de apelido"
               aria-label="Trocar de apelido">⎋</button>
     </header>
 
-    <nav class="salas" id="lista-salas" aria-label="Salas"></nav>
+    <div class="lateral-meio">
+      <p class="faixa" id="faixa-fechada" hidden>Chat fechado — só a administração está dentro.</p>
+      <nav class="salas" id="lista-salas" aria-label="Salas abertas"></nav>
 
-    <section class="presenca">
-      <h2 class="rotulo">Por aqui agora <span id="contagem-presenca">0</span></h2>
-      <ul id="lista-presenca" class="pessoas"></ul>
-    </section>
+      <section class="grupo" id="grupo-privadas">
+        <h2 class="rotulo grupo-topo">
+          Salas privadas
+          <button type="button" class="mais" id="botao-nova-sala"
+                  title="Criar sala privada" aria-label="Criar sala privada">+</button>
+        </h2>
+        <nav class="salas" id="lista-privadas" aria-label="Salas privadas"></nav>
+        <p class="dica" id="dica-privadas">Crie uma sala e convide só quem você quiser.</p>
+      </section>
+
+      <section class="grupo" id="grupo-conversas" hidden>
+        <h2 class="rotulo grupo-topo">
+          Conversas a sós
+          <button type="button" class="mais" id="botao-secreta" hidden
+                  title="Conversa secreta: gerar um link para uma pessoa"
+                  aria-label="Criar conversa secreta">+</button>
+        </h2>
+        <nav class="salas" id="lista-conversas" aria-label="Conversas a sós"></nav>
+      </section>
+
+      <section class="presenca">
+        <h2 class="rotulo">Pessoas · <span id="contagem-presenca">0</span> por aqui</h2>
+        <ul id="lista-presenca" class="pessoas"></ul>
+        <p class="dica"><b>A sós</b> abre uma conversa em particular; <b>No Geral</b> chama a
+          pessoa na sala Geral.</p>
+      </section>
+    </div>
 
     <footer class="lateral-rodape">
       <span class="avatar" id="meu-avatar" aria-hidden="true"></span>
       <span class="meu-nome" id="meu-nome"></span>
+      <button type="button" class="icone" id="botao-conta" title="Minha conta"
+              aria-label="Minha conta: entrar de qualquer aparelho">🔑</button>
+      <button type="button" class="icone" id="botao-som" aria-pressed="true"
+              title="Som ligado — tocar para desligar" aria-label="Som das mensagens">🔔</button>
       <span class="sinal" id="sinal" title="Conexão">•</span>
     </footer>
   </aside>
@@ -160,9 +206,22 @@
     <header class="conversa-topo">
       <button type="button" class="icone so-telefone" id="botao-voltar"
               aria-label="Voltar para as salas">‹</button>
-      <div>
+      <div class="conversa-titulo">
         <h1 id="titulo-sala">Geral</h1>
         <p id="subtitulo-sala">Quem está por aqui</p>
+      </div>
+      <div class="menu-sala" id="menu-sala" hidden>
+        <button type="button" class="icone" id="botao-opcoes" title="Opções da sala"
+                aria-label="Opções da sala" aria-haspopup="true" aria-expanded="false">⋯</button>
+        <div class="opcoes" id="opcoes-sala" role="menu" hidden>
+          <button type="button" role="menuitem" id="opcao-convidar">Convidar pessoas</button>
+          <button type="button" role="menuitem" id="opcao-novo-link">Gerar link novo</button>
+          <button type="button" role="menuitem" id="opcao-limpar">Limpar minha tela</button>
+          <button type="button" role="menuitem" id="opcao-apagar-tudo" class="perigo">Apagar todas as mensagens</button>
+          <button type="button" role="menuitem" id="opcao-membros">Pessoas da sala</button>
+          <button type="button" role="menuitem" id="opcao-sair">Sair da sala</button>
+          <button type="button" role="menuitem" id="opcao-apagar" class="perigo">Apagar a sala</button>
+        </div>
       </div>
     </header>
 
@@ -178,6 +237,93 @@
   </section>
 
 </main>
+
+<!-- ——— Portaria (só para a administração) ——— -->
+<dialog id="painel-admin" class="painel" aria-labelledby="painel-titulo">
+  <header class="painel-topo">
+    <h2 id="painel-titulo">Portaria</h2>
+    <button type="button" class="icone" id="botao-fechar-painel" aria-label="Fechar">✕</button>
+  </header>
+  <div class="painel-corpo">
+    <div class="chave-chat">
+      <span id="estado-chat">Chat aberto</span>
+      <button type="button" class="acao" id="botao-chat">Fechar o chat</button>
+    </div>
+
+    <div class="chave-chat neutra">
+      <span id="estado-senha">Senha da administração</span>
+      <button type="button" class="acao" id="botao-senha">Definir</button>
+    </div>
+
+    <h3 class="rotulo">Aguardando <span id="conta-pendentes">0</span></h3>
+    <ul class="gente" id="lista-pendentes"></ul>
+    <p class="dica" id="vazio-pendentes">Ninguém esperando.</p>
+
+    <h3 class="rotulo">Dentro</h3>
+    <ul class="gente" id="lista-aprovados"></ul>
+
+    <h3 class="rotulo">Bloqueadas</h3>
+    <ul class="gente" id="lista-bloqueados"></ul>
+    <p class="dica" id="vazio-bloqueados">Ninguém bloqueado.</p>
+  </div>
+</dialog>
+
+<!-- ——— Senha (o prompt() do navegador mostraria o que se digita) ——— -->
+<dialog id="painel-senha" class="painel" aria-labelledby="senha-titulo">
+  <form class="painel-corpo forma-senha" id="forma-senha" autocomplete="on">
+    <h2 id="senha-titulo">Senha</h2>
+    <p class="ajuda" id="senha-ajuda"></p>
+    <label for="campo-senha" class="oculto">Senha</label>
+    <input type="password" id="campo-senha" autocomplete="current-password" placeholder="Senha">
+    <label for="campo-senha-2" class="oculto">Repita a senha</label>
+    <input type="password" id="campo-senha-2" autocomplete="new-password" placeholder="Repita a senha" hidden>
+    <p class="erro" id="erro-senha" role="alert" hidden></p>
+    <div class="acoes-senha">
+      <button type="button" class="acao" id="senha-cancelar">Cancelar</button>
+      <button type="submit" class="acao principal" id="senha-ok">Entrar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ——— Minha conta: e-mail e senha para entrar de qualquer aparelho ——— -->
+<dialog id="painel-conta" class="painel" aria-labelledby="conta-titulo">
+  <header class="painel-topo">
+    <h2 id="conta-titulo">Minha conta</h2>
+    <button type="button" class="icone" id="botao-fechar-conta" aria-label="Fechar">✕</button>
+  </header>
+  <div class="painel-corpo forma-senha" id="conta-corpo"></div>
+</dialog>
+
+<!-- ——— Entrar com e-mail e senha ——— -->
+<dialog id="painel-entrar" class="painel" aria-labelledby="entrar-titulo">
+  <form class="painel-corpo forma-senha" id="forma-entrar-conta" autocomplete="on">
+    <h2 id="entrar-titulo">Já tenho conta</h2>
+    <p class="ajuda">Use o e-mail e a senha que você cadastrou em <b>🔑 Minha conta</b>.
+      Você entra com o mesmo apelido, as mesmas salas e conversas.</p>
+    <label for="conta-email" class="oculto">E-mail</label>
+    <input type="email" id="conta-email" autocomplete="username" placeholder="E-mail" required>
+    <label for="conta-senha" class="oculto">Senha</label>
+    <input type="password" id="conta-senha" autocomplete="current-password" placeholder="Senha" required>
+    <p class="erro" id="erro-entrar-conta" role="alert" hidden></p>
+    <div class="acoes-senha">
+      <button type="button" class="texto-link" id="botao-esqueci">Esqueci a senha</button>
+      <button type="button" class="acao" id="entrar-cancelar">Cancelar</button>
+      <button type="submit" class="acao principal" id="entrar-ok">Entrar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ——— Pessoas de uma sala privada ——— -->
+<dialog id="painel-membros" class="painel" aria-labelledby="membros-titulo">
+  <header class="painel-topo">
+    <h2 id="membros-titulo">Pessoas da sala</h2>
+    <button type="button" class="icone" id="botao-fechar-membros" aria-label="Fechar">✕</button>
+  </header>
+  <div class="painel-corpo">
+    <ul class="gente" id="lista-membros"></ul>
+    <p class="dica" id="membros-dica"></p>
+  </div>
+</dialog>
 
 <script type="module" src="app.js"></script>
 </body>

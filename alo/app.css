@@ -1,19 +1,32 @@
 /* ————————————————————————————————————————————————————————————
    Alô — aparência.
-   Mesma paleta da Oficina: fundo #0b1220, cartões #141d2e,
-   linhas #2b3a56, destaque #ffb020.
+   Tema abóbora e branco areia. Todas as cores moram aqui em cima;
+   o resto da folha só usa as variáveis. Os pares de texto e fundo
+   passam de 4,5:1 de contraste (o mínimo para ler com folga).
    ———————————————————————————————————————————————————————————— */
 
 :root {
-  color-scheme: dark;
-  --fundo: #0b1220;
-  --alto: #141d2e;
-  --linha: #2b3a56;
-  --texto: #e8edf7;
-  --apagado: #93a1bd;
-  --destaque: #ffb020;
-  --minha: #1d4ed8;
-  --perigo: #f87171;
+  color-scheme: light;
+  --fundo: #F6EFE3;          /* branco areia */
+  --alto: #FFFAF2;           /* cartões e barras, um tom mais claro */
+  --linha: #E3D5BF;
+  --suave: #F1E5D2;          /* sala apontada, hover */
+  --texto: #2E2117;
+  --apagado: #6E5D4C;
+  --destaque: #C2500C;       /* abóbora */
+  --destaque-texto: #A8440A; /* abóbora para texto pequeno sobre areia */
+  --sobre-destaque: #FFFFFF;
+  --minha: #F9DCC2;          /* balão das minhas mensagens */
+  --perigo: #B3261E;
+  --perigo-fundo: #FBE7E3;
+  --perigo-texto: #8C1D16;
+  --ok: #1E7A4F;
+  --ok-fundo: #E4F3EA;
+  --ok-texto: #155C3A;
+  --sobre-avatar: #FFFFFF;
+  --sombra: rgb(70 45 20 / 0.18);
+  --veu: rgb(46 33 23 / 0.45);
+  --brilho: rgb(194 80 12 / 0.2);
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --raio: 14px;
 }
@@ -83,7 +96,7 @@ body {
 }
 
 .ajuda.rodape { margin-top: 4px; }
-.ajuda a { color: var(--destaque); }
+.ajuda a { color: var(--destaque-texto); }
 
 .cartao label {
   font-size: 13px;
@@ -112,7 +125,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
 .principal {
   padding: 13px 16px;
   background: var(--destaque);
-  color: #24170a;
+  color: var(--sobre-destaque);
   border: 0;
   border-radius: var(--raio);
   font: inherit;
@@ -138,7 +151,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
 
 .lateral {
   display: grid;
-  grid-template-rows: auto auto 1fr auto;
+  grid-template-rows: auto 1fr auto;
   min-height: 0;
   border-right: 1px solid var(--linha);
   background: var(--alto);
@@ -199,10 +212,10 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
   cursor: pointer;
 }
 
-.sala:hover { background: #1b2740; }
+.sala:hover { background: var(--suave); }
 
 .sala[aria-current="true"] {
-  background: #1b2740;
+  background: var(--suave);
   border-color: var(--destaque);
 }
 
@@ -223,18 +236,50 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
   min-width: 22px;
   padding: 2px 7px;
   background: var(--destaque);
-  color: #24170a;
+  color: var(--sobre-destaque);
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
   text-align: center;
 }
 
-.presenca {
-  padding: 8px 16px 16px;
+.lateral-meio {
   overflow-y: auto;
   min-height: 0;
 }
+
+.presenca { padding: 8px 16px 16px; }
+
+.grupo { padding: 4px 0 0; }
+.grupo .rotulo { padding: 0 16px; }
+
+.grupo-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mais {
+  width: 26px; height: 26px;
+  background: transparent;
+  color: var(--destaque);
+  border: 1px solid var(--linha);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mais:hover { border-color: var(--destaque); }
+
+.dica {
+  margin: 2px 16px 8px;
+  font-size: 13px;
+  color: var(--apagado);
+}
+
+.presenca .dica { margin: 10px 0 0; }
 
 .rotulo {
   margin: 8px 0;
@@ -255,13 +300,71 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
   color: var(--apagado);
 }
 
+.pessoa-botao {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 3px 6px;
+  margin: -3px -6px;
+  background: transparent;
+  color: inherit;
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pessoa-botao:hover { background: var(--suave); color: var(--texto); }
+
+/* ——— Pessoas: nome e dois botões; bolinha verde em quem está online ——— */
+.pessoa { min-height: 44px; }
+.pessoa .avatar { position: relative; }
+.pessoa.online .avatar::after {
+  content: '';
+  position: absolute;
+  right: -2px; bottom: -2px;
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  background: var(--ok);
+  border: 2px solid var(--alto);
+}
+.pessoa-nome {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pessoa.online .pessoa-nome { color: var(--texto); }
+
+.pessoa .pessoa-botao,
+.pessoa .pessoa-geral {
+  flex: none;
+  width: auto;
+  margin: 0;
+  min-height: 40px;
+  padding: 8px 12px;
+  background: var(--alto);
+  color: var(--destaque-texto);
+  border: 1px solid var(--linha);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pessoa .pessoa-botao:hover,
+.pessoa .pessoa-geral:hover { border-color: var(--destaque); background: var(--suave); }
+
 .avatar {
   display: grid;
   place-content: center;
   width: 28px; height: 28px;
   border-radius: 50%;
-  background: #24314d;
-  color: var(--texto);
+  background: var(--suave);
+  color: var(--sobre-avatar);
   font-size: 12px;
   font-weight: 700;
   flex: none;
@@ -277,7 +380,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
 }
 
 .sinal { color: var(--perigo); font-size: 22px; line-height: 1; }
-.sinal.ligado { color: #34d399; }
+.sinal.ligado { color: var(--ok); }
 
 /* ——— Conversa ————————————————————————————————————————————— */
 
@@ -288,7 +391,45 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
   min-width: 0;
 }
 
-.conversa-topo h1 { margin: 0; font-size: 17px; }
+.conversa-titulo { flex: 1; min-width: 0; }
+.conversa-topo h1 {
+  margin: 0;
+  font-size: 17px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.menu-sala { position: relative; }
+
+.opcoes {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 5;
+  min-width: 210px;
+  padding: 6px;
+  display: grid;
+  background: var(--alto);
+  border: 1px solid var(--linha);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px var(--sombra);
+}
+
+.opcoes button {
+  padding: 10px 12px;
+  background: transparent;
+  color: var(--texto);
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.opcoes button:hover { background: var(--suave); }
+.opcoes .perigo { color: var(--perigo); }
 .conversa-topo p { margin: 0; font-size: 13px; color: var(--apagado); }
 
 .mensagens {
@@ -333,7 +474,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
   margin: 0 0 3px;
   font-size: 12px;
   font-weight: 700;
-  color: var(--destaque);
+  color: var(--destaque-texto);
 }
 
 .balao-corpo { margin: 0; white-space: pre-wrap; }
@@ -346,7 +487,29 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
   text-align: right;
 }
 
-.balao.minha .balao-hora { color: #c7d7ff; }
+.balao.minha .balao-hora { color: var(--apagado); }
+
+.balao-rodape {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.balao-apagar {
+  margin-right: auto;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+  opacity: 0.5;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.balao-apagar:hover { opacity: 1; }
 .balao.enviando { opacity: 0.55; }
 
 .vazio {
@@ -380,7 +543,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
   width: 44px; height: 44px;
   flex: none;
   background: var(--destaque);
-  color: #24170a;
+  color: var(--sobre-destaque);
   border: 0;
   border-radius: 50%;
   font-size: 17px;
@@ -392,11 +555,159 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
 .aviso {
   margin: 0;
   padding: 9px 16px;
-  background: #3b1d1d;
+  background: var(--perigo-fundo);
   border-top: 1px solid var(--perigo);
-  color: #fecaca;
+  color: var(--perigo-texto);
   font-size: 14px;
 }
+
+.aviso.bom {
+  background: var(--ok-fundo);
+  border-top-color: var(--ok);
+  color: var(--ok-texto);
+}
+
+/* ——— Conversa secreta: só a conversa aparece ——————————————— */
+
+.modo-reservado #lista-salas,
+.modo-reservado #grupo-privadas,
+.modo-reservado .presenca { display: none; }
+
+.faixa {
+  margin: 8px;
+  padding: 8px 12px;
+  background: var(--perigo-fundo);
+  border: 1px solid var(--perigo);
+  border-radius: 10px;
+  color: var(--perigo-texto);
+  font-size: 13px;
+}
+
+.chave-chat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 0 6px;
+  padding: 12px 14px;
+  background: var(--ok-fundo);
+  border: 1px solid var(--ok);
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.chave-chat.fechado { background: var(--perigo-fundo); border-color: var(--perigo); }
+.chave-chat.neutra { background: var(--fundo); border-color: var(--linha); }
+
+.texto-link {
+  justify-self: center;
+  padding: 6px;
+  background: none;
+  border: 0;
+  color: var(--apagado);
+  font: inherit;
+  font-size: 14px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.forma-senha { display: grid; gap: 12px; padding-top: 18px; }
+.forma-senha h2 { margin: 0; font-size: 18px; }
+.acoes-senha { display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap; }
+.acoes-senha .texto-link { margin-right: auto; }
+.conta-estado {
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--fundo);
+  border: 1px solid var(--linha);
+  border-radius: 12px;
+  font-size: 15px;
+}
+.conta-estado.protegida { background: var(--ok-fundo); border-color: var(--ok); color: var(--ok-texto); }
+
+/* ——— Portaria ——————————————————————————————————————————— */
+
+.com-selo { position: relative; }
+
+.selo {
+  position: absolute;
+  top: -7px; right: -7px;
+  min-width: 18px;
+  padding: 1px 5px;
+  background: var(--destaque);
+  color: var(--sobre-destaque);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+}
+
+.painel {
+  width: min(460px, calc(100% - 32px));
+  max-height: min(640px, calc(100dvh - 32px));
+  padding: 0;
+  background: var(--alto);
+  color: var(--texto);
+  border: 1px solid var(--linha);
+  border-radius: 18px;
+}
+
+.painel::backdrop { background: var(--veu); }
+
+.painel-topo {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: var(--alto);
+  border-bottom: 1px solid var(--linha);
+}
+
+.painel-topo h2 { margin: 0; font-size: 18px; }
+.painel-corpo { padding: 6px 18px 18px; }
+.painel-corpo .dica { margin: 0 0 6px; }
+
+.gente { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 8px; }
+
+.gente-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+}
+
+.gente-item .nome {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.etiqueta {
+  padding: 2px 8px;
+  border: 1px solid var(--linha);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--apagado);
+}
+
+.acao {
+  padding: 7px 12px;
+  background: var(--fundo);
+  color: var(--texto);
+  border: 1px solid var(--linha);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.acao.principal { background: var(--destaque); color: var(--sobre-destaque); border-color: transparent; }
+.acao.perigo { color: var(--perigo); }
 
 /* ——— Telefone ————————————————————————————————————————————— */
 
@@ -463,7 +774,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
   place-content: center;
   width: 32px; height: 32px;
   background: var(--destaque);
-  color: #24170a;
+  color: var(--sobre-destaque);
   border-radius: 50%;
   font-weight: 700;
 }
@@ -471,7 +782,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
 .passo-pendente .passo-numero { animation: pulsar 1.6s ease-in-out infinite; }
 
 @keyframes pulsar {
-  50% { box-shadow: 0 0 0 7px rgb(255 176 32 / 0.18); }
+  50% { box-shadow: 0 0 0 7px var(--brilho); }
 }
 
 .passo-corpo { display: grid; gap: 10px; align-content: start; min-width: 0; }
@@ -524,10 +835,81 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
 .resultado-titulo { margin: 0; font-weight: 700; }
 .resultado-detalhe { margin: 0; font-size: 14px; color: var(--apagado); }
 
-.resultado.bom  { border-color: #34d399; background: #10291f; }
-.resultado.ruim { border-color: var(--perigo); background: #3b1d1d; }
+.resultado.bom  { border-color: var(--ok); background: var(--ok-fundo); }
+.resultado.ruim { border-color: var(--perigo); background: var(--perigo-fundo); }
 
 @media (max-width: 560px) {
   .passo { padding: 16px; gap: 10px; }
   .botao-link, .acoes .principal { width: 100%; text-align: center; }
 }
+
+/* ——— versão sempre à vista, ao lado da marca ——— */
+.versao-app {
+  margin-left: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--apagado);
+  vertical-align: middle;
+}
+
+/* ——— Topo longe da barra de status, e botões do tamanho do dedo ———
+   Aberto pelo ícone da Tela de Início, o app desenha por baixo da barra
+   de status do iPhone/iPad (viewport-fit=cover + barra translúcida).
+   O topo de cada tela desce o quanto o aparelho pede, e os botões têm
+   44 px — o mínimo que a Apple recomenda para o toque. */
+:root {
+  --seguro-topo: env(safe-area-inset-top, 0px);
+  --seguro-esq: env(safe-area-inset-left, 0px);
+  --seguro-dir: env(safe-area-inset-right, 0px);
+}
+
+.lateral-topo,
+.conversa-topo {
+  padding-top: calc(var(--seguro-topo) + 14px);
+  padding-bottom: 14px;
+  min-height: calc(var(--seguro-topo) + 72px);
+}
+
+.lateral-topo { padding-left: calc(var(--seguro-esq) + 16px); }
+.conversa-topo { padding-right: calc(var(--seguro-dir) + 16px); }
+
+.tela { padding-top: calc(var(--seguro-topo) + 24px); }
+
+.icone {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  font-size: 20px;
+}
+
+.mais {
+  width: 36px; height: 36px;
+  font-size: 20px;
+}
+
+.opcoes { min-width: 270px; }
+.opcoes button { padding: 14px 14px; font-size: 16px; }
+
+.acao { min-height: 40px; padding: 8px 14px; }
+
+/* ——— Topo mais baixo e ícones 25% maiores (pedido do Gilson) ——— */
+.lateral-topo,
+.conversa-topo {
+  padding-top: calc(var(--seguro-topo) + 28px);
+  padding-bottom: 16px;
+  min-height: calc(var(--seguro-topo) + 100px);
+}
+
+.icone {
+  width: 55px; height: 55px;
+  border-radius: 15px;
+  font-size: 25px;
+}
+
+.mais {
+  width: 45px; height: 45px;
+  border-radius: 12px;
+  font-size: 25px;
+}
+
+.selo { top: -8px; right: -8px; min-width: 22px; font-size: 13px; line-height: 20px; }

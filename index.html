@@ -22,9 +22,11 @@
   h1 { margin: 0; font-size: 28px; letter-spacing: -0.01em; }
   p { margin: 6px 0 0; color: #93a1bd; }
   ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+  li { display: flex; gap: 8px; max-width: 540px; }
   a {
     display: block;
-    max-width: 460px;
+    flex: 1;
+    min-width: 0;
     padding: 18px 20px;
     border: 1px solid #2b3a56;
     border-radius: 14px;
@@ -33,6 +35,25 @@
     text-decoration: none;
   }
   a:hover { border-color: #ffb020; }
+  .enviar {
+    flex: none;
+    width: 76px;
+    display: grid;
+    place-content: center;
+    gap: 2px;
+    padding: 0;
+    border: 1px solid #2b3a56;
+    border-radius: 14px;
+    background: #141d2e;
+    color: #ffb020;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .enviar span { font-size: 20px; line-height: 1; }
+  .enviar:hover { border-color: #ffb020; }
+  .enviar:focus-visible { outline: 2px solid #ffb020; outline-offset: 2px; }
   b { font-size: 18px; }
 </style>
 </head>
@@ -45,7 +66,13 @@
     <li>
       <a href="alo/">
         <b>Alô</b>
-        <p>Sala de conversa aberta: entre com um apelido e fale com quem estiver por aqui.</p>
+        <p>Salas de conversa com portaria: abertas, privadas por convite e a sós.</p>
+      </a>
+    </li>
+    <li>
+      <a href="britagem/">
+        <b>Britagem</b>
+        <p>Relatório de turno: paradas, detector de metal e leituras, offline.</p>
       </a>
     </li>
     <li>
@@ -85,5 +112,34 @@
       </a>
     </li>
   </ul>
+<script>
+  // Um botão "Enviar" ao lado de cada projeto. Feito aqui, e não no HTML
+  // de cada cartão, para que projeto novo já nasça com o botão.
+  for (const cartao of document.querySelectorAll('ul > li > a')) {
+    const nome = cartao.querySelector('b').textContent;
+    const url = new URL(cartao.getAttribute('href'), location.href).href;
+    const botao = document.createElement('button');
+    botao.type = 'button';
+    botao.className = 'enviar';
+    botao.setAttribute('aria-label', 'Enviar o link de ' + nome);
+    botao.innerHTML = '<span aria-hidden="true">⇪</span>Enviar';
+    botao.addEventListener('click', () => enviar(botao, nome, url));
+    cartao.after(botao);
+  }
+
+  async function enviar(botao, nome, url) {
+    if (navigator.share) {
+      try { await navigator.share({ title: nome, url }); return; }
+      catch (e) { if (e.name === 'AbortError') return; }   // a pessoa desistiu
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      botao.lastChild.textContent = 'Copiado';
+      setTimeout(() => { botao.lastChild.textContent = 'Enviar'; }, 2000);
+    } catch {
+      prompt('Copie o link:', url);
+    }
+  }
+</script>
 </body>
 </html>
