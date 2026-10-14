@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '3.3.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '3.3.1';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -26,7 +26,7 @@ const AREA_PADRAO = {
   medidas: [
     { chave: 'horimetro', rotulo: 'Horímetro', complemento: 'rodado', unidade: 'h' },
     { chave: 'balanca', rotulo: 'Balança', complemento: 'no turno', unidade: 't' },
-    { chave: 'acido', rotulo: 'Ácido', complemento: 'médio', unidade: 'm³/h', tipo: 'vazao' }
+    { chave: 'acido', rotulo: 'Ácido', complemento: 'consumido', unidade: 'm³', unidadeHora: 'm³/h', tipo: 'vazao' }
   ],
   extras: [],
   tags: null       // null = usa TAGS_PADRAO
@@ -197,17 +197,26 @@ const tagsDe = (t, equip) => ((areaDe(t).tags || TAGS_PADRAO)[equip] || []).slic
 /** "Primário · BR-1101", ou só "Primário" quando a máquina não foi dita. */
 const nomeParada = p => p.equip + (p.tag ? ' · ' + p.tag : '');
 /**
- * O ácido é vazão (m³/h): conta a média do turno, não final − inicial.
+ * O ácido tem dois números: na leitura inicial e na final, o totalizador do
+ * instrumento (m³) — a somatória é final − inicial, o consumido no turno;
+ * na hora a hora, a vazão do momento (m³/h), que dá a média do turno.
  * Vale também para o ácido de uma área carregada de arquivo.
  */
 const ehVazao = m => m.tipo === 'vazao' || m.chave === 'acido';
 const medidasDe = t => areaDe(t).medidas.map(m => ehVazao(m)
-  ? Object.assign({}, m, { tipo: 'vazao', unidade: m.unidade || 'm³/h', complemento: 'médio' })
+  ? Object.assign({}, m, {
+      tipo: 'vazao',
+      unidade: (m.unidade || 'm³').replace(/\/h$/, ''),
+      unidadeHora: m.unidadeHora || 'm³/h',
+      complemento: 'consumido'
+    })
   : m);
+/** A unidade na hora a hora: a vazão (m³/h) para o ácido, a mesma para o resto. */
+const unidadeHora = m => m.unidadeHora || m.unidade;
 
-/** Média de uma vazão no turno: leitura inicial, as de hora em hora e a final. */
+/** Média de uma vazão no turno: só as leituras de hora em hora (a inicial e a final são totalizador). */
 function mediaVazao(t, chave) {
-  const valores = [t.inicial].concat(t.leituras.filter(l => !l.parada), [t.final])
+  const valores = t.leituras.filter(l => !l.parada)
     .filter(o => o && o[chave] != null).map(o => o[chave]);
   return valores.length ? +(valores.reduce((a, b) => a + b, 0) / valores.length).toFixed(2) : null;
 }
@@ -558,7 +567,7 @@ function desenharLeituras() {
     const tab = document.createElement('table');
     tab.className = 'tabela';
     tab.innerHTML = '<thead><tr><th>Hora</th>' + medidasDe(t)
-      .map(m => '<th>' + m.rotulo + (m.unidade ? ' (' + m.unidade + ')' : '') + '</th>').join('') +
+      .map(m => '<th>' + m.rotulo + (unidadeHora(m) ? ' (' + unidadeHora(m) + ')' : '') + '</th>').join('') +
       '<th></th></tr></thead>';
     const corpo = document.createElement('tbody');
 
@@ -611,12 +620,21 @@ function somatoria(t) {
   const fim = t.final || {};
   const out = {};
   medidasDe(t).forEach(m => {
-    if (ehVazao(m)) { out[m.chave] = mediaVazao(t, m.chave); return; }
     out[m.chave] = (ini[m.chave] != null && fim[m.chave] != null)
       ? +(fim[m.chave] - ini[m.chave]).toFixed(2)
       : null;
   });
   return out;
+}
+
+/**
+ * Ácido consumido: com as duas leituras do totalizador, é final − inicial;
+ * sem a final, uma estimativa pela vazão média × horímetro rodado.
+ */
+function linhasAcido(t, c, soma) {
+  if (soma.acido != null) return [['Ácido consumido (final − inicial)', comUnidade(soma.acido, 'm³')]];
+  const vol = volumeAcido(c.acidoMedio, soma.horimetro != null ? soma.horimetro : c.horimetro);
+  return vol == null ? [] : [['Ácido estimado (média × horímetro)', comUnidade(vol, 'm³')]];
 }
 
 const temLeitura = (o, t) => !!o && medidasDe(t).some(m => o[m.chave] != null);
@@ -733,10 +751,8 @@ function desenharResumo() {
       '<tr><td>Horímetro rodado</td><td>' +
         comUnidade(soma.horimetro != null ? soma.horimetro : c.horimetro, 'h') + '</td></tr>' +
       (completa ? '<tr><td>Balança no turno</td><td>' + comUnidade(soma.balanca, 't') + '</td></tr>' : '') +
-      '<tr><td>Ácido médio</td><td>' + comUnidade(c.acidoMedio, 'm³/h') + '</td></tr>' +
-      '<tr><td>Ácido no turno <span class="fraco">(média × horímetro)</span></td><td>' +
-        comUnidade(volumeAcido(c.acidoMedio, soma.horimetro != null ? soma.horimetro : c.horimetro), 'm³') +
-        '</td></tr>' +
+      '<tr><td>Ácido médio <span class="fraco">(hora a hora)</span></td><td>' + comUnidade(c.acidoMedio, 'm³/h') + '</td></tr>' +
+      linhasAcido(t, c, soma).map(([r, v]) => '<tr><td>' + r + '</td><td>' + v + '</td></tr>').join('') +
       '<tr><td>Balança inicial</td><td>' + comUnidade(t.toneladaInicial, 't') + '</td></tr>' +
       '<tr><td>Balança final</td><td>' + comUnidade(t.toneladaFinal, 't') + '</td></tr>' +
       '<tr><td><b>Produção</b> (final − inicial)</td><td><b>' + comUnidade(t.producao, 't') + '</b></td></tr>' +
@@ -1282,7 +1298,8 @@ function formExtremo(t, qual) {
       (o[m.chave] != null ? mostrarNumero(o[m.chave]) : '') + '"></label>').join('') +
     '<p class="fraco pequeno">Horímetro e balança: o número cheio do totalizador (o horímetro' +
     ' como no visor, 0422216, ou com vírgula). A somatória é a final menos a inicial.' +
-    ' Ácido: a vazão no momento, em m³/h — conta na média do turno.</p>';
+    ' Ácido: o totalizador do instrumento, em m³ — final − inicial é o consumido.' +
+    ' A vazão (m³/h) vai na leitura hora a hora.</p>';
 
   abrirCaixa(titulo, corpo, async () => {
     const dados = { hora: doCampo($('#f-hora').value, t) };
@@ -1293,6 +1310,12 @@ function formExtremo(t, qual) {
         return;
       }
       dados[m.chave] = v;
+    }
+    if (qual === 'final' && t.inicial && t.inicial.acido != null && dados.acido != null &&
+        dados.acido < t.inicial.acido) {
+      erro('O ácido final está menor que o inicial (' + mostrarNumero(t.inicial.acido) +
+        ' m³). Na inicial e na final vai o totalizador, não a vazão.');
+      return;
     }
     if (qual === 'final' && t.inicial && t.inicial.horimetro != null && dados.horimetro != null &&
         dados.horimetro < t.inicial.horimetro) {
@@ -1510,7 +1533,7 @@ function relatorioTexto(t) {
 
   if (t.leituras.length) {
     L.push('LEITURAS  (hora · ' + medidasDe(t)
-      .map(m => m.rotulo + (m.unidade ? ' ' + m.unidade : '')).join(' · ') + ')');
+      .map(m => m.rotulo + (unidadeHora(m) ? ' ' + unidadeHora(m) : '')).join(' · ') + ')');
     t.leituras.slice().sort((a, b) => new Date(a.hora) - new Date(b.hora)).forEach(l => {
       L.push(l.parada
         ? '· ' + hhmm(l.hora) + '  ' + (l.obs || 'Parada.')
@@ -1550,11 +1573,8 @@ function relatorioTexto(t) {
   if (t.producao != null) L.push('PRODUÇÃO: ' + mostrarNumero(t.producao) + ' t');
   const horimetroRodado = soma.horimetro != null ? soma.horimetro : c.horimetro;
   if (horimetroRodado != null) L.push('Horímetro rodado: ' + comUnidade(horimetroRodado, 'h'));
-  if (c.acidoMedio != null) {
-    L.push('Ácido médio: ' + comUnidade(c.acidoMedio, 'm³/h'));
-    const vol = volumeAcido(c.acidoMedio, horimetroRodado);
-    if (vol != null) L.push('Ácido no turno (média × horímetro): ' + comUnidade(vol, 'm³'));
-  }
+  if (c.acidoMedio != null) L.push('Ácido médio (hora a hora): ' + comUnidade(c.acidoMedio, 'm³/h'));
+  linhasAcido(t, c, soma).forEach(([r, v]) => L.push(r + ': ' + v));
   return L.join('\n');
 }
 
@@ -1664,7 +1684,7 @@ function blocosDoRelatorio(t) {
     const colHora = [70].concat(medidas.map(() => Math.floor(339 / medidas.length))).concat([90]);
     B.push({ tipo: 'h2', texto: 'Hora a hora' });
     B.push({ tipo: 'tabela', colunas: colHora,
-      cabecalho: ['Hora'].concat(medidas.map(m => m.rotulo)).concat(['Observação']),
+      cabecalho: ['Hora'].concat(medidas.map(m => m.rotulo + (unidadeHora(m) ? ' (' + unidadeHora(m) + ')' : ''))).concat(['Observação']),
       linhas: t.leituras.slice().sort((a, b) => new Date(a.hora) - new Date(b.hora))
         .map(l => l.parada
           ? [hhmm(l.hora)].concat(medidas.map(() => '—')).concat([l.obs || 'Parada.'])
@@ -1674,11 +1694,8 @@ function blocosDoRelatorio(t) {
   const linhasFim = [['Duração do turno', duracao(c.duracaoTurno)]];
   const horimetroRodado = soma.horimetro != null ? soma.horimetro : c.horimetro;
   if (horimetroRodado != null) linhasFim.push(['Horímetro rodado', comUnidade(horimetroRodado, 'h')]);
-  if (c.acidoMedio != null) {
-    linhasFim.push(['Ácido médio', comUnidade(c.acidoMedio, 'm³/h')]);
-    const vol = volumeAcido(c.acidoMedio, horimetroRodado);
-    if (vol != null) linhasFim.push(['Ácido no turno (média × horímetro)', comUnidade(vol, 'm³')]);
-  }
+  if (c.acidoMedio != null) linhasFim.push(['Ácido médio (hora a hora)', comUnidade(c.acidoMedio, 'm³/h')]);
+  linhasAcido(t, c, soma).forEach(l => linhasFim.push(l));
   if (t.producao != null) linhasFim.push(['Produção', mostrarNumero(t.producao) + ' t']);
   area.extras.forEach(e => {
     const v = (t.extras || {})[e.chave];
@@ -1722,7 +1739,7 @@ function csvCampo(v) {
 
 function baixarCsv(t) {
   const L = [['tipo', 'equipamento', 'tag', 'inicio', 'fim', 'minutos', 'acumulado_equip', 'acumulado_turno',
-    'motivo', 'horimetro_h', 'balanca_t', 'acido_m3h', 'observacao']];
+    'motivo', 'horimetro_h', 'balanca_t', 'acido', 'observacao']];
   t.paradas.slice().sort((a, b) => new Date(a.inicio) - new Date(b.inicio)).forEach(p =>
     L.push(['parada', p.equip, p.tag || '', hhmm(p.inicio), p.fim ? hhmm(p.fim) : '',
       minutos(p.inicio, p.fim || relogio(t)),
@@ -1751,7 +1768,7 @@ function baixarCsv(t) {
   });
   if (temLeitura(t.inicial, t) && temLeitura(t.final, t)) {
     const soma = somatoria(t);
-    L.push(['somatoria', '', '', '', '', '', '', 'final menos inicial (ácido: média)',
+    L.push(['somatoria', '', '', '', '', '', '', 'final menos inicial',
       soma.horimetro, soma.balanca, soma.acido, '']);
   }
   // A produção vai na coluna da balança, que é de onde ela sai.
