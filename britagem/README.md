@@ -30,7 +30,7 @@ adiante. Funciona **sem internet** e tudo fica neste aparelho.
 | Registro | Campos |
 | -------- | ------ |
 | **Funcionamento** | Por equipamento: hora de entrar e de sair |
-| **Parada** | Equipamento (AA140, Primário, Rebritagem — ou **Outro…**, que abre o campo para digitar o nome), motivo, início e fim |
+| **Parada** | Equipamento (AA140, Primário, Rebritagem — ou **Outro…**, que abre o campo para digitar o nome), a **máquina** pela tag do painel (opcional: BR-1101, TP-1103…), motivo, início e fim |
 | **Detector DT 1101** | Hora que acionou, hora que liberou, 👍 metal encontrado / 👎 não encontrado |
 | **Leitura inicial / final** | Hora, o número cheio do totalizador do horímetro e da balança, e a vazão do ácido (m³/h) |
 | **Leitura hora a hora** | Hora, horímetro, balança, ácido (m³/h) — ou a marca de **fora de operação**. Os campos abrem o **teclado numérico** e aceitam vírgula ou ponto. |
@@ -91,6 +91,7 @@ tela de partida → *carregar as áreas*, ou **Turnos → Áreas**.
 | Campo | Para que serve |
 | ----- | -------------- |
 | `equipamentos` | Os botões do formulário de parada e as linhas do cartão Funcionamento |
+| `tags` | Opcional: `{ "Primário": ["BR-1101", …] }`, as máquinas de cada equipamento, pela tag do painel |
 | `motivos` | As sugestões do campo de motivo |
 | `medidas` | As colunas da leitura inicial, da hora a hora, da final e da somatória |
 | `extras` | Campos próprios da área no resumo (número da pilha, condições do rádio…) |

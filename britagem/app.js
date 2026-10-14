@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '3.2.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '3.3.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -28,7 +28,16 @@ const AREA_PADRAO = {
     { chave: 'balanca', rotulo: 'Balança', complemento: 'no turno', unidade: 't' },
     { chave: 'acido', rotulo: 'Ácido', complemento: 'médio', unidade: 'm³/h', tipo: 'vazao' }
   ],
-  extras: []
+  extras: [],
+  tags: null       // null = usa TAGS_PADRAO
+};
+
+/* As máquinas de cada sistema, com a tag do painel (Logicon/Cimtec).
+   Na parada, a tag é opcional: diz qual máquina, dentro do sistema, parou. */
+const TAGS_PADRAO = {
+  'Primário': ['AL-1101', 'BR-1101', 'TP-1101', 'AL-1102.1', 'AL-1102.2', 'TP-1102', 'DT-1101', 'BR-1102'],
+  'Rebritagem': ['TP-1103', 'PE-1101', 'TP-1104', 'TP-1105', 'TP-1106', 'TP-1107',
+    'BR-1103', 'BR-1104', 'MG-1401', 'AE-1401', 'TP-1401']
 };
 
 const TURNOS = ['A', 'B', 'C', 'D', 'E'];
@@ -184,6 +193,9 @@ function areaDe(t) {
 
 const equipamentosDaArea = t => areaDe(t).equipamentos.slice();
 const motivosDaArea = t => areaDe(t).motivos.slice();
+const tagsDe = (t, equip) => ((areaDe(t).tags || TAGS_PADRAO)[equip] || []).slice();
+/** "Primário · BR-1101", ou só "Primário" quando a máquina não foi dita. */
+const nomeParada = p => p.equip + (p.tag ? ' · ' + p.tag : '');
 /**
  * O ácido é vazão (m³/h): conta a média do turno, não final − inicial.
  * Vale também para o ácido de uma área carregada de arquivo.
@@ -330,7 +342,7 @@ function fichaParada(p, t) {
     '</div>' +
     '<span class="dur' + (aberta ? ' correndo' : '') + '"></span>';
 
-  div.querySelector('.equip').textContent = p.equip;
+  div.querySelector('.equip').textContent = nomeParada(p);
   div.querySelector('.horas').textContent = hhmm(p.inicio) + ' → ' + (p.fim ? hhmm(p.fim) : '…');
   div.querySelector('.motivo').textContent = p.motivo || 'sem motivo anotado';
   const antes = rodouAntes(t, p);
@@ -613,11 +625,13 @@ const temLeitura = (o, t) => !!o && medidasDe(t).some(m => o[m.chave] != null);
 
 function contasDoTurno(t) {
   const porEquip = {};
+  const porTag = {};
   let totalParado = 0;
   t.paradas.forEach(p => {
     const j = janela(t, p.equip);
     const m = minutosNaJanela(p.inicio, p.fim || j.fim, j);
     porEquip[p.equip] = (porEquip[p.equip] || 0) + m;
+    if (p.tag) porTag[p.tag] = (porTag[p.tag] || 0) + m;
     totalParado += m;
   });
   const leituras = t.leituras.filter(l => !l.parada && l.horimetro != null)
@@ -627,6 +641,7 @@ function contasDoTurno(t) {
     : null;
   return {
     porEquip,
+    porTag,
     totalParado,
     paradas: t.paradas.length,
     abertas: t.paradas.filter(p => !p.fim).length,
@@ -1079,6 +1094,12 @@ function formParada(t, p) {
       'Nome do equipamento' +
       '<input id="f-equip-livre" type="text" placeholder="ex.: Peneira 02, Correia TP 1407" value="' +
       (p && !equipamentosDaArea(t).includes(p.equip) ? p.equip : '') + '"></label>' +
+    equipamentosDaArea(t).filter(e => tagsDe(t, e).length).map((e, i) =>
+      '<div class="grupo-tag" data-equip="' + e.replace(/"/g, '&quot;') + '" hidden>' +
+        '<p class="rotulo-grupo">Qual máquina? <span class="fraco">(opcional)</span></p>' +
+        grupoEscolhas('g-tag-' + i, ['—'].concat(tagsDe(t, e)),
+          p && p.equip === e && p.tag ? p.tag : '—') +
+      '</div>').join('') +
     '<label class="campo">Motivo' +
       '<input id="f-motivo" type="text" list="motivos-usados" value="' + (p ? (p.motivo || '') : '') + '">' +
       '<datalist id="motivos-usados">' +
@@ -1099,12 +1120,15 @@ function formParada(t, p) {
     let equip = escolhido('#g-equip');
     if (equip === '__outro' || !equip) equip = $('#f-equip-livre').value.trim();
     if (!equip) { erro('Diga qual equipamento parou.'); return; }
+    const grupoTag = $$('#formulario .grupo-tag').find(g => g.dataset.equip === equip);
+    const tagEscolhida = grupoTag ? grupoTag.querySelector('button.ativo') : null;
+    const tag = tagEscolhida && tagEscolhida.dataset.valor !== '—' ? tagEscolhida.dataset.valor : null;
     const inicio = doCampo($('#f-ini').value, t);
     if (!inicio) { erro('Informe a hora de início.'); return; }
     const fim = doCampo($('#f-fim').value, t);
     if (fim && new Date(fim) < new Date(inicio)) { erro('O fim está antes do início.'); return; }
 
-    const dados = { equip, motivo: $('#f-motivo').value.trim(), inicio, fim };
+    const dados = { equip, tag, motivo: $('#f-motivo').value.trim(), inicio, fim };
     if (p) Object.assign(p, dados);
     else t.paradas.push(Object.assign({ id: id() }, dados));
     fecharCaixa();
@@ -1116,6 +1140,14 @@ function formParada(t, p) {
     await salvar();
     avisar('Parada apagada.');
   } : null);
+
+  // A lista de máquinas acompanha o sistema escolhido.
+  const mostrarTags = () => {
+    const equip = escolhido('#g-equip');
+    $$('#formulario .grupo-tag').forEach(g => { g.hidden = g.dataset.equip !== equip; });
+  };
+  $('#g-equip').addEventListener('click', mostrarTags);
+  mostrarTags();
 }
 
 /* ——— detector ——— */
@@ -1442,11 +1474,12 @@ function relatorioTexto(t) {
   if (t.paradas.length) {
     L.push('PARADAS');
     t.paradas.slice().sort((a, b) => new Date(a.inicio) - new Date(b.inicio)).forEach(p => {
-      L.push('· ' + p.equip + '  ' + hhmm(p.inicio) + ' → ' + (p.fim ? hhmm(p.fim) : 'em andamento') +
+      L.push('· ' + nomeParada(p) + '  ' + hhmm(p.inicio) + ' → ' + (p.fim ? hhmm(p.fim) : 'em andamento') +
         '  (' + duracao(minutos(p.inicio, p.fim || relogio(t))) + ')' + (p.motivo ? ' — ' + p.motivo : '') +
         '  [Σ ' + duracao(acumuladoAte(t, p)) + ']');
     });
     Object.keys(c.porEquip).sort().forEach(e => L.push('  ' + e + ': ' + duracao(c.porEquip[e])));
+    Object.keys(c.porTag).sort().forEach(e => L.push('    máquina ' + e + ': ' + duracao(c.porTag[e])));
     L.push('  TOTAL PARADO: ' + duracao(c.totalParado));
     L.push('');
 
@@ -1571,11 +1604,12 @@ function blocosDoRelatorio(t) {
     B.push({ tipo: 'tabela', colunas: [96, 58, 58, 62, 225],
       cabecalho: ['Equipamento', 'Início', 'Fim', 'Duração', 'Motivo'],
       linhas: t.paradas.slice().sort((a, b) => new Date(a.inicio) - new Date(b.inicio))
-        .map(p => [p.equip, hhmm(p.inicio), p.fim ? hhmm(p.fim) : '—',
+        .map(p => [nomeParada(p), hhmm(p.inicio), p.fim ? hhmm(p.fim) : '—',
           duracao(minutos(p.inicio, p.fim || relogio(t))), p.motivo || '—']) });
     B.push({ tipo: 'tabela', colunas: [250, 249],
       cabecalho: ['Tempo parado', 'Total'],
       linhas: Object.keys(c.porEquip).sort().map(e => [e, duracao(c.porEquip[e])])
+        .concat(Object.keys(c.porTag).sort().map(e => ['  máquina ' + e, duracao(c.porTag[e])]))
         .concat([['TOTAL PARADO', duracao(c.totalParado)]]) });
 
     B.push({ tipo: 'h1', texto: 'Tempo rodando' });
@@ -1687,10 +1721,10 @@ function csvCampo(v) {
 }
 
 function baixarCsv(t) {
-  const L = [['tipo', 'equipamento', 'inicio', 'fim', 'minutos', 'acumulado_equip', 'acumulado_turno',
+  const L = [['tipo', 'equipamento', 'tag', 'inicio', 'fim', 'minutos', 'acumulado_equip', 'acumulado_turno',
     'motivo', 'horimetro_h', 'balanca_t', 'acido_m3h', 'observacao']];
   t.paradas.slice().sort((a, b) => new Date(a.inicio) - new Date(b.inicio)).forEach(p =>
-    L.push(['parada', p.equip, hhmm(p.inicio), p.fim ? hhmm(p.fim) : '',
+    L.push(['parada', p.equip, p.tag || '', hhmm(p.inicio), p.fim ? hhmm(p.fim) : '',
       minutos(p.inicio, p.fim || relogio(t)),
       acumuladoAte(t, p, p.equip), acumuladoAte(t, p), p.motivo, '', '', '', '']));
   t.detector.slice().sort((a, b) => new Date(a.inicio) - new Date(b.inicio)).forEach(d =>
@@ -1732,7 +1766,8 @@ function baixarCsv(t) {
       '', t.producao, '', 'toneladas']);
   }
 
-  const texto = '﻿' + L.map(linha => linha.map(csvCampo).join(';')).join('\r\n');
+  // A coluna da tag só a parada preenche; nas demais linhas ela vai vazia.
+  const texto = '﻿' + L.map((linha, i) => (i === 0 || linha[0] === 'parada' ? linha : [linha[0], linha[1], ''].concat(linha.slice(2))).map(csvCampo).join(';')).join('\r\n');
   const blob = new Blob([texto], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
