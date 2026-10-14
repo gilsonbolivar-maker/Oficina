@@ -61,6 +61,29 @@ h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
   transform: scaleX(var(--espelho)) scale(var(--zoom));
 }
 
+#tela {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: #000;
+  filter: var(--filtro);
+}
+
+/* A referência fica por cima do visor para mirar igual à foto antiga. */
+#fantasma {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  opacity: var(--fantasma, 0.45);
+  mix-blend-mode: difference;
+}
+
 .grade {
   position: absolute;
   inset: 0;
@@ -178,8 +201,50 @@ h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
 }
 .icone.grande { width: 52px; height: 52px; font-size: 24px; }
 .icone.zoom-atalho { font-size: 13px; font-weight: 700; letter-spacing: -0.02em; }
+.icone.modo-atalho { width: auto; padding: 0 12px; border-radius: 22px; font-size: 13px; font-weight: 700; }
+.icone.modo-atalho.ativo { border-color: var(--acento); color: var(--acento); }
 .icone.zoom-atalho.ativo { border-color: var(--acento); color: var(--acento); }
 .icone[aria-pressed="true"] { background: var(--acento); color: var(--acento-texto); }
+
+/* ——— controles do modo ——— */
+.controles {
+  flex: none;
+  display: grid;
+  gap: 8px;
+  padding: 10px 16px 0;
+  background: var(--fundo);
+}
+
+.controle {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--texto-fraco);
+}
+.controle b { color: var(--texto); float: right; }
+.controle input[type="range"] { width: 100%; accent-color: var(--acento); }
+
+.medida {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto-fraco);
+}
+.medida.forte { color: var(--acento); }
+
+.nivel {
+  height: 8px;
+  border: 1px solid var(--borda);
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--superficie);
+}
+.nivel-barra {
+  height: 100%;
+  width: 0;
+  background: var(--acento);
+  transition: width .12s linear;
+}
 
 /* ——— filtros ——— */
 .filtros {
@@ -347,6 +412,27 @@ h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
   background: #000;
 }
 .previa figcaption { font-size: 13px; color: var(--texto-fraco); }
+
+/* ——— lista de modos ——— */
+.destinos { display: grid; gap: 8px; }
+
+.destino {
+  display: grid;
+  gap: 2px;
+  padding: 12px 14px;
+  text-align: left;
+  font: inherit;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-borda);
+  background: var(--superficie);
+  color: var(--texto);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.destino b { font-size: 15px; }
+.destino small { color: var(--texto-fraco); line-height: 1.4; }
+.destino[aria-pressed="true"] { border-color: var(--acento); }
+.destino[aria-pressed="true"] b { color: var(--acento); }
 
 .carretel {
   list-style: none;

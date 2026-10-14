@@ -30,14 +30,70 @@ barra de endereço (computador).
 
 | Botão | O que faz |
 | ----- | --------- |
+| **Modo** | Troca entre Foto, Lupa, Vibração e Comparar. |
 | **⚙** | Ajustes: zoom fino, força da inversão, temporizador, espelho, grade. |
 | **1.0×** | Zoom: toque para ciclar 1× → 2× → 3× → 5×. Fica laranja quando ampliado. |
-| **v1.3.0** | O número da versão, abaixo do nome do filtro; toque para abrir os ajustes. |
+| **v1.4.0** | O número da versão, abaixo do nome do filtro; toque para abrir os ajustes. |
 | **🔦** | Lanterna — só aparece quando a câmera de trás permite acender. |
 | Fileira de filtros | Troca o filtro; o escolhido fica aceso. |
 | Miniatura | Abre as fotos desta sessão. |
 | Botão redondo | Tira a foto. |
 | **⇄** | Troca entre a câmera de trás e a frontal. |
+
+## Os quatro modos
+
+O botão de modo, no alto à esquerda, troca o jeito de olhar. Os três últimos
+mostram o que o olho sozinho não alcança.
+
+| Modo | O que faz | Para quê |
+| ---- | --------- | -------- |
+| **Foto** | A câmera normal, com os filtros de cor | o uso de sempre |
+| **Lupa** | Soma vários quadros e tira a média | ler etiqueta, tag e display de longe |
+| **Vibração** | Amplifica o movimento pequeno demais para o olho | ver se bomba, motor ou tubulação estão tremendo |
+| **Comparar** | Põe uma foto antiga por cima do visor e destaca o que mudou | ronda: mesma cena, dois horários |
+
+### Lupa
+
+Cada pixel do sensor tem um chuvisco próprio, diferente a cada quadro. A média
+de N quadros divide esse ruído por √N e o texto pequeno sai de dentro dele —
+depois o realce de bordas devolve o contorno que a média arredondou.
+
+```
+1 quadro          8 quadros somados
+▒F▒T-1▒0008   →   FIT-140008
+```
+
+Só funciona com a cena parada: se o quadro muda demais, a soma **recomeça** em
+vez de borrar tudo. O contador na tela diz quando estabilizou. **Apoie o
+aparelho** — a mão tremendo reinicia a conta a todo instante.
+
+Combina com o zoom: aproxime até o campo encher a tela, espere estabilizar,
+fotografe. A foto sai com os quadros já somados, não é só a tela.
+
+### Vibração
+
+Um fundo que acompanha a cena devagar guarda "como as coisas estão paradas"; o
+que foge dele é movimento. Multiplicado por 5× a 60×, um tremor de um pixel
+vira faixa colorida: **laranja** para um lado, **azul** para o outro. A barra
+mostra o nível, de *parado* a *movimento forte*.
+
+Os filtros de cor saem de cena nesse modo — a cor já é a informação.
+
+**O que ele não dá:** frequência em Hz. A câmera entrega 30 quadros por
+segundo, então vibração acima de ~15 Hz aparece com frequência falsa
+(*aliasing*) — e num motor a 1800 rpm o número sairia errado. O modo mostra
+**onde** treme e **quanto**, não a que frequência.
+
+### Comparar
+
+1. Abra uma foto e toque em **Referência**
+2. O app entra no modo Comparar e põe a foto antiga por cima do visor
+3. Mire até as bordas sumirem — é o alinhamento
+4. Fotografe: sai a foto nova **e** uma imagem da diferença
+
+Na imagem da diferença a cena fica apagada e só o que mudou acende em
+**vermelho**, com a porcentagem na legenda. Diferença abaixo do ruído do sensor
+é descartada, para não acender a imagem inteira à toa.
 
 ## Os filtros
 
@@ -142,6 +198,7 @@ Quando sai uma versão nova o app percebe sozinho: o número no visor fica
 
 | Versão | O que mudou |
 | ------ | ----------- |
+| 1.4.0 | Modos **Lupa**, **Vibração** e **Comparar**: ver o que o olho não alcança. |
 | 1.3.0 | Botão **Transcrever**: envia a foto com o pedido de transcrição pronto. |
 | 1.2.0 | Botão **PDF**: folha A4 com a foto e a data, montada no próprio app. |
 | 1.1.0 | Zoom até 6× por pinça, dois toques, atalho e ajuste fino — com recorte real na foto. |
