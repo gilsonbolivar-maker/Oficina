@@ -32,8 +32,8 @@ adiante. Funciona **sem internet** e tudo fica neste aparelho.
 | **Funcionamento** | Por equipamento: hora de entrar e de sair |
 | **Parada** | Equipamento (AA140, Primário, Rebritagem — ou **Outro…**, que abre o campo para digitar o nome), motivo, início e fim |
 | **Detector DT 1101** | Hora que acionou, hora que liberou, 👍 metal encontrado / 👎 não encontrado |
-| **Leitura inicial / final** | Hora e o número cheio do totalizador: horímetro, balança e ácido |
-| **Leitura hora a hora** | Hora, horímetro, balança, ácido — ou a marca de **fora de operação**. Os campos abrem o **teclado numérico** e aceitam vírgula ou ponto. |
+| **Leitura inicial / final** | Hora, o número cheio do totalizador do horímetro e da balança, e a vazão do ácido (m³/h) |
+| **Leitura hora a hora** | Hora, horímetro, balança, ácido (m³/h) — ou a marca de **fora de operação**. Os campos abrem o **teclado numérico** e aceitam vírgula ou ponto. |
 | **Turno** | Data, turno (A a E), operador, produção em toneladas |
 
 ## As áreas
@@ -262,3 +262,15 @@ quem usa — nada é enviado para servidor nenhum.
 
 **De onde veio o formato:** a planilha *Britagem* usada no turno, com as
 colunas de paradas por equipamento, o detector DT 1101 e as leituras horárias.
+
+## Horímetro e ácido
+
+O horímetro é um **COEL 1/100**: sete tambores, e os dois últimos (vermelhos)
+são **centésimos de hora**. Dá para digitar como no visor — `0422216` vira
+**4222,16 h** — ou com vírgula (`4222,16`). Embaixo do campo aparece como o
+número foi entendido, e uma leitura menor que a anterior é recusada.
+
+O **ácido é vazão, em m³/h** (o valor do momento), não totalizador. Por isso o
+turno mostra a **média** das leituras (inicial, hora a hora e final) e o
+**ácido no turno**, estimado como média × horímetro rodado, em m³ — e não
+"final menos inicial".

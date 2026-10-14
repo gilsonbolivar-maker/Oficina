@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '3.1.5';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '3.2.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -26,7 +26,7 @@ const AREA_PADRAO = {
   medidas: [
     { chave: 'horimetro', rotulo: 'Horímetro', complemento: 'rodado', unidade: 'h' },
     { chave: 'balanca', rotulo: 'Balança', complemento: 'no turno', unidade: 't' },
-    { chave: 'acido', rotulo: 'Ácido', complemento: 'consumido', unidade: '' }
+    { chave: 'acido', rotulo: 'Ácido', complemento: 'médio', unidade: 'm³/h', tipo: 'vazao' }
   ],
   extras: []
 };
@@ -125,6 +125,31 @@ function lerNumero(texto) {
   return Number(t);
 }
 
+/**
+ * Horímetro COEL 1/100: o visor tem 7 tambores e os dois últimos, em
+ * vermelho, são centésimos de hora — "0422216" no visor é 4222,16 h.
+ * Com vírgula ou ponto, vale como foi digitado; só com dígitos, igual ao
+ * visor, os dois últimos viram os centésimos.
+ */
+function lerHorimetro(texto) {
+  const t = String(texto == null ? '' : texto).trim().replace(/\s/g, '');
+  if (/^\d+$/.test(t)) return +(Number(t) / 100).toFixed(2);
+  return lerNumero(t);
+}
+
+/** Mostra embaixo do campo como o horímetro foi entendido: "= 4222,16 h". */
+function previaHorimetro(campo) {
+  const previa = document.createElement('span');
+  previa.className = 'fraco pequeno previa-horimetro';
+  campo.insertAdjacentElement('afterend', previa);
+  const atualizar = () => {
+    const v = lerHorimetro(campo.value);
+    previa.textContent = (v == null || Number.isNaN(v)) ? '' : '= ' + mostrarNumero(v) + ' h';
+  };
+  campo.addEventListener('input', atualizar);
+  atualizar();
+}
+
 /** 4193.1 -> "4193,1", para a tela sair na vírgula de sempre. */
 function mostrarNumero(v) {
   if (v === null || v === undefined || Number.isNaN(v)) return '—';
@@ -159,7 +184,25 @@ function areaDe(t) {
 
 const equipamentosDaArea = t => areaDe(t).equipamentos.slice();
 const motivosDaArea = t => areaDe(t).motivos.slice();
-const medidasDe = t => areaDe(t).medidas;
+/**
+ * O ácido é vazão (m³/h): conta a média do turno, não final − inicial.
+ * Vale também para o ácido de uma área carregada de arquivo.
+ */
+const ehVazao = m => m.tipo === 'vazao' || m.chave === 'acido';
+const medidasDe = t => areaDe(t).medidas.map(m => ehVazao(m)
+  ? Object.assign({}, m, { tipo: 'vazao', unidade: m.unidade || 'm³/h', complemento: 'médio' })
+  : m);
+
+/** Média de uma vazão no turno: leitura inicial, as de hora em hora e a final. */
+function mediaVazao(t, chave) {
+  const valores = [t.inicial].concat(t.leituras.filter(l => !l.parada), [t.final])
+    .filter(o => o && o[chave] != null).map(o => o[chave]);
+  return valores.length ? +(valores.reduce((a, b) => a + b, 0) / valores.length).toFixed(2) : null;
+}
+
+/** Volume de ácido estimado: vazão média × horas que o horímetro rodou. */
+const volumeAcido = (media, horas) =>
+  (media == null || horas == null) ? null : +(media * horas).toFixed(2);
 
 let avisoTimer = null;
 function avisar(txt) {
@@ -556,6 +599,7 @@ function somatoria(t) {
   const fim = t.final || {};
   const out = {};
   medidasDe(t).forEach(m => {
+    if (ehVazao(m)) { out[m.chave] = mediaVazao(t, m.chave); return; }
     out[m.chave] = (ini[m.chave] != null && fim[m.chave] != null)
       ? +(fim[m.chave] - ini[m.chave]).toFixed(2)
       : null;
@@ -581,7 +625,6 @@ function contasDoTurno(t) {
   const horimetro = leituras.length > 1
     ? +(leituras[leituras.length - 1].horimetro - leituras[0].horimetro).toFixed(2)
     : null;
-  const acidos = t.leituras.filter(l => !l.parada && l.acido != null).map(l => l.acido);
   return {
     porEquip,
     totalParado,
@@ -590,7 +633,7 @@ function contasDoTurno(t) {
     acionamentos: t.detector.length,
     encontrados: t.detector.filter(d => d.achou === true).length,
     horimetro,
-    acidoMedio: acidos.length ? +(acidos.reduce((a, b) => a + b, 0) / acidos.length).toFixed(2) : null,
+    acidoMedio: mediaVazao(t, 'acido'),
     duracaoTurno: minutos(t.inicio, relogio(t))
   };
 }
@@ -675,8 +718,10 @@ function desenharResumo() {
       '<tr><td>Horímetro rodado</td><td>' +
         comUnidade(soma.horimetro != null ? soma.horimetro : c.horimetro, 'h') + '</td></tr>' +
       (completa ? '<tr><td>Balança no turno</td><td>' + comUnidade(soma.balanca, 't') + '</td></tr>' : '') +
-      (completa ? '<tr><td>Ácido consumido</td><td>' + mostrarNumero(soma.acido) + '</td></tr>' : '') +
-      '<tr><td>Ácido médio por hora</td><td>' + mostrarNumero(c.acidoMedio) + '</td></tr>' +
+      '<tr><td>Ácido médio</td><td>' + comUnidade(c.acidoMedio, 'm³/h') + '</td></tr>' +
+      '<tr><td>Ácido no turno <span class="fraco">(média × horímetro)</span></td><td>' +
+        comUnidade(volumeAcido(c.acidoMedio, soma.horimetro != null ? soma.horimetro : c.horimetro), 'm³') +
+        '</td></tr>' +
       '<tr><td>Balança inicial</td><td>' + comUnidade(t.toneladaInicial, 't') + '</td></tr>' +
       '<tr><td>Balança final</td><td>' + comUnidade(t.toneladaFinal, 't') + '</td></tr>' +
       '<tr><td><b>Produção</b> (final − inicial)</td><td><b>' + comUnidade(t.producao, 't') + '</b></td></tr>' +
@@ -1131,12 +1176,13 @@ function formLeitura(t, l) {
     '<div id="campos-leitura">' +
       '<label class="campo">Horímetro (h)' +
         (ultima ? ' <span class="fraco">(última: ' + mostrarNumero(ultima.horimetro) + ')</span>' : '') +
+        ' <span class="fraco pequeno">— como no visor (0422216) ou com vírgula (4222,16)</span>' +
         '<input id="f-horimetro" type="text" inputmode="decimal" enterkeyhint="next" value="' +
         (l && l.horimetro != null ? mostrarNumero(l.horimetro) : '') + '"></label>' +
       '<div class="dupla-campo">' +
         '<label class="campo">Balança (t)<input id="f-balanca" type="text" inputmode="decimal" enterkeyhint="next" value="' +
           (l && l.balanca != null ? mostrarNumero(l.balanca) : '') + '"></label>' +
-        '<label class="campo">Ácido<input id="f-acido" type="text" inputmode="decimal" enterkeyhint="done" value="' +
+        '<label class="campo">Ácido (m³/h)<input id="f-acido" type="text" inputmode="decimal" enterkeyhint="done" value="' +
           (l && l.acido != null ? mostrarNumero(l.acido) : '') + '"></label>' +
       '</div>' +
     '</div>' +
@@ -1154,12 +1200,21 @@ function formLeitura(t, l) {
     };
     const lidos = {};
     for (const nome in campos) {
-      const v = parada ? null : lerNumero($(campos[nome][0]).value);
+      const ler = nome === 'horimetro' ? lerHorimetro : lerNumero;
+      const v = parada ? null : ler($(campos[nome][0]).value);
       if (Number.isNaN(v)) {
         erro('O ' + campos[nome][1] + ' não é um número. Use só dígitos e vírgula.');
         return;
       }
       lidos[nome] = v;
+    }
+    // Horímetro só anda para a frente: menor que a leitura anterior é engano.
+    const antes = t.leituras.filter(x => x !== l && !x.parada && x.horimetro != null &&
+      new Date(x.hora) < new Date(hora)).sort((a, b) => new Date(a.hora) - new Date(b.hora)).pop();
+    if (lidos.horimetro != null && antes && lidos.horimetro < antes.horimetro) {
+      erro('O horímetro (' + mostrarNumero(lidos.horimetro) + ' h) está menor que a leitura anterior (' +
+        mostrarNumero(antes.horimetro) + ' h). Confira os dígitos.');
+      return;
     }
     const dados = Object.assign({ hora, parada, obs: $('#f-obs').value.trim() }, lidos);
     if (l) Object.assign(l, dados);
@@ -1174,6 +1229,7 @@ function formLeitura(t, l) {
     avisar('Leitura apagada.');
   } : null);
 
+  previaHorimetro($('#f-horimetro'));
   const alterna = () => { $('#campos-leitura').hidden = $('#f-parada').checked; };
   $('#f-parada').addEventListener('change', alterna);
   alterna();
@@ -1192,18 +1248,25 @@ function formExtremo(t, qual) {
       '<label class="campo">' + m.rotulo + (m.unidade ? ' (' + m.unidade + ')' : '') +
       '<input id="f-' + m.chave + '" type="text" inputmode="decimal" value="' +
       (o[m.chave] != null ? mostrarNumero(o[m.chave]) : '') + '"></label>').join('') +
-    '<p class="fraco pequeno">É o número cheio do totalizador. A somatória do' +
-    ' turno sai da diferença entre a final e a inicial.</p>';
+    '<p class="fraco pequeno">Horímetro e balança: o número cheio do totalizador (o horímetro' +
+    ' como no visor, 0422216, ou com vírgula). A somatória é a final menos a inicial.' +
+    ' Ácido: a vazão no momento, em m³/h — conta na média do turno.</p>';
 
   abrirCaixa(titulo, corpo, async () => {
     const dados = { hora: doCampo($('#f-hora').value, t) };
     for (const m of medidasDe(t)) {
-      const v = lerNumero($('#f-' + m.chave).value);
+      const v = (m.chave === 'horimetro' ? lerHorimetro : lerNumero)($('#f-' + m.chave).value);
       if (Number.isNaN(v)) {
         erro('O valor de ' + m.rotulo.toLowerCase() + ' não é um número. Use só dígitos e vírgula.');
         return;
       }
       dados[m.chave] = v;
+    }
+    if (qual === 'final' && t.inicial && t.inicial.horimetro != null && dados.horimetro != null &&
+        dados.horimetro < t.inicial.horimetro) {
+      erro('O horímetro final está menor que o inicial (' + mostrarNumero(t.inicial.horimetro) +
+        ' h). Confira os dígitos.');
+      return;
     }
     t[qual] = dados;
     fecharCaixa();
@@ -1215,6 +1278,7 @@ function formExtremo(t, qual) {
     await salvar();
     avisar(titulo + ' apagada.');
   } : null);
+  if ($('#f-horimetro')) previaHorimetro($('#f-horimetro'));
 }
 
 /* ——— campos próprios da área ——— */
@@ -1453,7 +1517,11 @@ function relatorioTexto(t) {
   if (t.producao != null) L.push('PRODUÇÃO: ' + mostrarNumero(t.producao) + ' t');
   const horimetroRodado = soma.horimetro != null ? soma.horimetro : c.horimetro;
   if (horimetroRodado != null) L.push('Horímetro rodado: ' + comUnidade(horimetroRodado, 'h'));
-  if (c.acidoMedio != null) L.push('Ácido médio por hora: ' + mostrarNumero(c.acidoMedio));
+  if (c.acidoMedio != null) {
+    L.push('Ácido médio: ' + comUnidade(c.acidoMedio, 'm³/h'));
+    const vol = volumeAcido(c.acidoMedio, horimetroRodado);
+    if (vol != null) L.push('Ácido no turno (média × horímetro): ' + comUnidade(vol, 'm³'));
+  }
   return L.join('\n');
 }
 
@@ -1572,7 +1640,11 @@ function blocosDoRelatorio(t) {
   const linhasFim = [['Duração do turno', duracao(c.duracaoTurno)]];
   const horimetroRodado = soma.horimetro != null ? soma.horimetro : c.horimetro;
   if (horimetroRodado != null) linhasFim.push(['Horímetro rodado', comUnidade(horimetroRodado, 'h')]);
-  if (c.acidoMedio != null) linhasFim.push(['Ácido médio por hora', mostrarNumero(c.acidoMedio)]);
+  if (c.acidoMedio != null) {
+    linhasFim.push(['Ácido médio', comUnidade(c.acidoMedio, 'm³/h')]);
+    const vol = volumeAcido(c.acidoMedio, horimetroRodado);
+    if (vol != null) linhasFim.push(['Ácido no turno (média × horímetro)', comUnidade(vol, 'm³')]);
+  }
   if (t.producao != null) linhasFim.push(['Produção', mostrarNumero(t.producao) + ' t']);
   area.extras.forEach(e => {
     const v = (t.extras || {})[e.chave];
@@ -1616,7 +1688,7 @@ function csvCampo(v) {
 
 function baixarCsv(t) {
   const L = [['tipo', 'equipamento', 'inicio', 'fim', 'minutos', 'acumulado_equip', 'acumulado_turno',
-    'motivo', 'horimetro_h', 'balanca_t', 'acido', 'observacao']];
+    'motivo', 'horimetro_h', 'balanca_t', 'acido_m3h', 'observacao']];
   t.paradas.slice().sort((a, b) => new Date(a.inicio) - new Date(b.inicio)).forEach(p =>
     L.push(['parada', p.equip, hhmm(p.inicio), p.fim ? hhmm(p.fim) : '',
       minutos(p.inicio, p.fim || relogio(t)),
@@ -1645,7 +1717,7 @@ function baixarCsv(t) {
   });
   if (temLeitura(t.inicial, t) && temLeitura(t.final, t)) {
     const soma = somatoria(t);
-    L.push(['somatoria', '', '', '', '', '', '', 'final menos inicial',
+    L.push(['somatoria', '', '', '', '', '', '', 'final menos inicial (ácido: média)',
       soma.horimetro, soma.balanca, soma.acido, '']);
   }
   // A produção vai na coluna da balança, que é de onde ela sai.
