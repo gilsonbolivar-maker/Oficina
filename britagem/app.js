@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '3.3.1';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '3.3.2';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -220,10 +220,6 @@ function mediaVazao(t, chave) {
     .filter(o => o && o[chave] != null).map(o => o[chave]);
   return valores.length ? +(valores.reduce((a, b) => a + b, 0) / valores.length).toFixed(2) : null;
 }
-
-/** Volume de ácido estimado: vazão média × horas que o horímetro rodou. */
-const volumeAcido = (media, horas) =>
-  (media == null || horas == null) ? null : +(media * horas).toFixed(2);
 
 let avisoTimer = null;
 function avisar(txt) {
@@ -627,14 +623,9 @@ function somatoria(t) {
   return out;
 }
 
-/**
- * Ácido consumido: com as duas leituras do totalizador, é final − inicial;
- * sem a final, uma estimativa pela vazão média × horímetro rodado.
- */
+/** Ácido consumido: final − inicial do totalizador; só aparece com as duas leituras. */
 function linhasAcido(t, c, soma) {
-  if (soma.acido != null) return [['Ácido consumido (final − inicial)', comUnidade(soma.acido, 'm³')]];
-  const vol = volumeAcido(c.acidoMedio, soma.horimetro != null ? soma.horimetro : c.horimetro);
-  return vol == null ? [] : [['Ácido estimado (média × horímetro)', comUnidade(vol, 'm³')]];
+  return soma.acido != null ? [['Ácido consumido (final − inicial)', comUnidade(soma.acido, 'm³')]] : [];
 }
 
 const temLeitura = (o, t) => !!o && medidasDe(t).some(m => o[m.chave] != null);

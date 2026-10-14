@@ -278,5 +278,5 @@ O **ácido tem dois números**:
 | Leitura **inicial** e **final** | o **totalizador** do instrumento | m³ | **Ácido consumido** = final − inicial |
 | Leitura **hora a hora** | a **vazão** do momento | m³/h | **Ácido médio** = média das leituras |
 
-Enquanto a leitura final não foi anotada, o resumo mostra o **ácido estimado**
-(vazão média × horímetro rodado). Uma final menor que a inicial é recusada.
+O consumido aparece quando as duas leituras (inicial e final) estão anotadas.
+Uma final menor que a inicial é recusada.
