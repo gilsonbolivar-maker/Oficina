@@ -31,6 +31,22 @@ jobs:
         with:
           enablement: true
 
+      # O Tanque Agitador é React + Vite: compila e põe o build no lugar do código.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tanque-agitador/package-lock.json
+
+      - name: Compilar o Tanque Agitador
+        working-directory: tanque-agitador
+        run: |
+          npm ci
+          npm run build
+          rm -rf node_modules src index.html
+          cp -r dist/. .
+          rm -rf dist
+
       # O site é o repositório inteiro: cada projeto fica na sua pasta.
       - uses: actions/upload-pages-artifact@v3
         with:
