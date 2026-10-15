@@ -22,10 +22,6 @@ Todo app da Oficina mostra o número da versão na tela, sempre.
 | Caderno Pencil | no meio do topo, embaixo do estado |
 | Câmera Negativo | embaixo do estado, no topo (`#versao-topo`) |
 | Escola | rodapé ("Escola v1") |
-| Tanque Agitador | ao lado do título, no cartão do topo |
-
-O Tanque Agitador é React + Vite: lá a `VERSAO` mora em `src/versao.ts` e em
-`public/sw.js` (mesmo valor), e o GitHub Pages compila o app no deploy.
 
 App novo já nasce com `VERSAO = '1.0.0'` e um lugar visível com `data-versao`.
 
