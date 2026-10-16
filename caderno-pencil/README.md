@@ -32,6 +32,10 @@ Ou seja: **não precisa de internet e nada sai do seu iPad.**
 | **Aa** | Tamanho da letra, espaço entre linhas, pauta e **Tema: Escuro / Claro** (fica salvo no aparelho; quem usava o modo noite já abre no Escuro). |
 | **☰** | Lista das notas guardadas — no meio do topo. |
 | **Limpar** | Apaga o texto da folha, sem mexer nas outras notas. Pede confirmação. |
+
+O canto de cima à esquerda fica vazio de propósito: com o app em janela, o
+iPadOS desenha ali os controles dela e cobriria qualquer botão.
+
 | **＋** | Folha nova. |
 
 ## Enviar para outro app
@@ -74,7 +78,8 @@ já na nova; as notas continuam onde estavam.
 
 | Versão | O que mudou |
 | ------ | ----------- |
-| 1.4.1 | O **Limpar** desceu um pouco, para não ficar colado na borda de cima. |
+| 1.4.2 | O **Limpar** foi para a direita, ao lado do **＋**: em janela, o iPadOS cobre o canto esquerdo com os controles dela. |
+| 1.4.1 | O **Limpar** desceu um pouco (não bastava — ver 1.4.2). |
 | 1.4.0 | Botão **Limpar** no topo; o **☰** foi para o centro. |
 | 1.3.0 | Seletor **Tema: Escuro / Claro** no lugar do “Modo noite” (a escolha antiga é mantida). |
 | 1.2.0 | Alça para arrastar a nota; número de versão e aviso de atualização. |
