@@ -74,6 +74,7 @@ já na nova; as notas continuam onde estavam.
 
 | Versão | O que mudou |
 | ------ | ----------- |
+| 1.4.1 | O **Limpar** desceu um pouco, para não ficar colado na borda de cima. |
 | 1.4.0 | Botão **Limpar** no topo; o **☰** foi para o centro. |
 | 1.3.0 | Seletor **Tema: Escuro / Claro** no lugar do “Modo noite” (a escolha antiga é mantida). |
 | 1.2.0 | Alça para arrastar a nota; número de versão e aviso de atualização. |
