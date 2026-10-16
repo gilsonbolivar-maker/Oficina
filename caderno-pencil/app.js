@@ -5,7 +5,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.3.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.4.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -326,6 +326,23 @@ el('btn-nova').addEventListener('click', () => {
   atualizarEstado();
   areaTexto.focus();
   mostrarAviso('Folha nova');
+});
+
+/* Limpa a folha sem mexer nas outras notas: apaga só o texto desta.
+   Pede confirmação porque o ↶ não desfaz uma troca feita por código. */
+el('btn-limpar').addEventListener('click', () => {
+  if (!areaTexto.value.trim()) { mostrarAviso('A folha já está vazia.'); return; }
+  if (!confirm('Limpar a folha? O texto escrito será apagado.')) return;
+
+  areaTexto.value = '';
+  const nota = notaAtual() || novaNota('');
+  nota.texto = '';
+  nota.alterada = Date.now();
+  gravar(true);
+  desenharLista();
+  atualizarEstado();
+  areaTexto.focus();
+  mostrarAviso('Folha limpa');
 });
 
 el('btn-apagar').addEventListener('click', () => {
