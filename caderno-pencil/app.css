@@ -62,17 +62,24 @@ body {
 
 h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
 
-/* ——— topo ——— */
+/* ——— topo ———
+   Três colunas iguais na primeira linha, para o botão de notas ficar
+   mesmo no centro: Limpar à esquerda, ☰ no meio, ＋ à direita.
+   O estado ocupa a linha de baixo, inteira. */
 .topo {
   flex: none;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
+  gap: 6px 10px;
+  padding: 8px 12px 13px;
   border-bottom: 1px solid var(--borda);
 }
+#btn-limpar { justify-self: start; }
+#btn-notas { justify-self: center; }
+#btn-nova { justify-self: end; }
 .estado {
-  flex: 1;
+  grid-column: 1 / -1;
   margin: 0;
   text-align: center;
   font-size: 13px;
@@ -95,6 +102,13 @@ h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
   touch-action: manipulation;
 }
 .icone:active { transform: translateY(1px); }
+/* botão do topo com palavra em vez de símbolo */
+.icone.texto {
+  width: auto;
+  padding: 0 16px;
+  font-size: 15px;
+  font-weight: 600;
+}
 
 /* ——— folha de escrita ——— */
 .folha {
