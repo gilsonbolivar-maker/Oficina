@@ -18,7 +18,7 @@ Todo app da Oficina mostra o número da versão na tela, sempre.
 |---|---|
 | Alô | ao lado da marca "Alô" (barra lateral e cartões de entrada) |
 | Britagem, Agenda Telefônica, IOs da URA | canto direito da barra de abas; na tela de boas-vindas |
-| Alarme GPS, Alerta de Chuva | ao lado do título |
+| Alarme GPS | ao lado do título |
 | Caderno Pencil | no meio do topo, embaixo do estado |
 | Câmera Negativo | embaixo do estado, no topo (`#versao-topo`) |
 | Escola | rodapé ("Escola v1") |

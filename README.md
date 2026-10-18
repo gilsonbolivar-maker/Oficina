@@ -9,7 +9,6 @@ Oficina de desenvolvimento — Projetos e soluções
 | [`britagem/`](britagem/) | PWA de relatório de turno da britagem: paradas, detector de metal e leituras. |
 | [`agenda-telefonica/`](agenda-telefonica/) | PWA de agenda: busca, ficha e discagem offline. Vem vazio; a lista é carregada no aparelho. |
 | [`alarme-gps/`](alarme-gps/) | PWA que toca um alarme ao chegar perto de um ponto marcado no mapa. |
-| [`alerta-chuva/`](alerta-chuva/) | PWA que avisa quando a previsão mostra chuva chegando no seu local. |
 | [`escola/`](escola/) | App de treino, para mexer no código sem risco de quebrar os outros. |
 | [`caderno-pencil/`](caderno-pencil/) | PWA para escrever à mão com a Apple Pencil no iPad e copiar o texto digitado. |
 | [`camera-negativo/`](camera-negativo/) | Câmera fotográfica que mostra e fotografa com as cores invertidas. |
@@ -26,7 +25,6 @@ preciso configurar nada em Settings.
 - Britagem: <https://gilsonbolivar-maker.github.io/Oficina/britagem/>
 - Agenda Telefônica: <https://gilsonbolivar-maker.github.io/Oficina/agenda-telefonica/>
 - Alarme GPS: <https://gilsonbolivar-maker.github.io/Oficina/alarme-gps/>
-- Alerta de Chuva: <https://gilsonbolivar-maker.github.io/Oficina/alerta-chuva/>
 - Caderno Pencil: <https://gilsonbolivar-maker.github.io/Oficina/caderno-pencil/>
 - Escola: <https://gilsonbolivar-maker.github.io/Oficina/escola/>
 - Câmera Negativo: <https://gilsonbolivar-maker.github.io/Oficina/camera-negativo/>
