@@ -13,6 +13,14 @@ Oficina de desenvolvimento — Projetos e soluções
 | [`caderno-pencil/`](caderno-pencil/) | PWA para escrever à mão com a Apple Pencil no iPad e copiar o texto digitado. |
 | [`camera-negativo/`](camera-negativo/) | Câmera fotográfica que mostra e fotografa com as cores invertidas. |
 | [`ura-ios/`](ura-ios/) | PWA para consultar e treinar as Instruções Operacionais da URA, offline. |
+| [`treino/`](treino/) | Ficha de academia Puxa & Empurra: esteira, máquinas, cargas e descanso. |
+| [`mensagem-efemera/`](mensagem-efemera/) | Texto vira imagem preta e branca para enviar como visualização única. |
+| [`descubra-seu-app/`](descubra-seu-app/) | Questionário que indica ao cliente o app ideal. |
+| [`portfolio/`](portfolio/) | Portfólio para apresentar a agências e empresas. |
+| [`dd-logos/`](dd-logos/) | Logomarcas e paleta da marca DD Desenvolvedor Digital. |
+| [`karla-neves/`](karla-neves/) | Site da Karla Neves Estética. |
+| [`lete-diedrichs/`](lete-diedrichs/) | Site da artista Lete Diedrichs. |
+| [`harmonize/`](harmonize/) | Guia do projeto Harmonize Clinical. |
 
 ## Publicação
 
@@ -29,3 +37,11 @@ preciso configurar nada em Settings.
 - Escola: <https://gilsonbolivar-maker.github.io/Oficina/escola/>
 - Câmera Negativo: <https://gilsonbolivar-maker.github.io/Oficina/camera-negativo/>
 - IOs da URA: <https://gilsonbolivar-maker.github.io/Oficina/ura-ios/>
+- Treino: <https://gilsonbolivar-maker.github.io/Oficina/treino/>
+- Mensagem Efêmera: <https://gilsonbolivar-maker.github.io/Oficina/mensagem-efemera/>
+- Descubra seu App: <https://gilsonbolivar-maker.github.io/Oficina/descubra-seu-app/>
+- Portfólio: <https://gilsonbolivar-maker.github.io/Oficina/portfolio/>
+- DD Desenvolvedor Digital: <https://gilsonbolivar-maker.github.io/Oficina/dd-logos/>
+- Karla Neves Estética: <https://gilsonbolivar-maker.github.io/Oficina/karla-neves/>
+- Lete Diedrichs: <https://gilsonbolivar-maker.github.io/Oficina/lete-diedrichs/>
+- Harmonize por Dentro: <https://gilsonbolivar-maker.github.io/Oficina/harmonize/>

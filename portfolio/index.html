@@ -1,0 +1,238 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Oficina Gilson Bolivar</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: ficha de oficina — cabeçalho de chapa, faixa de ferramentas, ordens de serviço por setor, processo, contato */
+:root{
+  --bg:#f3f2ee; --surface:#fbfaf7; --fg:#1d1f22; --muted:#5d6168; --line:#d6d4cc;
+  --accent:#c98a0b; --accent-ink:#1d1f22; --chip:#e9e6dc;
+  --display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#16181b; --surface:#1d2024; --fg:#ecebe6; --muted:#a3a7ad; --line:#30343a;
+  --accent:#e8a627; --accent-ink:#16181b; --chip:#262a2f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#16181b; --surface:#1d2024; --fg:#ecebe6; --muted:#a3a7ad; --line:#30343a;
+  --accent:#e8a627; --accent-ink:#16181b; --chip:#262a2f; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:16px/1.6 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:960px;margin:0 auto;padding-block:40px 64px;display:grid;gap:56px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1}
+.label{font:500 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+a{color:inherit}
+a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+/* hero */
+.hero{display:grid;gap:20px;border-top:6px solid var(--fg);padding-top:20px}
+.hero .top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.hero h1{font-size:clamp(3rem,11vw,6.5rem);font-weight:800;text-transform:uppercase;letter-spacing:-.01em}
+.hero h1 span{color:var(--accent)}
+.hero p{font-size:1.2rem;max-width:34ch;margin:0}
+.cta{display:flex;gap:12px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;font:600 15px var(--body);
+  border:2px solid var(--fg);background:var(--fg);color:var(--bg);text-decoration:none;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--fg)}
+
+/* ferramentas */
+.tools{display:grid;gap:14px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:500 13px var(--mono);background:var(--chip);padding:6px 10px;border:1px solid var(--line)}
+
+/* números */
+.facts{display:grid;grid-template-columns:repeat(3,1fr);border-block:1px solid var(--line)}
+.fact{padding:18px 12px;display:grid;gap:4px}
+.fact + .fact{border-left:1px solid var(--line)}
+.fact b{font:800 2.6rem/1 var(--display);font-variant-numeric:tabular-nums}
+.fact span{font-size:.9rem;color:var(--muted)}
+
+/* projetos */
+.sector{display:grid;gap:16px}
+.sector-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.sector-head h2{font-size:2.2rem;font-weight:800;text-transform:uppercase}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px}
+.os{background:var(--surface);border:1px solid var(--line);padding:20px;display:grid;gap:10px;align-content:start;min-width:0}
+.os .num{font:500 12px var(--mono);color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+.os h3{font-size:1.6rem;font-weight:600}
+.os p{margin:0;color:var(--muted);font-size:.95rem}
+.os ul{margin:0;padding-left:18px;font-size:.92rem}
+.os .stack{font:400 12px var(--mono);color:var(--muted);border-top:1px dashed var(--line);padding-top:10px}
+.os a.link{font:600 14px var(--body);color:var(--fg);text-decoration-color:var(--accent);text-decoration-thickness:2px;text-underline-offset:4px}
+.status{font:500 11px var(--mono);text-transform:uppercase;letter-spacing:.08em;padding:3px 7px;background:var(--accent);color:var(--accent-ink)}
+.status.dev{background:var(--chip);color:var(--muted);border:1px solid var(--line)}
+
+/* processo */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:0;counter-reset:s;border-top:1px solid var(--line)}
+.step{padding:18px 16px 18px 0;display:grid;gap:6px;counter-increment:s}
+.step::before{content:"0" counter(s);font:800 1.8rem var(--display);color:var(--accent)}
+.step b{font-weight:600}
+.step span{color:var(--muted);font-size:.93rem}
+
+/* contato */
+.contact{background:var(--fg);color:var(--bg);padding:28px;display:grid;gap:14px}
+.contact h2{font-size:clamp(2rem,7vw,3rem);font-weight:800;text-transform:uppercase}
+.contact .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.contact code{font:500 16px var(--mono);user-select:all;word-break:break-all}
+.contact .btn{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.toast{font:500 13px var(--mono);color:var(--accent)}
+
+@media (max-width:520px){
+  .facts{grid-template-columns:1fr}
+  .fact + .fact{border-left:0;border-top:1px solid var(--line)}
+}
+@media (prefers-reduced-motion:no-preference){.btn{transition:transform .15s}.btn:hover{transform:translateY(-2px)}}
+</style>
+
+<div class="wrap">
+
+  <header class="hero">
+    <div class="top">
+      <span class="label">Oficina · desenvolvimento com IA</span>
+      <span class="label">Brasil · remoto</span>
+    </div>
+    <h1>Gilson<br><span>Bolivar</span></h1>
+    <p>Construo apps e sites que funcionam de verdade, do problema à publicação, em dias.</p>
+    <div class="cta">
+      <a class="btn" href="#contato">Falar comigo</a>
+      <a class="btn ghost" href="#projetos">Ver projetos</a>
+    </div>
+  </header>
+
+  <section class="facts" aria-label="Resumo">
+    <div class="fact"><b>8</b><span>projetos construídos</span></div>
+    <div class="fact"><b>3</b><span>setores: indústria, saúde, cultura</span></div>
+    <div class="fact"><b>PWA</b><span>apps instaláveis no celular, sem loja</span></div>
+  </section>
+
+  <section class="tools">
+    <span class="label">Ferramentas que uso no dia a dia</span>
+    <div class="chips">
+      <span class="chip">Claude Code</span><span class="chip">Lovable</span><span class="chip">Google AI Studio</span>
+      <span class="chip">Figma</span><span class="chip">React</span><span class="chip">TypeScript</span>
+      <span class="chip">Tailwind</span><span class="chip">PWA</span><span class="chip">Gemini · Claude · Grok APIs</span>
+      <span class="chip">GitHub Pages</span><span class="chip">Netlify</span><span class="chip">Cloudflare</span>
+    </div>
+  </section>
+
+  <div id="projetos" style="display:grid;gap:48px">
+
+    <section class="sector">
+      <div class="sector-head"><h2>Indústria</h2><span class="label">apps de operação e campo</span></div>
+      <div class="grid">
+        <article class="os">
+          <div class="num"><span>OS-01</span><span class="status">Em uso</span></div>
+          <h3>Painel de Tags URA/INB</h3>
+          <p>Painel supervisório para leitura de sensores por área, usado na rotina de turno.</p>
+          <ul>
+            <li>Leitura de valores por foto (OCR)</li>
+            <li>Alertas por limite e passagem de serviço</li>
+            <li>Envio por WhatsApp ao responsável de cada área</li>
+            <li>Gráfico com previsão de +30 e +60 min</li>
+          </ul>
+          <div class="stack">HTML · JavaScript · Tesseract.js · PDF</div>
+        </article>
+        <article class="os">
+          <div class="num"><span>OS-02</span><span class="status">Publicado</span></div>
+          <h3>Leitor Visual de Painéis</h3>
+          <p>Fotografa um painel industrial e a IA extrai os valores direto para a tabela de leitura.</p>
+          <ul>
+            <li>Escolha de IA: Gemini, Claude ou Grok</li>
+            <li>Instalável no celular (PWA)</li>
+            <li>Roda sem servidor próprio</li>
+          </ul>
+          <div class="stack">React · Vite · Gemini Vision · Netlify</div>
+        </article>
+        <article class="os">
+          <div class="num"><span>OS-03</span><span class="status">Publicado</span></div>
+          <h3>App da Britagem</h3>
+          <p>Aplicativo de apoio à operação de britagem.</p>
+          <div class="stack">Claude Code · GitHub Pages</div>
+          <a class="link" href="https://gilsonbolivar-maker.github.io/Oficina/britagem/" target="_blank" rel="noopener">Abrir app ↗</a>
+        </article>
+        <article class="os">
+          <div class="num"><span>OS-04</span><span class="status dev">Protótipo</span></div>
+          <h3>Grimório de Campo</h3>
+          <p>App de campo que lê os sensores reais do iPad (bússola, movimento e microfone) para medições na floresta.</p>
+          <div class="stack">PWA · APIs de sensores do navegador</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="sector">
+      <div class="sector-head"><h2>Saúde e negócios</h2><span class="label">sites que trazem cliente</span></div>
+      <div class="grid">
+        <article class="os">
+          <div class="num"><span>OS-05</span><span class="status">Publicado</span></div>
+          <h3>Drª Lara Azevedo</h3>
+          <p>Site da cirurgiã-dentista: especialidades, contato por WhatsApp e identidade da marca.</p>
+          <div class="stack">HTML · GitHub Pages</div>
+          <a class="link" href="https://gilsonbolivar-maker.github.io/Lara-Azevedo-/" target="_blank" rel="noopener">Ver site ↗</a>
+        </article>
+        <article class="os">
+          <div class="num"><span>OS-06</span><span class="status dev">Em produção</span></div>
+          <h3>Dra. Débora Costa</h3>
+          <p>Site de psicóloga clínica com atendimento 100% online, focado em TCC.</p>
+          <div class="stack">Lovable · TanStack Start · React · Cloudflare</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="sector">
+      <div class="sector-head"><h2>Cultura</h2><span class="label">artistas e eventos</span></div>
+      <div class="grid">
+        <article class="os">
+          <div class="num"><span>OS-07</span><span class="status">Publicado</span></div>
+          <h3>Lete Diedrichs</h3>
+          <p>Site colorido para artista plástica, muralista e professora de canto, inspirado nos murais dela.</p>
+          <div class="stack">HTML · design autoral</div>
+        </article>
+        <article class="os">
+          <div class="num"><span>OS-08</span><span class="status dev">Protótipo</span></div>
+          <h3>Lavagem da Esquina do Padre</h3>
+          <p>Site do 40º Cortejo Cultural (Caetité-BA) e portfólio de patrocínio para captação via Lei Rouanet.</p>
+          <div class="stack">Figma · PDF de patrocínio</div>
+        </article>
+      </div>
+    </section>
+  </div>
+
+  <section style="display:grid;gap:16px">
+    <span class="label">Como eu trabalho</span>
+    <div class="steps">
+      <div class="step"><b>Entendo o problema</b><span>Uma conversa curta para saber o que precisa funcionar.</span></div>
+      <div class="step"><b>Protótipo rápido</b><span>Em poucos dias você já testa algo real.</span></div>
+      <div class="step"><b>Ajuste com uso</b><span>Corrijo com base no que acontece na prática.</span></div>
+      <div class="step"><b>Publico</b><span>No ar, com link, pronto para o cliente usar.</span></div>
+    </div>
+  </section>
+
+  <section class="contact" id="contato">
+    <span class="label" style="color:inherit;opacity:.7">Agências, estúdios e empresas</span>
+    <h2>Precisa de alguém que entregue rápido?</h2>
+    <div class="row">
+      <code id="email">gilsonbolivar@gmail.com</code>
+      <button class="btn" id="copy" type="button">Copiar e-mail</button>
+      <span class="toast" id="toast" hidden>Copiado</span>
+    </div>
+  </section>
+
+</div>
+<script>
+document.getElementById('copy').addEventListener('click',function(){
+  var t=document.getElementById('email').textContent,toast=document.getElementById('toast');
+  function ok(){toast.hidden=false;setTimeout(function(){toast.hidden=true},1800)}
+  function sel(){var r=document.createRange();r.selectNodeContents(document.getElementById('email'));var s=getSelection();s.removeAllRanges();s.addRange(r)}
+  try{navigator.clipboard.writeText(t).then(ok,sel)}catch(e){sel()}
+});
+</script>
+
+
+<span data-versao style="position:fixed;right:8px;bottom:6px;z-index:9999;font:500 11px ui-monospace,Menlo,monospace;opacity:.55;pointer-events:none"></span>
+<script>(function(){const VERSAO='1.0.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Portfólio v"+VERSAO})})();</script>
+</body></html>

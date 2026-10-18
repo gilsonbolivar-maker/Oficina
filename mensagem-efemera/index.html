@@ -1,0 +1,415 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found]){display:none!important}</style></head><body>
+<title>Mensagem Efêmera</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  /* Página monocromática por definição: o que ela produz é preto e branco.
+     Tema único e deliberado — todas as cores pintadas explicitamente. */
+  :root{
+    --ink:#07100c;        /* preto com leve viés verde */
+    --panel:#0c1712;
+    --field:#050a07;
+    --line:#1b2b22;
+    --fg:#e6efe9;
+    --dim:#6d8378;
+    --accent:#25d366;     /* verde do WhatsApp — vem do assunto, não de enfeite */
+    --mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--ink);color:var(--fg);
+    font-family:var(--mono);font-size:14px;line-height:1.5;
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:620px;margin:0 auto;padding:22px 18px calc(28px + env(safe-area-inset-bottom))}
+
+  header{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+  h1{font-size:16px;font-weight:700;margin:0;letter-spacing:.2px}
+  h1 .cursor{color:var(--accent);font-weight:500}
+  .tag{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim)}
+  .lede{color:var(--dim);font-size:12.5px;margin:0 0 18px}
+
+  .field{
+    background:var(--field);border:1px solid var(--line);border-radius:12px;
+    overflow:hidden;transition:border-color .15s ease;
+  }
+  .field:focus-within{border-color:var(--accent)}
+  .field .bar{
+    display:flex;justify-content:space-between;align-items:center;gap:10px;
+    padding:8px 12px;border-bottom:1px solid var(--line);
+    font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:var(--dim);
+  }
+  .field .bar b{color:var(--accent);font-weight:500}
+  .wipe{
+    font:500 11px/1 var(--mono);letter-spacing:.8px;text-transform:uppercase;
+    background:none;border:0;padding:4px 6px;margin:-4px -6px;border-radius:6px;
+    color:var(--dim);cursor:pointer;flex:0 0 auto;transition:color .15s ease;
+  }
+  .wipe:hover{color:#ff7a6b}
+  .wipe:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .wipe[data-armed="1"]{color:#ff7a6b;font-weight:700}
+  .bar .meta{display:flex;align-items:center;gap:14px}
+  textarea{
+    display:block;width:100%;min-height:184px;resize:vertical;
+    background:transparent;color:var(--fg);border:0;padding:14px;
+    font:400 15px/1.55 var(--mono);caret-color:var(--accent);
+  }
+  textarea:focus{outline:none}
+  textarea::placeholder{color:#3f5349}
+
+  .controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:14px}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .seg label{position:relative;cursor:pointer}
+  .seg input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+  .seg span{display:block;padding:8px 15px;font-size:13px;color:var(--dim);transition:.15s}
+  .seg input:checked ~ span{background:var(--fg);color:var(--ink);font-weight:700}
+  .seg input:focus-visible ~ span{outline:2px solid var(--accent);outline-offset:-2px}
+  .seg-label{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim)}
+
+  .actions{display:flex;gap:9px;margin-top:14px;flex-wrap:wrap}
+  button{
+    font:700 14px var(--mono);border-radius:10px;padding:12px 16px;cursor:pointer;
+    background:var(--panel);color:var(--fg);border:1px solid var(--line);flex:1 1 45%;
+    transition:border-color .15s ease, transform .06s ease;
+  }
+  button:hover:not(:disabled){border-color:#33513f}
+  button:active:not(:disabled){transform:translateY(1px)}
+  button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  button:disabled{opacity:.35;cursor:not-allowed}
+  button.go{background:var(--accent);color:#04150b;border-color:var(--accent);flex:1 1 100%}
+  button.go:hover:not(:disabled){border-color:#5ee995;background:#2fe073}
+
+  .status{margin-top:12px;font-size:12px;color:var(--dim);min-height:18px}
+  .status .ok{color:var(--accent)}
+
+  .result{margin-top:8px;display:none}
+  figure{margin:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#000}
+  figure img{display:block;width:100%;height:auto}
+  figcaption{
+    display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;
+    padding:9px 12px;border-top:1px solid var(--line);background:var(--panel);
+    font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums;
+  }
+  .save-tip{
+    margin-top:10px;padding:11px 13px;border:1px dashed var(--line);border-radius:10px;
+    font-size:12.5px;color:var(--dim);background:var(--panel);
+  }
+  .save-tip b{color:var(--fg);font-weight:500}
+
+  .steps{margin:22px 0 0;padding:16px 0 0;border-top:1px solid var(--line);list-style:none;
+         display:grid;gap:9px;font-size:12.5px;color:var(--dim);counter-reset:s}
+  .steps li{display:grid;grid-template-columns:16px 1fr;gap:10px;align-items:baseline}
+  .steps li::before{
+    counter-increment:s;content:counter(s);
+    color:var(--accent);font-size:11px;min-width:14px;
+  }
+  .steps b{color:var(--fg);font-weight:500}
+
+  @media (prefers-reduced-motion: reduce){*{transition:none !important}}
+</style>
+
+<div class="wrap">
+
+  <header>
+    <h1>mensagem <span class="cursor">&rarr;</span> imagem</h1>
+    <span class="tag">visualização única</span>
+  </header>
+  <p class="lede">Fundo preto, fonte de terminal branca. A imagem é gerada no seu aparelho — nada sai daqui.</p>
+
+  <div class="field">
+    <div class="bar">
+      <span>mensagem</span>
+      <span class="meta"><span id="count">0 caracteres</span><button type="button" class="wipe" id="wipe">apagar tudo</button></span>
+    </div>
+    <textarea id="msg" spellcheck="false" placeholder="Digite aqui o que você quer transformar em imagem..."></textarea>
+  </div>
+
+  <div class="controls">
+    <span class="seg-label">tamanho</span>
+    <div class="seg" id="size">
+      <label><input type="radio" name="sz" value="30"><span>P</span></label>
+      <label><input type="radio" name="sz" value="38" checked><span>M</span></label>
+      <label><input type="radio" name="sz" value="48"><span>G</span></label>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="go" id="gen">Gerar imagem</button>
+    <button id="share" disabled>Compartilhar</button>
+    <button id="copy" disabled>Copiar</button>
+  </div>
+
+  <p class="status" id="status"></p>
+
+  <div class="result" id="result">
+    <figure>
+      <img id="out" alt="Imagem gerada com a mensagem digitada">
+      <figcaption><span id="dims"></span><span id="weight"></span></figcaption>
+    </figure>
+    <p class="save-tip">
+      No celular: <b>toque e segure a imagem</b> &rarr; Salvar imagem.
+      No computador: <b>botão direito</b> &rarr; Salvar imagem como.
+    </p>
+  </div>
+
+  <ol class="steps">
+    <li><span>Digite a mensagem e toque em <b>Gerar imagem</b>.</span></li>
+    <li><span>Salve a imagem (ou use <b>Compartilhar</b>, no celular).</span></li>
+    <li><span>No WhatsApp, anexe a imagem e toque no ícone <b>1</b> antes de enviar.</span></li>
+  </ol>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var W = 1080, PAD = 64, LH = 1.5, MAXH = 4200;
+  var FAMILY = '"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", "DejaVu Sans Mono", monospace';
+
+  var $ = function (id) { return document.getElementById(id); };
+  var msg = $("msg"), out = $("out"), result = $("result"), status = $("status");
+  var dims = $("dims"), weight = $("weight"), count = $("count");
+  var btnGen = $("gen"), btnShare = $("share"), btnCopy = $("copy"), btnWipe = $("wipe");
+  var current = null;
+
+  /* rascunho e contador */
+  try { msg.value = localStorage.getItem("draft") || ""; } catch (e) {}
+  function tally() {
+    var n = msg.value.length;
+    count.textContent = n + (n === 1 ? " caractere" : " caracteres");
+  }
+  msg.addEventListener("input", function () {
+    tally();
+    try { localStorage.setItem("draft", msg.value); } catch (e) {}
+  });
+  tally();
+
+  /* quebra de linha para fonte monoespaçada */
+  function wrap(text, maxChars) {
+    var lines = [];
+    text.replace(/\r/g, "").split("\n").forEach(function (para) {
+      if (!para.length) { lines.push(""); return; }
+      var line = "";
+      para.split(/(\s+)/).forEach(function (tk) {
+        if (!tk.length) return;
+        if (/^\s+$/.test(tk)) {
+          if (line.length && line.length + tk.length <= maxChars) line += tk;
+          else if (line.length) { lines.push(line); line = ""; }
+          return;
+        }
+        while (tk.length) {
+          var free = maxChars - line.length;
+          if (tk.length <= free) { line += tk; tk = ""; }
+          else if (tk.length <= maxChars) { lines.push(line.replace(/\s+$/, "")); line = ""; }
+          else { line += tk.slice(0, free); tk = tk.slice(free); lines.push(line); line = ""; }
+        }
+      });
+      lines.push(line.replace(/\s+$/, ""));
+    });
+    return lines;
+  }
+
+  function draw(text, fontSize) {
+    var c = document.createElement("canvas");
+    var g = c.getContext("2d");
+    g.font = fontSize + "px " + FAMILY;
+    var charW = g.measureText("M").width || fontSize * 0.6;
+    var maxChars = Math.max(8, Math.floor((W - PAD * 2) / charW));
+    var lines = wrap(text, maxChars);
+    var lineH = Math.round(fontSize * LH);
+    var H = Math.max(320, PAD * 2 + lines.length * lineH);
+
+    c.width = W; c.height = H;
+    g = c.getContext("2d");
+    g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
+    g.font = fontSize + "px " + FAMILY;
+    g.textBaseline = "top";
+    g.fillStyle = "#fff";
+    for (var i = 0; i < lines.length; i++) {
+      g.fillText(lines[i], PAD, PAD + i * lineH + Math.round(fontSize * 0.12));
+    }
+    return c;
+  }
+
+  function render(text, fontSize) {
+    var c = draw(text, fontSize);
+    while (c.height > MAXH && fontSize > 22) {
+      fontSize = Math.max(22, fontSize - 4);
+      c = draw(text, fontSize);
+    }
+    return c;
+  }
+
+  /* --- PNG 4 bits em escala de cinza: metade dos bytes, sem perda visual --- */
+  var CRC = (function () {
+    var t = new Uint32Array(256);
+    for (var n = 0; n < 256; n++) {
+      var c = n;
+      for (var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      t[n] = c >>> 0;
+    }
+    return t;
+  })();
+  function crc32(buf) {
+    var c = 0xFFFFFFFF;
+    for (var i = 0; i < buf.length; i++) c = CRC[(c ^ buf[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+  function chunk(type, data) {
+    var o = new Uint8Array(12 + data.length), dv = new DataView(o.buffer);
+    dv.setUint32(0, data.length);
+    for (var i = 0; i < 4; i++) o[4 + i] = type.charCodeAt(i);
+    o.set(data, 8);
+    dv.setUint32(8 + data.length, crc32(o.subarray(4, 8 + data.length)));
+    return o;
+  }
+  function pngGray(w, h, gray) {
+    var bpr = (w + 1) >> 1;
+    var raw = new Uint8Array((bpr + 1) * h);
+    var prev = new Uint8Array(bpr), cur = new Uint8Array(bpr);
+    for (var y = 0; y < h; y++) {
+      var r = y * w, o = y * (bpr + 1);
+      cur.fill(0);
+      for (var x = 0; x < w; x++) {
+        var v = gray[r + x] >> 4;
+        if (x & 1) cur[x >> 1] |= v; else cur[x >> 1] = v << 4;
+      }
+      raw[o] = 2;                                        // filtro "Up"
+      for (var i = 0; i < bpr; i++) raw[o + 1 + i] = (cur[i] - prev[i]) & 0xFF;
+      prev.set(cur);
+    }
+    var cs = new CompressionStream("deflate");
+    var wr = cs.writable.getWriter(); wr.write(raw); wr.close();
+    return new Response(cs.readable).arrayBuffer().then(function (ab) {
+      var ihdr = new Uint8Array(13), dv = new DataView(ihdr.buffer);
+      dv.setUint32(0, w); dv.setUint32(4, h);
+      ihdr[8] = 4; ihdr[9] = 0;                          // 4 bits, escala de cinza
+      return new Blob([
+        new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
+        chunk("IHDR", ihdr), chunk("IDAT", new Uint8Array(ab)), chunk("IEND", new Uint8Array(0))
+      ], { type: "image/png" });
+    });
+  }
+  function toBlob(canvas) {
+    var w = canvas.width, h = canvas.height;
+    if (typeof CompressionStream === "function") {
+      try {
+        var d = canvas.getContext("2d").getImageData(0, 0, w, h).data;
+        var gray = new Uint8Array(w * h);
+        for (var i = 0, j = 0; j < gray.length; i += 4, j++) gray[j] = d[i];
+        return pngGray(w, h, gray);
+      } catch (e) {}
+    }
+    return new Promise(function (res) { canvas.toBlob(res, "image/png"); });
+  }
+
+  /* --- ações --- */
+  function fontSize() {
+    return parseInt(document.querySelector('input[name="sz"]:checked').value, 10);
+  }
+
+  function fontsReady(px) {
+    if (!document.fonts || !document.fonts.load) return Promise.resolve();
+    return document.fonts.load(px + 'px "JetBrains Mono"').catch(function () {});
+  }
+
+  function generate() {
+    var text = msg.value.replace(/\s+$/, "");
+    if (!text.trim()) { status.textContent = "Digite uma mensagem primeiro."; msg.focus(); return; }
+
+    btnGen.disabled = true;
+    status.textContent = "gerando...";
+    var px = fontSize();
+
+    var canvas;
+    fontsReady(px).then(function () {
+      canvas = render(text, px);
+      return toBlob(canvas);
+    }).then(function (blob) {
+      if (current) URL.revokeObjectURL(current.url);
+      var stamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, "");
+      current = { blob: blob, url: URL.createObjectURL(blob), name: "msg-" + stamp + ".png" };
+
+      out.src = current.url;
+      result.style.display = "block";
+      dims.textContent = canvas.width + " × " + canvas.height + " px";
+      weight.textContent = Math.max(1, Math.round(blob.size / 1024)) + " KB";
+      status.innerHTML = '<span class="ok">pronto</span> — salve a imagem abaixo';
+      btnShare.disabled = btnCopy.disabled = false;
+      btnGen.disabled = false;
+    }).catch(function (err) {
+      status.textContent = "Não foi possível gerar a imagem: " + err;
+      btnGen.disabled = false;
+    });
+  }
+
+  btnGen.addEventListener("click", generate);
+  msg.addEventListener("keydown", function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); generate(); }
+  });
+  $("size").addEventListener("change", function () { if (current) generate(); });
+
+  btnShare.addEventListener("click", function () {
+    if (!current) return;
+    var file = new File([current.blob], current.name, { type: "image/png" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file] }).catch(function () {
+        status.textContent = "Compartilhamento cancelado.";
+      });
+    } else {
+      status.textContent = "Compartilhar não está disponível aqui — toque e segure a imagem para salvar.";
+    }
+  });
+
+  btnCopy.addEventListener("click", function () {
+    if (!current) return;
+    if (!navigator.clipboard || typeof ClipboardItem === "undefined") {
+      status.textContent = "Copiar não está disponível aqui — toque e segure a imagem para salvar."; return;
+    }
+    navigator.clipboard.write([new ClipboardItem({ "image/png": current.blob })])
+      .then(function () { status.innerHTML = '<span class="ok">imagem copiada</span> — cole no WhatsApp Web'; })
+      .catch(function () { status.textContent = "Não foi possível copiar — toque e segure a imagem para salvar."; });
+  });
+
+  /* apagar tudo: texto, rascunho salvo e imagem gerada (dois toques para confirmar) */
+  var armed = false, armTimer;
+  function disarm() {
+    armed = false;
+    clearTimeout(armTimer);
+    btnWipe.textContent = "apagar tudo";
+    btnWipe.removeAttribute("data-armed");
+  }
+  function wipe() {
+    disarm();
+    msg.value = "";
+    tally();
+    try { localStorage.removeItem("draft"); localStorage.removeItem("wiped"); } catch (e) {}
+    if (current) { URL.revokeObjectURL(current.url); current = null; }
+    out.removeAttribute("src");
+    result.style.display = "none";
+    btnShare.disabled = btnCopy.disabled = true;
+    status.textContent = "apagado — nada guardado neste aparelho";
+    msg.focus();
+  }
+  btnWipe.addEventListener("click", function () {
+    if (!msg.value && !current) { wipe(); return; }
+    if (!armed) {
+      armed = true;
+      btnWipe.textContent = "apagar mesmo?";
+      btnWipe.setAttribute("data-armed", "1");
+      armTimer = setTimeout(disarm, 4000);
+      return;
+    }
+    wipe();
+  });
+  msg.addEventListener("input", disarm);
+
+  /* abre com a caixa vazia (ou com o rascunho que ficou salvo) */
+  if (msg.value) generate(); else msg.focus();
+})();
+</script>
+
+
+<span data-versao style="position:fixed;right:8px;bottom:6px;z-index:9999;font:500 11px ui-monospace,Menlo,monospace;opacity:.55;pointer-events:none"></span>
+<script>(function(){const VERSAO='1.0.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Mensagem Efêmera v"+VERSAO})})();</script>
+</body></html>

@@ -22,6 +22,7 @@ Todo app da Oficina mostra o número da versão na tela, sempre.
 | Caderno Pencil | no meio do topo, embaixo do estado |
 | Câmera Negativo | embaixo do estado, no topo (`#versao-topo`) |
 | Escola | rodapé ("Escola v1") |
+| Páginas de arquivo único (Treino, Mensagem Efêmera, Descubra seu App, Portfólio, DD, Karla Neves, Lete Diedrichs, Harmonize) | canto inferior direito; a `VERSAO` fica no script no fim do `index.html` (não têm `app.js` nem `sw.js`) |
 
 App novo já nasce com `VERSAO = '1.0.0'` e um lugar visível com `data-versao`.
 

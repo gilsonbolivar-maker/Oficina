@@ -1,0 +1,817 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Treino Puxa &amp; Empurra</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: coluna única de app de bolso — cabeçalho, seletor A/B, esteira, lista de máquinas, barra fixa de descanso */
+:root{
+  --bg:#eef1f3; --surface:#ffffff; --line:#d5dbe0; --fg:#14191e; --muted:#5d6872;
+  --push:#d9480f; --push-soft:#fde6db; --pull:#1864ab; --pull-soft:#dbe9f7;
+  --ok:#2b8a3e; --ok-soft:#dcf2e1; --sil:#dde3e8; --musc:#bcc6ce; --far:#7d8a95; --pad:#4b5966; --frame:#a3aeb7;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --acc:var(--push); --acc-soft:var(--push-soft);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1316; --surface:#181e23; --line:#2a333b; --fg:#e8edf1; --muted:#93a0ab;
+  --push:#ff8a50; --push-soft:#3a2216; --pull:#5fa8ef; --pull-soft:#162a3d;
+  --ok:#5bd17a; --ok-soft:#173222; --sil:#27313a; --musc:#3a4651; --far:#6d7a86; --pad:#7e8e9c; --frame:#4a5661; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1316; --surface:#181e23; --line:#2a333b; --fg:#e8edf1; --muted:#93a0ab;
+  --push:#ff8a50; --push-soft:#3a2216; --pull:#5fa8ef; --pull-soft:#162a3d;
+  --ok:#5bd17a; --ok-soft:#173222; --sil:#27313a; --musc:#3a4651; --far:#6d7a86; --pad:#7e8e9c; --frame:#4a5661; color-scheme:dark}
+body.pull{--acc:var(--pull); --acc-soft:var(--pull-soft)}
+body{background:var(--bg); color:var(--fg); font-family:var(--body); font-size:16px; line-height:1.4}
+.wrap{max-width:560px; margin:0 auto; padding-inline:16px; padding-block:20px 120px; display:flex; flex-direction:column; gap:18px}
+h1,h2{font-family:var(--display); margin:0; text-wrap:balance; letter-spacing:.01em}
+h1{font-size:2.3rem; font-weight:800; line-height:1; text-transform:uppercase}
+h2{font-size:1.35rem; font-weight:800; text-transform:uppercase}
+.eyebrow{font-size:.75rem; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); font-weight:600}
+.head{display:flex; flex-direction:column; gap:6px}
+.sugg{font-size:.95rem; color:var(--muted)}
+.sugg b{color:var(--acc)}
+.seg{display:grid; grid-template-columns:1fr 1fr; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:4px; gap:4px}
+.seg button{font-family:var(--display); font-size:1.15rem; font-weight:800; text-transform:uppercase; border:0; border-radius:9px; padding:10px 6px; background:transparent; color:var(--muted); cursor:pointer}
+.seg button small{display:block; font-family:var(--body); font-size:.72rem; font-weight:500; text-transform:none; letter-spacing:0}
+.seg button[aria-pressed="true"]{background:var(--acc); color:#fff}
+.seg button[aria-pressed="true"] small{color:#fff; opacity:.85}
+button:focus-visible,input:focus-visible{outline:2px solid var(--acc); outline-offset:2px}
+.card{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:12px}
+.row{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap}
+.clock{font-family:var(--display); font-weight:800; font-size:3rem; line-height:1; font-variant-numeric:tabular-nums}
+.bar{height:8px; border-radius:99px; background:var(--line); overflow:hidden; position:relative}
+.bar i{display:block; height:100%; width:0; background:var(--acc); transition:width .4s}
+.phases{display:grid; grid-template-columns:1fr 3fr; gap:4px; font-size:.78rem; color:var(--muted)}
+.phases span{border-top:3px solid var(--line); padding-top:4px}
+.phases span.on{border-color:var(--acc); color:var(--fg); font-weight:600}
+.btns{display:flex; gap:8px}
+.btn{font:600 .95rem var(--body); border-radius:10px; padding:10px 16px; border:1px solid var(--line); background:var(--surface); color:var(--fg); cursor:pointer}
+.btn.primary{background:var(--acc); border-color:var(--acc); color:#fff}
+.done-tag{font-size:.8rem; font-weight:600; color:var(--ok); background:var(--ok-soft); padding:3px 9px; border-radius:99px}
+.list{display:flex; flex-direction:column; gap:10px; list-style:none; margin:0; padding:0}
+.ex{background:var(--surface); border:1px solid var(--line); border-left:4px solid var(--acc); border-radius:12px; padding:14px; display:grid; grid-template-columns:1fr auto; gap:10px 12px}
+.ex.complete{border-left-color:var(--ok); opacity:.8}
+.ex-name{font-weight:600; font-size:1.05rem; min-width:0}
+.ex-meta{display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; font-size:.8rem}
+.chip{background:var(--acc-soft); color:var(--acc); font-weight:600; padding:2px 8px; border-radius:99px}
+.plain{color:var(--muted)}
+.tip{grid-column:1/-1; font-size:.85rem; color:var(--muted); margin:0}
+.kg{display:flex; align-items:center; gap:4px}
+.kg button{width:34px; height:34px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--fg); font-size:1.1rem; cursor:pointer}
+.kg input{width:52px; text-align:center; font:600 1rem var(--body); font-variant-numeric:tabular-nums; border:1px solid var(--line); border-radius:8px; padding:6px 2px; background:var(--bg); color:var(--fg)}
+.kg label{font-size:.75rem; color:var(--muted)}
+.swap{grid-column:1/-1}
+.swap summary{cursor:pointer; font-weight:600; font-size:.9rem; color:var(--muted); list-style:none}
+.swap summary::-webkit-details-marker{display:none}
+.swap[open] summary{color:var(--acc)}
+.swap-note{font-size:.82rem; margin:8px 0 6px}
+.opts{display:flex; flex-direction:column; gap:6px}
+.opt{display:flex; justify-content:space-between; align-items:center; gap:10px; text-align:left; border:1px solid var(--line); background:var(--bg); color:var(--fg); border-radius:10px; padding:9px 12px; font:500 .92rem var(--body); cursor:pointer}
+.opt small{color:var(--muted); white-space:nowrap; font-size:.75rem}
+.opt em{color:var(--muted); font-style:normal; font-size:.8rem}
+.opt[aria-pressed="true"]{border-color:var(--acc); background:var(--acc-soft); font-weight:600}
+.subst{font-size:.78rem; color:var(--muted); margin-top:4px}
+.how{grid-column:1/-1; border-top:1px solid var(--line); padding-top:8px}
+.how summary{cursor:pointer; font-weight:600; font-size:.9rem; color:var(--acc); list-style:none; display:flex; align-items:center; gap:6px}
+.how summary::-webkit-details-marker{display:none}
+.how summary::before{content:"+"; display:inline-grid; place-items:center; width:20px; height:20px; border-radius:50%; background:var(--acc-soft); font-size:.95rem}
+.how[open] summary::before{content:"−"}
+.how-body{display:flex; flex-direction:column; gap:10px; padding-top:10px; font-size:.9rem}
+.how-body h3{margin:0 0 4px; font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+.how-body ul,.how-body ol{margin:0; padding-left:20px; display:flex; flex-direction:column; gap:3px}
+.how-body .err li::marker{color:var(--push)}
+.viz{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px}
+.viz figure{margin:0; background:var(--bg); border-radius:10px; padding:8px; display:flex; flex-direction:column; gap:6px; min-width:0}
+.viz canvas{width:100%; height:auto; aspect-ratio:200/180; display:block}
+.viz svg{width:100%; height:auto; display:block; max-height:220px}
+.viz figcaption{font-size:.78rem; color:var(--muted); text-align:center}
+.viz .mlist{display:flex; flex-direction:column; gap:3px; text-align:left; color:var(--fg)}
+.sil{fill:var(--sil); stroke:var(--sil); stroke-linecap:round}
+ellipse.m0{fill:var(--musc)} ellipse.m1{fill:var(--acc)} ellipse.m2{fill:var(--acc); fill-opacity:.4}
+.viz svg text{font-size:9px; fill:var(--muted); text-anchor:middle; font-family:var(--body)}
+.sw{display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px}
+.sw.m1{background:var(--acc)} .sw.m2{background:var(--acc); opacity:.4}
+.vid{align-self:flex-start; font-weight:600; font-size:.88rem; color:var(--fg); text-decoration:none; border:1px solid var(--line); border-radius:8px; padding:7px 12px}
+.sets{grid-column:1/-1; display:flex; gap:8px; flex-wrap:wrap}
+.set{flex:1; min-width:64px; border:1.5px dashed var(--line); background:transparent; color:var(--muted); border-radius:10px; padding:8px 4px; font:600 .85rem var(--body); cursor:pointer}
+.set[aria-pressed="true"]{border-style:solid; border-color:var(--ok); background:var(--ok-soft); color:var(--ok)}
+.finish{font-family:var(--display); font-size:1.3rem; font-weight:800; text-transform:uppercase; padding:14px; border-radius:12px; border:0; background:var(--fg); color:var(--bg); cursor:pointer}
+.hist{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; font-size:.9rem}
+.hist li{display:flex; justify-content:space-between; border-bottom:1px solid var(--line); padding-bottom:6px}
+.dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px}
+.notes{font-size:.88rem; color:var(--muted); margin:0; padding-left:18px; display:flex; flex-direction:column; gap:4px}
+.notes b{color:var(--fg)}
+.credit{margin:0; padding-top:10px; border-top:1px solid var(--line); font-size:.85rem; color:var(--muted)}
+.credit b{color:var(--fg)}
+.rest{position:fixed; left:0; right:0; bottom:0; background:var(--fg); color:var(--bg); padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px)); display:flex; align-items:center; justify-content:space-between; gap:12px; z-index:5}
+.rest .clock{font-size:2.2rem}
+.rest .btn{background:transparent; color:var(--bg); border-color:currentColor}
+.toast{font-size:.9rem; color:var(--ok); font-weight:600; text-align:center}
+@media (prefers-reduced-motion:reduce){.bar i{transition:none}}
+</style>
+
+<div class="wrap">
+  <header class="head">
+    <span class="eyebrow" id="today"></span>
+    <h1>Puxa &amp; Empurra</h1>
+    <p class="sugg" id="sugg"></p>
+  </header>
+
+  <div class="seg" role="group" aria-label="Escolher treino">
+    <button id="bt-push" data-type="push">Empurra<small>Peito · Ombro · Tríceps · Quadríceps</small></button>
+    <button id="bt-pull" data-type="pull">Puxa<small>Costas · Bíceps · Posterior · Abdômen</small></button>
+  </div>
+
+  <section class="card" aria-labelledby="t-esteira">
+    <div class="row">
+      <div>
+        <span class="eyebrow">Passo 1 · Aquecimento</span>
+        <h2 id="t-esteira">Esteira · 20 min</h2>
+      </div>
+      <span class="done-tag" id="tm-done" hidden>Concluída</span>
+    </div>
+    <div class="row">
+      <div class="clock" id="tm-clock">20:00</div>
+      <div class="btns">
+        <button class="btn primary" id="tm-toggle">Iniciar</button>
+        <button class="btn" id="tm-reset">Zerar</button>
+      </div>
+    </div>
+    <div class="bar"><i id="tm-bar"></i></div>
+    <div class="phases">
+      <span id="ph1">0–5 min · caminhada 5–6 km/h</span>
+      <span id="ph2">5–20 min · ritmo moderado, inclinação 3–5%</span>
+    </div>
+  </section>
+
+  <section aria-labelledby="t-maq" style="display:flex;flex-direction:column;gap:10px">
+    <div class="row">
+      <div>
+        <span class="eyebrow">Passo 2 · Máquinas</span>
+        <h2 id="t-maq">Treino <span id="t-name"></span></h2>
+      </div>
+      <span class="plain" id="progress" style="font-variant-numeric:tabular-nums"></span>
+    </div>
+    <ul class="list" id="list"></ul>
+  </section>
+
+  <button class="finish" id="finish">Concluir treino de hoje</button>
+  <p class="toast" id="toast" hidden></p>
+
+  <section class="card" aria-labelledby="t-hist">
+    <h2 id="t-hist">Últimos treinos</h2>
+    <ul class="hist" id="hist"></ul>
+  </section>
+
+  <section class="card" aria-labelledby="t-reg">
+    <h2 id="t-reg">Como usar</h2>
+    <ol class="notes">
+      <li><b>Alterne A/B:</b> Empurra → Puxa → Empurra… de 3 a 5 vezes por semana.</li>
+      <li><b>Carga:</b> escolha um peso em que as últimas 2 repetições sejam difíceis.</li>
+      <li><b>Progressão:</b> fez o topo da faixa (ex.: 12) nas 3 séries? Suba 1 placa ou 2,5–5 kg.</li>
+      <li><b>Descanso:</b> toque em cada série feita e o cronômetro de descanso começa sozinho.</li>
+      <li>O app guarda pesos e histórico <b>só neste navegador</b>.</li>
+    </ol>
+    <p class="credit">Desenvolvido por <b>Gilson Bolivar</b></p>
+  </section>
+</div>
+
+<div class="rest" id="rest" hidden role="status">
+  <div>
+    <div class="eyebrow" style="color:inherit;opacity:.7">Descanso</div>
+    <div class="clock" id="rest-clock">0:00</div>
+  </div>
+  <div class="btns">
+    <button class="btn" id="rest-add">+15s</button>
+    <button class="btn" id="rest-skip">Pular</button>
+  </div>
+</div>
+
+<script>
+const WORKOUTS = {
+  push: { name: "Empurra", exs: [
+    {id:"chest-press", n:"Supino reto na máquina", m:"Peito", s:3, r:"10–12", d:90, t:"Pegada na altura do meio do peito; empurre sem travar os cotovelos."},
+    {id:"incline-press", n:"Supino inclinado na máquina", m:"Peito superior", s:3, r:"10–12", d:90, t:"Sem máquina inclinada livre? Use o Smith com banco a 30°."},
+    {id:"shoulder-press", n:"Desenvolvimento na máquina", m:"Ombros", s:3, r:"10–12", d:90, t:"Costas apoiadas; desça até as mãos ficarem na linha do queixo."},
+    {id:"lateral-raise", n:"Elevação lateral na máquina", m:"Ombro lateral", s:3, r:"12–15", d:60, t:"Ou na polia baixa, um braço de cada vez."},
+    {id:"triceps-rope", n:"Tríceps na polia com corda", m:"Tríceps", s:3, r:"12–15", d:60, t:"Cotovelos colados ao corpo; abra a corda no final."},
+    {id:"leg-press", n:"Leg press 45°", m:"Quadríceps · Glúteo", s:3, r:"10–12", d:120, t:"Pés na largura do quadril; joelhos acompanham a ponta dos pés."},
+    {id:"leg-ext", n:"Cadeira extensora", m:"Quadríceps", s:3, r:"12–15", d:60, t:"Segure 1 segundo no alto."}
+  ]},
+  pull: { name: "Puxa", exs: [
+    {id:"lat-pulldown", n:"Puxada frontal na polia", m:"Dorsais", s:3, r:"10–12", d:90, t:"Puxe a barra até o alto do peito, peito aberto."},
+    {id:"seated-row", n:"Remada sentada na máquina", m:"Costas (meio)", s:3, r:"10–12", d:90, t:"Junte as escápulas no final do movimento."},
+    {id:"rear-delt", n:"Crucifixo invertido (peck deck)", m:"Ombro posterior", s:3, r:"12–15", d:60, t:"Sente de frente para o encosto; braços quase estendidos."},
+    {id:"biceps-machine", n:"Rosca bíceps na máquina", m:"Bíceps", s:3, r:"10–12", d:60, t:"Ou rosca na polia baixa com barra."},
+    {id:"leg-curl", n:"Mesa ou cadeira flexora", m:"Posterior de coxa", s:3, r:"10–12", d:60, t:"Desça devagar, em 2–3 segundos."},
+    {id:"calf", n:"Panturrilha no leg press", m:"Panturrilha", s:3, r:"15", d:45, t:"Só a ponta dos pés na plataforma; amplitude total."},
+    {id:"ab-machine", n:"Abdominal na máquina", m:"Abdômen", s:3, r:"12–15", d:45, t:"Expire ao contrair; sem puxar com os braços."}
+  ]}
+};
+/* Execução: p = preparação, m = movimento, x = erros comuns, q = busca do vídeo */
+const HOW = {
+  "chest-press": {p:["Ajuste o banco para que as pegadas fiquem na altura do meio do peito.","Costas e cabeça apoiadas, pés firmes no chão.","Ombros para trás e para baixo, peito aberto."],
+    m:["Empurre as pegadas para a frente soltando o ar.","Pare logo antes de travar os cotovelos.","Volte devagar (2–3 s) até sentir alongar o peito."],
+    x:["Tirar as costas do encosto.","Cotovelos muito abertos, a 90° do tronco (força o ombro). Mantenha em ~45–60°."], q:"supino reto máquina execução correta"},
+  "incline-press": {p:["Banco ajustado para as pegadas ficarem na linha da parte alta do peito.","Costas apoiadas e escápulas encaixadas."],
+    m:["Empurre para cima e para a frente soltando o ar.","Desça controlando até as mãos ficarem perto da clavícula."],
+    x:["Arquear demais a lombar.","Subir os ombros em direção às orelhas."], q:"supino inclinado máquina execução correta"},
+  "shoulder-press": {p:["Banco ajustado para as pegadas ficarem na altura dos ombros.","Costas totalmente apoiadas, abdômen firme."],
+    m:["Empurre para cima soltando o ar, sem travar os cotovelos.","Desça devagar até as mãos ficarem na linha do queixo."],
+    x:["Afastar a lombar do encosto.","Descer pouco (amplitude curta)."], q:"desenvolvimento máquina ombro execução correta"},
+  "lateral-raise": {p:["Ombros alinhados com o eixo de giro da máquina.","Braços apoiados nas almofadas, cotovelos levemente dobrados."],
+    m:["Eleve os braços para os lados até a altura dos ombros.","Segure 1 s em cima e desça devagar."],
+    x:["Usar impulso do tronco.","Subir acima da linha dos ombros, encolhendo o trapézio."], q:"elevação lateral máquina execução correta"},
+  "triceps-rope": {p:["Corda presa na polia alta. Fique de frente, joelhos levemente dobrados.","Tronco um pouco inclinado à frente, cotovelos colados ao corpo."],
+    m:["Estenda os cotovelos levando a corda para baixo.","No final, abra as mãos para os lados.","Volte até os antebraços passarem da horizontal."],
+    x:["Mexer os cotovelos para a frente e para trás.","Jogar o peso do corpo sobre a corda."], q:"tríceps corda polia execução correta"},
+  "leg-press": {p:["Costas e quadril bem encostados no banco.","Pés no meio da plataforma, na largura do quadril, pontas um pouco para fora."],
+    m:["Solte a trava e desça dobrando os joelhos até cerca de 90°.","Empurre com o calcanhar e o meio do pé, soltando o ar.","Pare logo antes de travar os joelhos."],
+    x:["Tirar o quadril do banco no fim da descida (arredonda a lombar).","Joelhos caindo para dentro.","Travar os joelhos esticados."], q:"leg press 45 execução correta"},
+  "leg-ext": {p:["Encosto ajustado para o joelho ficar alinhado com o eixo da máquina.","Rolo apoiado logo acima do tornozelo. Segure as alças laterais."],
+    m:["Estenda as pernas até ficarem retas, contraindo a coxa.","Segure 1 s em cima e desça devagar."],
+    x:["Dar tranco para subir.","Deixar o peso bater no final da descida."], q:"cadeira extensora execução correta"},
+  "lat-pulldown": {p:["Prenda as coxas sob o apoio.","Pegada na barra um pouco mais aberta que os ombros, palmas para a frente."],
+    m:["Incline o tronco levemente para trás e abra o peito.","Puxe a barra até o alto do peito, levando os cotovelos para baixo e para trás.","Volte devagar até esticar os braços."],
+    x:["Puxar a barra atrás da nuca.","Balançar o tronco para ganhar impulso.","Puxar só com os braços, sem descer os ombros."], q:"puxada frontal polia execução correta"},
+  "seated-row": {p:["Peito apoiado (se a máquina tiver) ou tronco ereto.","Ajuste o banco para as pegadas ficarem na altura do peito."],
+    m:["Puxe levando os cotovelos para trás, junto ao corpo.","Junte as escápulas no final e segure 1 s.","Volte esticando os braços sem arredondar as costas."],
+    x:["Jogar o tronco para trás a cada repetição.","Encolher os ombros em direção às orelhas."], q:"remada sentada máquina execução correta"},
+  "rear-delt": {p:["Sente de frente para o encosto, peito apoiado.","Pegadas na altura dos ombros, braços quase estendidos."],
+    m:["Abra os braços para trás em arco, até a linha do corpo.","Segure 1 s e volte devagar."],
+    x:["Juntar as escápulas demais (vira exercício de costas).","Usar peso alto e dobrar os cotovelos."], q:"crucifixo invertido peck deck execução correta"},
+  "biceps-machine": {p:["Ajuste o banco para a axila encostar no alto do apoio.","Cotovelos alinhados com o eixo da máquina."],
+    m:["Dobre os cotovelos subindo as pegadas, soltando o ar.","Contraia em cima e desça devagar até quase esticar."],
+    x:["Tirar os cotovelos do apoio.","Descer rápido, sem controle."], q:"rosca bíceps máquina execução correta"},
+  "leg-curl": {p:["Mesa: deite de bruços, joelhos logo após a borda do banco.","Rolo apoiado acima do calcanhar. Quadril colado ao banco."],
+    m:["Dobre os joelhos trazendo o rolo em direção ao glúteo.","Desça devagar, em 2–3 s."],
+    x:["Levantar o quadril do banco.","Soltar o peso de uma vez na descida."], q:"mesa flexora execução correta"},
+  "calf": {p:["No leg press, apoie só a ponta dos pés na borda de baixo da plataforma.","Pernas quase estendidas, sem travar os joelhos. Mantenha a trava de segurança ao alcance."],
+    m:["Empurre com a ponta dos pés, subindo os calcanhares o máximo possível.","Volte devagar até sentir a panturrilha alongar."],
+    x:["Dobrar os joelhos para ajudar.","Fazer só meio movimento."], q:"panturrilha no leg press execução correta"},
+  "ab-machine": {p:["Ajuste o banco e prenda os pés, se houver apoio.","Segure as pegadas sem puxar com força."],
+    m:["Solte o ar e enrole o tronco para a frente, contraindo o abdômen.","Volte devagar sem deixar o peso bater."],
+    x:["Puxar com os braços.","Usar carga alta e perder o controle."], q:"abdominal máquina execução correta"}
+};
+const openHow = new Set();
+
+/* Músculos: [principais, secundários] */
+const MNAME = {peito:"Peito", deltA:"Ombro (frente)", deltL:"Ombro (lateral)", deltP:"Ombro (posterior)", biceps:"Bíceps", triceps:"Tríceps",
+  antebraco:"Antebraço", abdomen:"Abdômen", obliquos:"Oblíquos", quad:"Quadríceps", adutores:"Adutores", trap:"Trapézio",
+  meio:"Meio das costas", dorsais:"Dorsais", lombar:"Lombar", gluteo:"Glúteo", posterior:"Posterior de coxa", pant:"Panturrilha"};
+const TARGET = {
+  "chest-press":[["peito"],["deltA","triceps"]], "incline-press":[["peito","deltA"],["triceps"]],
+  "shoulder-press":[["deltA","deltL"],["triceps","trap"]], "lateral-raise":[["deltL"],["trap","deltA"]],
+  "triceps-rope":[["triceps"],["antebraco"]], "leg-press":[["quad","gluteo"],["posterior","adutores","pant"]],
+  "leg-ext":[["quad"],[]], "lat-pulldown":[["dorsais"],["biceps","deltP","meio"]],
+  "seated-row":[["meio","dorsais"],["biceps","deltP","trap"]], "rear-delt":[["deltP"],["meio","trap"]],
+  "biceps-machine":[["biceps"],["antebraco"]], "leg-curl":[["posterior"],["pant","gluteo"]],
+  "calf":[["pant"],[]], "ab-machine":[["abdomen"],["obliquos"]]
+};
+const MUSC = [ // chave, vista, cx (a partir do centro), cy, rx, ry, espelhado
+  ["deltA","f",22,37,5,6,1],["deltL","f",28,39,3.5,6,1],["peito","f",10.5,45,9.5,7,1],["biceps","f",26.5,56,4,9,1],
+  ["antebraco","f",29.5,84,3.5,10,1],["abdomen","f",0,73,7,17,0],["obliquos","f",14,75,3.5,11,1],["quad","f",10.5,121,6,17,1],
+  ["adutores","f",4,113,2.5,9,1],
+  ["trap","b",0,36,13,6,0],["deltP","b",22,37,5,6,1],["deltL","b",28,39,3.5,6,1],["meio","b",0,51,8,8,0],["dorsais","b",11.5,63,7,14,1],
+  ["triceps","b",26.5,56,4,9,1],["antebraco","b",29.5,84,3.5,10,1],["lombar","b",0,87,5.5,7,0],["gluteo","b",8,106,8,8,1],
+  ["posterior","b",10.5,129,6,13,1],["pant","b",11,157,5,10,1]
+];
+function bodyMap(id){
+  const [pr, se] = TARGET[id];
+  const sil = cx => `<circle cx="${cx}" cy="13" r="9"/><rect x="${cx-4}" y="20" width="8" height="11"/>
+    <path d="M${cx-22} 30L${cx+22} 30L${cx+16} 92L${cx+17} 104L${cx-17} 104L${cx-16} 92Z"/>
+    ${[-1,1].map(s=>`<line x1="${cx+s*24}" y1="33" x2="${cx+s*28}" y2="70" stroke-width="9"/><line x1="${cx+s*28}" y1="70" x2="${cx+s*31}" y2="103" stroke-width="7"/>
+    <line x1="${cx+s*9}" y1="100" x2="${cx+s*11}" y2="142" stroke-width="13"/><line x1="${cx+s*11}" y1="142" x2="${cx+s*11}" y2="182" stroke-width="9"/>`).join("")}`;
+  const mus = MUSC.map(([k,v,x,y,rx,ry,m]) => {
+    const cx = v === "f" ? 50 : 150;
+    const cls = pr.includes(k) ? "m1" : se.includes(k) ? "m2" : "m0";
+    return (m ? [-1,1] : [0]).map(s => `<ellipse class="${cls}" cx="${cx+s*x}" cy="${y}" rx="${rx}" ry="${ry}"/>`).join("");
+  }).join("");
+  return `<svg viewBox="0 0 200 198" role="img" aria-label="Músculos trabalhados">
+    <g class="sil">${sil(50)}${sil(150)}</g>${mus}
+    <text x="50" y="195">Frente</text><text x="150" y="195">Costas</text></svg>`;
+}
+function muscleText(id){
+  const [pr, se] = TARGET[id];
+  return `<span><i class="sw m1"></i><b>Principal:</b> ${pr.map(k=>MNAME[k]).join(", ")}</span>` +
+    (se.length ? `<span><i class="sw m2"></i><b>Ajuda:</b> ${se.map(k=>MNAME[k]).join(", ")}</span>` : "");
+}
+
+/* Animação: boneco em vista lateral (ângulos absolutos, 0° = para baixo, 90° = para frente, 180° = para cima) */
+const dir = a => { const r = a*Math.PI/180; return [Math.sin(r), Math.cos(r)] };
+const pt = (o,a,l) => { const d = dir(a); return [o[0]+d[0]*l, o[1]+d[1]*l] };
+function sideJ(P){
+  const hip=[P.hx,P.hy], sh=pt(hip,P.t,46), head=pt(sh,P.t,14), el=pt(sh,P.ua,26), ha=pt(el,P.fa,24),
+        kn=pt(hip,P.th,38), an=pt(kn,P.sh,36), to=pt(an,P.sh+(P.ft ?? 90),11);
+  return {hip,sh,head,el,ha,kn,an,to};
+}
+function frontJ(P){
+  const sR=[118,86], elR=[sR[0]+Math.sin(P.a*Math.PI/180)*25*P.len, sR[1]+Math.cos(P.a*Math.PI/180)*25*P.len];
+  const b=(P.a+P.bend)*Math.PI/180, haR=[elR[0]+Math.sin(b)*24*P.len, elR[1]+Math.cos(b)*24*P.len];
+  const mir = p => [200-p[0], p[1]];
+  return {sR, sL:mir(sR), elR, elL:mir(elR), haR, haL:mir(haR)};
+}
+const seat = (d,J) => { d.l([J.hip[0], J.hip[1]+9], [J.hip[0],168], 4); d.l([J.hip[0]-14,169],[J.hip[0]+14,169],4); d.r(J.hip[0]-22, J.hip[1]+5, 44, 7) };
+const back = (d,J,P) => { const o = dir(P.t+90); d.pad([J.hip[0]+o[0]*7, J.hip[1]+o[1]*7], [J.head[0]+o[0]*7, J.head[1]+o[1]*7], 8) };
+const SEATED = {hx:80, hy:132, t:180, th:90, sh:0};
+const pressRail = (d,J,P,at) => { d.l([70,165],[190,45],4); d.l([40,150],[40,170],4); back(d,J,P);
+  d.l([J.hip[0]-4, J.hip[1]+8], [J.hip[0]+20, J.hip[1]+4], 5);
+  const q = dir(45); d.l([at[0]+q[0]*16, at[1]+q[1]*16], [at[0]-q[0]*16, at[1]-q[1]*16], 5) };
+const ANIM = {
+  "chest-press": {a:{...SEATED, ua:-30, fa:95}, b:{ua:88, fa:92}, hl:["chest","ua"],
+    props:(d,J,P)=>{ seat(d,J); back(d,J,P); d.stack(150); d.l([150,40],J.ha,3); d.c([150,40],3); d.c(J.ha,4.5) }},
+  "incline-press": {a:{...SEATED, t:200, ua:10, fa:150}, b:{ua:140, fa:140}, hl:["chest","ua"],
+    props:(d,J,P)=>{ seat(d,J); back(d,J,P); d.stack(150); d.l([150,30],J.ha,3); d.c([150,30],3); d.c(J.ha,4.5) }},
+  "shoulder-press": {a:{...SEATED, ua:-5, fa:175}, b:{ua:175, fa:178}, hl:["ua","fa"],
+    props:(d,J,P)=>{ seat(d,J); back(d,J,P); d.l([98,14],[98,120],3); d.l(J.ha,[98,J.ha[1]],3); d.c(J.ha,4.5) }},
+  "lateral-raise": {front:true, a:{a:12, bend:10, len:1}, b:{a:85}, cap:"vista de frente",
+    props:(d,J)=>{ d.r(78,136,44,5); d.l([100,141],[100,170],4); d.c(J.elR,5); d.c(J.elL,5) }},
+  "triceps-rope": {a:{hx:85, hy:94, t:172, th:5, sh:-5, ua:5, fa:160}, b:{fa:5}, hl:["fa","ua"],
+    props:(d,J)=>{ d.stack(130); d.c([124,14],5); d.l([124,14],J.ha,1.5);
+      d.l(J.ha,[J.ha[0]-3,J.ha[1]+9],3); d.l(J.ha,[J.ha[0]+4,J.ha[1]+8],3) }},
+  "leg-press": {a:{hx:60, hy:140, t:225, th:170, sh:100, ft:125, ua:10, fa:60}, b:{th:135, sh:135, ft:90}, hl:["th","sh"],
+    props:(d,J,P)=>pressRail(d,J,P,J.an)},
+  "leg-ext": {a:{...SEATED, t:185, ua:10, fa:40, sh:0}, b:{sh:88}, hl:["th"],
+    props:(d,J,P)=>{ seat(d,J); back(d,J,P); const pad = pt(J.an,P.sh+90,6); d.l(J.kn,pad,3); d.c(J.kn,3); d.c(pad,5); d.c(J.ha,3.5) }},
+  "lat-pulldown": {a:{...SEATED, t:190, ua:175, fa:178}, b:{ua:-15, fa:150}, hl:["torso","ua"],
+    props:(d,J)=>{ seat(d,J); d.stack(140); d.l([90,8],[146,8],4); d.c([96,11],4); d.l([96,11],J.ha,1.5); d.c(J.ha,4.5); d.c([J.kn[0]-4,J.kn[1]-9],5) }},
+  "seated-row": {a:{...SEATED, hx:70, ua:88, fa:90}, b:{ua:-60, fa:85}, hl:["torso","ua"],
+    props:(d,J)=>{ seat(d,J); d.r(77,106,6,22); d.stack(172); d.l(J.ha,[172,J.ha[1]],1.5); d.c(J.ha,4.5) }},
+  "rear-delt": {front:true, a:{a:88, bend:0, len:.35}, b:{len:1}, cap:"vista de costas",
+    props:(d,J)=>{ d.r(78,136,44,5); d.l([100,141],[100,170],4); d.c(J.haR,4.5); d.c(J.haL,4.5) }},
+  "biceps-machine": {a:{...SEATED, hx:78, t:172, ua:45, fa:80}, b:{fa:200}, hl:["fa"],
+    props:(d,J)=>{ seat(d,J); d.l([J.sh[0]+3,J.sh[1]+12],[J.el[0]+6,J.el[1]+9],7); d.l([112,118],[112,170],4); d.c(J.ha,4.5) }},
+  "leg-curl": {a:{hx:100, hy:118, t:-90, th:90, sh:90, ft:-90, ua:-30, fa:-60}, b:{sh:200}, hl:["th"],
+    props:(d,J,P)=>{ d.r(30,122,115,6); d.l([40,128],[40,170],4); d.l([135,128],[135,170],4);
+      const pad = pt(J.an,P.sh+90,6); d.l(J.kn,pad,3); d.c(J.kn,3); d.c(pad,5); d.c(J.ha,3.5) }},
+  "calf": {a:{hx:60, hy:140, t:225, th:135, sh:135, ft:90, ua:10, fa:60}, b:{ft:40}, hl:["sh"],
+    props:(d,J,P)=>pressRail(d,J,P,J.to)},
+  "ab-machine": {a:{...SEATED, ua:-10, fa:170}, b:{t:145, ua:40, fa:120}, hl:["torso"],
+    props:(d,J)=>{ seat(d,J); d.c([J.an[0]+7,J.an[1]-14],5); d.c(J.ha,4.5) }}
+};
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+/* Ponto que deixa o rastro (seta do caminho do movimento) */
+const TRACE = {"chest-press":"ha","incline-press":"ha","shoulder-press":"ha","lateral-raise":"haR","triceps-rope":"ha","leg-press":"an",
+  "leg-ext":"an","lat-pulldown":"ha","seated-row":"ha","rear-delt":"haR","biceps-machine":"ha","leg-curl":"an","calf":"to","ab-machine":"head",
+  "bench-smith":"ha","pec-fly":"haR","triceps-oh":"ha","smith-squat":"sh","straight-pull":"ha","face-pull":"ha","cable-curl":"ha",
+  "seated-curl":"an","stiff":"ha","calf-stand":"sh","calf-seated":"kn","cable-crunch":"head"};
+const lerpPose = (S,p) => { const P = {}; for (const k in S.a) P[k] = S.a[k] + ((S.b[k] ?? S.a[k]) - S.a[k]) * p; return P };
+function drawAnim(cv, id, p){
+  const S = ANIM[id], cs = getComputedStyle(document.body), v = n => cs.getPropertyValue(n).trim();
+  const col = {fg:v("--fg"), mu:v("--muted"), acc:v("--acc"), line:v("--line"), far:v("--far"), pad:v("--pad"), frame:v("--frame"), bg:v("--bg")};
+  const dpr = window.devicePixelRatio || 1, ctx = cv.getContext("2d");
+  if (cv.width !== 200*dpr){ cv.width = 200*dpr; cv.height = 180*dpr }
+  ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,200,180); ctx.lineCap = "round"; ctx.lineJoin = "round";
+  const circ = (a,r,c) => { ctx.fillStyle=c; ctx.beginPath(); ctx.arc(a[0],a[1],r,0,7); ctx.fill() };
+  /* membro afinando: cápsula de raio ra em a até rb em b */
+  const limb = (a,b,ra,rb,c) => {
+    const dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy)||1, nx=-dy/L, ny=dx/L;
+    ctx.fillStyle=c; ctx.beginPath();
+    ctx.moveTo(a[0]+nx*ra,a[1]+ny*ra); ctx.lineTo(b[0]+nx*rb,b[1]+ny*rb); ctx.lineTo(b[0]-nx*rb,b[1]-ny*rb); ctx.lineTo(a[0]-nx*ra,a[1]-ny*ra);
+    ctx.fill(); circ(a,ra,c); circ(b,rb,c);
+  };
+  const d = {
+    p,
+    l(a,b,w=4,c=col.frame){ ctx.strokeStyle=c; ctx.lineWidth=w; ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke() },
+    c(a,r,c=col.pad){ circ(a,r,c) },
+    r(x,y,w,h,c=col.pad){ ctx.fillStyle=c; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x,y,w,h,Math.min(3,h/2,w/2)) : ctx.rect(x,y,w,h); ctx.fill() },
+    pad(a,b,w=7){ limb(a,b,w/2,w/2,col.pad) },
+    /* coluna com pilha de anilhas: as de cima sobem durante o esforço */
+    stack(x){
+      d.l([x-4,4],[x-4,170],2.5); d.l([x+12,4],[x+12,170],2.5); d.l([x-6,4],[x+14,4],4);
+      const lift = p*16;
+      d.l([x+4,10],[x+4,166-9*4.6-lift],1.2,col.mu);
+      for (let i=0;i<9;i++){ const y = 166-(i+1)*4.6 - (i>=6 ? lift : 0); d.r(x-2,y,12,3.8, i>=6 ? col.fg : col.pad) }
+    }
+  };
+  ctx.fillStyle = col.line; ctx.fillRect(0,170,200,1.5);
+  const hlc = (S,k) => (S.hl || []).includes(k);
+  const sidePerson = (J,P,alpha) => {
+    const c = k => hlc(S,k) ? col.acc : col.fg, cf = k => hlc(S,k) ? col.acc : col.far;
+    const o = [-3,-2], sh = q => [q[0]+o[0], q[1]+o[1]];
+    /* lado de trás (mais claro) */
+    ctx.globalAlpha = alpha*.55;
+    limb(sh(J.hip),sh(J.kn),6.5,4.6,cf("th")); limb(sh(J.kn),sh(J.an),4.4,2.8,cf("sh")); limb(sh(J.an),sh(J.to),2.8,1.8,cf("sh"));
+    limb(sh(J.sh),sh(J.el),4.2,3.3,cf("ua")); limb(sh(J.el),sh(J.ha),3.3,2.4,cf("fa")); circ(sh(J.ha),3,cf("fa"));
+    ctx.globalAlpha = alpha;
+    /* tronco: cápsula + peito à frente + glúteo atrás */
+    const fwd = dir(P.t-90), bk = dir(P.t+90), mid = (a,b,t) => [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t];
+    const tc = c("torso");
+    limb(J.hip,J.sh,8,9.5,tc);
+    const ch = mid(J.hip,J.sh,.72); circ([ch[0]+fwd[0]*2.5, ch[1]+fwd[1]*2.5], 9, hlc(S,"chest") ? col.acc : tc);
+    circ([J.hip[0]+bk[0]*2, J.hip[1]+bk[1]*2], 7.5, tc);
+    const nk = pt(J.sh,P.t,6); limb(J.sh,nk,4,3.5,col.fg); circ(J.head,8.5,col.fg);
+    circ(pt(J.head,P.t-90,3.5),2.2,col.fg);
+    /* lado da frente */
+    limb(J.hip,J.kn,7,4.8,c("th")); limb(J.kn,J.an,4.6,3,c("sh")); limb(J.an,J.to,3,2,c("sh"));
+    limb(J.sh,J.el,4.6,3.5,c("ua")); limb(J.el,J.ha,3.5,2.6,c("fa")); circ(J.ha,3.2,c("fa"));
+  };
+  const frontPerson = (J,alpha) => {
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = col.fg; ctx.beginPath(); ctx.moveTo(83,83); ctx.lineTo(117,83); ctx.lineTo(110,128); ctx.lineTo(90,128); ctx.fill();
+    d.r(88,124,24,10,col.fg);
+    circ([93,139],7,col.fg); circ([107,139],7,col.fg);
+    limb([92,142],[91,165],4.6,3,col.fg); limb([108,142],[109,165],4.6,3,col.fg);
+    limb([100,84],[100,76],4,3.5,col.fg); circ([100,68],8.5,col.fg);
+    [["sR","elR","haR"],["sL","elL","haL"]].forEach(([s,e,h]) => {
+      limb(J[s],J[e],4.6,3.5,col.fg); limb(J[e],J[h],3.5,2.6,col.fg); circ(J[h],3.2,col.fg); circ(J[s],6,col.acc);
+    });
+  };
+  const jointsAt = pp => { const P = lerpPose(S,pp); return {P, J: S.front ? frontJ(P) : sideJ(P)} };
+  const person = (pp, alpha, full) => {
+    const {P,J} = jointsAt(pp);
+    if (full){ ctx.globalAlpha = alpha; S.props(d,J,P) }
+    S.front ? frontPerson(J,alpha) : sidePerson(J,P,alpha);
+    ctx.globalAlpha = 1;
+    return J;
+  };
+  /* rastro tracejado + seta indicando o sentido do esforço */
+  const trace = () => {
+    const key = TRACE[id]; if (!key) return;
+    const pts = []; for (let i=0;i<=16;i++) pts.push(jointsAt(i/16).J[key]);
+    ctx.save(); ctx.strokeStyle = col.acc; ctx.globalAlpha = .6; ctx.lineWidth = 1.4; ctx.setLineDash([3,3]);
+    ctx.beginPath(); pts.forEach((q,i)=> i ? ctx.lineTo(q[0],q[1]) : ctx.moveTo(q[0],q[1])); ctx.stroke(); ctx.setLineDash([]);
+    const a = pts[pts.length-3], b = pts[pts.length-1], ang = Math.atan2(b[1]-a[1], b[0]-a[0]);
+    ctx.fillStyle = col.acc; ctx.globalAlpha = .9; ctx.beginPath(); ctx.moveTo(b[0]+Math.cos(ang)*5, b[1]+Math.sin(ang)*5);
+    ctx.lineTo(b[0]+Math.cos(ang+2.5)*5, b[1]+Math.sin(ang+2.5)*5); ctx.lineTo(b[0]+Math.cos(ang-2.5)*5, b[1]+Math.sin(ang-2.5)*5); ctx.fill();
+    ctx.restore();
+  };
+  if (reduceMotion){ person(0,.25,false); trace(); person(1,1,true) }
+  else { trace(); person(p,1,true) }
+}
+function animLoop(t){
+  const p = (1 - Math.cos(t/1000 * Math.PI * 2 / 3.2)) / 2;
+  document.querySelectorAll("details.how[open] canvas").forEach(cv => drawAnim(cv, cv.dataset.id, p));
+  if (!reduceMotion) requestAnimationFrame(animLoop);
+}
+const TM_TOTAL = 20*60;
+
+const store = {
+  get(k, f){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : f }catch(e){ return f } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)) }catch(e){} }
+};
+const $ = id => document.getElementById(id);
+const todayKey = new Date().toISOString().slice(0,10);
+
+let weights = store.get("pe-weights", {});
+let history = store.get("pe-history", []);
+let sess = store.get("pe-session", null);
+if (!sess || sess.date !== todayKey) {
+  const last = history[0];
+  sess = { date: todayKey, type: last && last.type === "push" ? "pull" : "push", sets: {}, tm: {elapsed:0, start:null} };
+}
+const suggested = history[0] && history[0].type === "push" ? "pull" : "push";
+const save = () => store.set("pe-session", sess);
+
+/* Substitutos: mesmo grupo muscular do exercício original (chave = exercício original) */
+const H = (p,m,x,q) => ({p,m,x,q});
+const ALTS = {
+  "chest-press": [
+    {id:"smith-bench", n:"Supino reto no Smith", eq:"Smith", r:"8–12", d:90, anim:"bench-smith", t:"Barra desce na linha do meio do peito.",
+      how:H(["Banco reto centralizado sob a barra; a barra deve descer no meio do peito.","Pegada um pouco mais aberta que os ombros, escápulas encaixadas."],
+        ["Destrave a barra e desça devagar até quase encostar no peito.","Empurre para cima soltando o ar, sem travar os cotovelos."],
+        ["Tirar o quadril do banco.","Deixar a barra quicar no peito."],"supino reto smith execução correta")},
+    {id:"pec-deck", n:"Crucifixo na máquina (peck deck)", eq:"Máquina", r:"12–15", d:60, anim:"pec-fly", t:"Cotovelos levemente dobrados o tempo todo.",
+      how:H(["Banco ajustado para as pegadas ficarem na altura do peito.","Costas apoiadas, cotovelos levemente dobrados."],
+        ["Feche os braços à frente do peito como num abraço, soltando o ar.","Abra devagar até sentir o peito alongar."],
+        ["Abrir demais e forçar o ombro.","Empurrar com as mãos em vez de fechar com o peito."],"peck deck crucifixo máquina execução correta")}
+  ],
+  "incline-press": [
+    {id:"smith-incline", n:"Supino inclinado no Smith", eq:"Smith", r:"8–12", d:90, anim:"incline-press", t:"Banco a 30°; a barra desce perto da clavícula.",
+      how:H(["Banco inclinado a 30° sob a barra.","Pegada um pouco mais aberta que os ombros."],
+        ["Desça a barra até a parte alta do peito.","Empurre para cima soltando o ar."],
+        ["Inclinação alta demais (vira exercício de ombro).","Arquear muito a lombar."],"supino inclinado smith execução correta")},
+    {id:"hammer-incline", n:"Supino inclinado articulado", eq:"Máquina", r:"10–12", d:90, anim:"incline-press", t:"Cada braço trabalha separado; mantenha os dois no mesmo ritmo.",
+      how:H(["Ajuste o banco para as pegadas ficarem na altura da parte alta do peito.","Costas apoiadas."],
+        ["Empurre para cima e para a frente.","Volte devagar até sentir o peito alongar."],
+        ["Tirar as costas do encosto."],"supino inclinado articulado hammer execução")}
+  ],
+  "shoulder-press": [
+    {id:"smith-shoulder", n:"Desenvolvimento no Smith", eq:"Smith", r:"8–12", d:90, anim:"shoulder-press", t:"Banco a 80–90°, barra passa à frente do rosto.",
+      how:H(["Banco quase vertical sob a barra.","Pegada um pouco mais aberta que os ombros."],
+        ["Desça a barra até a altura do queixo.","Empurre para cima sem travar os cotovelos."],
+        ["Descer a barra atrás da nuca.","Arquear a lombar."],"desenvolvimento smith execução correta")},
+    {id:"hammer-shoulder", n:"Desenvolvimento articulado", eq:"Máquina", r:"10–12", d:90, anim:"shoulder-press", t:"Mantenha as costas apoiadas.",
+      how:H(["Banco ajustado com as pegadas na altura dos ombros."],
+        ["Empurre para cima soltando o ar.","Desça devagar até a linha do queixo."],
+        ["Afastar a lombar do encosto."],"desenvolvimento articulado execução")}
+  ],
+  "lateral-raise": [
+    {id:"cable-lateral", n:"Elevação lateral na polia baixa", eq:"Polia", r:"12–15", d:60, anim:"lateral-raise", t:"Um braço de cada vez; o cabo passa pela frente do corpo.",
+      how:H(["Fique de lado para a polia baixa e segure a pegada com a mão mais distante.","Cotovelo levemente dobrado."],
+        ["Eleve o braço para o lado até a altura do ombro.","Desça devagar, sem deixar o peso bater."],
+        ["Inclinar o tronco para ajudar.","Subir acima do ombro."],"elevação lateral polia baixa execução correta")},
+    {id:"db-lateral", n:"Elevação lateral sentado (halteres)", eq:"Halteres", r:"12–15", d:60, anim:"lateral-raise", t:"Sentado evita o balanço do corpo.",
+      how:H(["Sente na ponta do banco, halteres ao lado do corpo."],
+        ["Eleve os braços para os lados até a altura dos ombros.","Desça devagar."],
+        ["Usar halteres pesados demais e balançar."],"elevação lateral sentado halteres execução")}
+  ],
+  "triceps-rope": [
+    {id:"triceps-bar", n:"Tríceps na polia com barra reta", eq:"Polia", r:"10–12", d:60, anim:"triceps-rope", t:"Pegada pronada (palmas para baixo) ou barra V.",
+      how:H(["Barra na polia alta, pegada na largura dos ombros.","Cotovelos colados ao corpo."],
+        ["Estenda os cotovelos levando a barra até as coxas.","Volte até os antebraços passarem da horizontal."],
+        ["Mexer os cotovelos.","Inclinar o corpo sobre a barra."],"tríceps polia barra reta execução correta")},
+    {id:"triceps-oh", n:"Tríceps francês na polia", eq:"Polia", r:"10–12", d:60, anim:"triceps-oh", t:"De costas para a polia, corda acima da cabeça.",
+      how:H(["Corda na polia baixa ou média. Fique de costas para o aparelho, um pé à frente.","Cotovelos apontados para cima, perto da cabeça."],
+        ["Estenda os braços para cima e para a frente.","Volte devagar, sentindo o tríceps alongar atrás da cabeça."],
+        ["Abrir os cotovelos para os lados.","Arquear a lombar."],"tríceps francês polia corda execução correta")}
+  ],
+  "leg-press": [
+    {id:"smith-squat", n:"Agachamento no Smith", eq:"Smith", r:"8–12", d:120, anim:"smith-squat", t:"Pés um pouco à frente da barra.",
+      how:H(["Barra apoiada no alto das costas, não no pescoço.","Pés na largura dos ombros, um pouco à frente do corpo."],
+        ["Desça empurrando o quadril para trás até as coxas ficarem paralelas ao chão.","Suba empurrando o chão, soltando o ar."],
+        ["Joelhos caindo para dentro.","Tirar os calcanhares do chão."],"agachamento smith execução correta")},
+    {id:"hack-squat", n:"Agachamento hack (máquina)", eq:"Máquina", r:"10–12", d:120, anim:"smith-squat", t:"Costas sempre apoiadas no encosto.",
+      how:H(["Ombros sob as almofadas, costas apoiadas.","Pés no meio da plataforma, na largura do quadril."],
+        ["Destrave e desça até cerca de 90° nos joelhos.","Suba empurrando com o pé inteiro."],
+        ["Descer rápido e quicar embaixo.","Travar os joelhos no alto."],"agachamento hack máquina execução correta")}
+  ],
+  "leg-ext": [
+    {id:"leg-ext-uni", n:"Cadeira extensora unilateral", eq:"Máquina", r:"12–15", d:45, anim:"leg-ext", t:"Uma perna de cada vez; comece pela mais fraca.",
+      how:H(["Mesma regulagem da extensora normal.","Use metade ou menos da carga das duas pernas."],
+        ["Estenda uma perna, segure 1 s e desça devagar.","Faça todas as repetições e troque de perna."],
+        ["Girar o quadril para ajudar."],"cadeira extensora unilateral execução")},
+    {id:"leg-press-low", n:"Leg press com pés baixos", eq:"Máquina", r:"12–15", d:90, anim:"leg-press", t:"Pés na parte baixa da plataforma dão mais foco no quadríceps.",
+      how:H(["Pés juntos na parte baixa da plataforma, na largura do quadril."],
+        ["Desça até onde os calcanhares continuam apoiados.","Empurre sem travar os joelhos."],
+        ["Tirar os calcanhares da plataforma."],"leg press pés baixos quadríceps")}
+  ],
+  "lat-pulldown": [
+    {id:"pulldown-neutral", n:"Puxada com triângulo", eq:"Polia", r:"10–12", d:90, anim:"lat-pulldown", t:"Pegada neutra (palmas viradas uma para a outra).",
+      how:H(["Encaixe o triângulo na polia alta e prenda as coxas sob o apoio."],
+        ["Puxe o triângulo até o alto do peito, cotovelos para baixo.","Volte devagar esticando os braços."],
+        ["Jogar o tronco para trás.","Encolher os ombros."],"puxada triângulo pegada neutra execução")},
+    {id:"assisted-pullup", n:"Barra fixa assistida (Gravitron)", eq:"Máquina", r:"8–12", d:90, anim:"lat-pulldown", t:"Quanto mais peso na máquina, mais fácil fica.",
+      how:H(["Ajoelhe-se na plataforma e escolha o peso de ajuda.","Pegada um pouco mais aberta que os ombros."],
+        ["Puxe o corpo até o queixo passar da barra.","Desça devagar até esticar os braços."],
+        ["Balançar as pernas.","Subir só até a metade."],"barra fixa assistida graviton execução")},
+    {id:"straight-pull", n:"Pulldown com braços estendidos", eq:"Polia", r:"12–15", d:60, anim:"straight-pull", t:"Braços quase retos; o movimento vem do ombro.",
+      how:H(["Barra ou corda na polia alta. Fique em pé, tronco um pouco inclinado.","Braços estendidos à frente, cotovelos levemente dobrados."],
+        ["Leve a barra para baixo em arco até as coxas.","Volte devagar até a altura dos olhos."],
+        ["Dobrar os cotovelos (vira tríceps)."],"pulldown braços estendidos polia execução")}
+  ],
+  "seated-row": [
+    {id:"cable-row", n:"Remada baixa na polia (triângulo)", eq:"Polia", r:"10–12", d:90, anim:"seated-row", t:"Pés apoiados, joelhos levemente dobrados.",
+      how:H(["Sente com os pés na plataforma e segure o triângulo.","Coluna reta, peito aberto."],
+        ["Puxe o triângulo até o abdômen, juntando as escápulas.","Volte esticando os braços sem curvar as costas."],
+        ["Balançar o tronco para frente e para trás."],"remada baixa polia triângulo execução correta")},
+    {id:"hammer-row", n:"Remada articulada", eq:"Máquina", r:"10–12", d:90, anim:"seated-row", t:"Peito sempre apoiado na almofada.",
+      how:H(["Ajuste o banco para as pegadas ficarem na altura do peito."],
+        ["Puxe levando os cotovelos para trás.","Segure 1 s e volte devagar."],
+        ["Tirar o peito do apoio."],"remada articulada máquina execução")}
+  ],
+  "rear-delt": [
+    {id:"cable-reverse-fly", n:"Crucifixo invertido na polia", eq:"Polia", r:"12–15", d:60, anim:"rear-delt", t:"Cabos cruzados na altura dos ombros.",
+      how:H(["Duas polias na altura dos ombros. Segure o cabo esquerdo com a mão direita e vice-versa."],
+        ["Abra os braços para trás em arco, até a linha do corpo.","Volte devagar."],
+        ["Dobrar muito os cotovelos."],"crucifixo invertido polia execução")},
+    {id:"face-pull", n:"Face pull na polia", eq:"Polia", r:"12–15", d:60, anim:"face-pull", t:"Puxe a corda em direção ao rosto, cotovelos altos.",
+      how:H(["Corda na polia na altura do rosto. Pegada com polegares para trás."],
+        ["Puxe a corda até perto das orelhas, abrindo as mãos.","Cotovelos sempre na altura dos ombros. Volte devagar."],
+        ["Baixar os cotovelos.","Jogar o corpo para trás."],"face pull polia corda execução correta")}
+  ],
+  "biceps-machine": [
+    {id:"cable-curl", n:"Rosca na polia baixa (barra)", eq:"Polia", r:"10–12", d:60, anim:"cable-curl", t:"Tensão constante durante todo o movimento.",
+      how:H(["Barra na polia baixa, fique em pé de frente.","Cotovelos colados ao corpo."],
+        ["Dobre os cotovelos subindo a barra até o peito.","Desça devagar até quase esticar."],
+        ["Balançar o tronco.","Levar os cotovelos para a frente."],"rosca bíceps polia baixa execução correta")},
+    {id:"cable-hammer", n:"Rosca martelo na polia (corda)", eq:"Polia", r:"10–12", d:60, anim:"cable-curl", t:"Palmas viradas uma para a outra; trabalha também o antebraço.",
+      how:H(["Corda na polia baixa, pegada neutra."],
+        ["Suba a corda dobrando os cotovelos.","Desça devagar."],
+        ["Mexer os cotovelos."],"rosca martelo polia corda execução")}
+  ],
+  "leg-curl": [
+    {id:"seated-curl", n:"Cadeira flexora (sentado)", eq:"Máquina", r:"10–12", d:60, anim:"seated-curl", t:"Prenda bem as coxas com o apoio.",
+      how:H(["Joelho alinhado com o eixo da máquina.","Rolo apoiado atrás do tornozelo, apoio firme sobre as coxas."],
+        ["Dobre os joelhos levando o rolo para baixo e para trás.","Volte devagar, em 2–3 segundos."],
+        ["Tirar o quadril do banco."],"cadeira flexora sentado execução correta")},
+    {id:"smith-rdl", n:"Stiff no Smith", eq:"Smith", r:"10–12", d:90, anim:"stiff", t:"Joelhos levemente dobrados e fixos; quem dobra é o quadril.",
+      how:H(["Fique em pé com a barra na altura das coxas, pés na largura do quadril."],
+        ["Empurre o quadril para trás descendo a barra junto às pernas.","Desça até sentir alongar atrás da coxa e suba contraindo o glúteo."],
+        ["Arredondar as costas.","Afastar a barra das pernas."],"stiff smith execução correta")}
+  ],
+  "calf": [
+    {id:"calf-stand", n:"Panturrilha em pé na máquina", eq:"Máquina", r:"12–15", d:45, anim:"calf-stand", t:"Pausa de 1 s em cima e embaixo.",
+      how:H(["Ombros sob as almofadas, ponta dos pés na borda do degrau."],
+        ["Suba nas pontas dos pés o mais alto possível.","Desça até o calcanhar ficar abaixo do degrau."],
+        ["Dobrar os joelhos.","Movimento curto e rápido."],"panturrilha em pé máquina execução")},
+    {id:"calf-seated", n:"Panturrilha sentado na máquina", eq:"Máquina", r:"15–20", d:45, anim:"calf-seated", t:"Foco na parte mais baixa da panturrilha.",
+      how:H(["Almofada sobre as coxas, perto dos joelhos.","Ponta dos pés no apoio."],
+        ["Suba os calcanhares o máximo possível.","Desça devagar até alongar."],
+        ["Fazer só meio movimento."],"panturrilha sentado máquina execução")}
+  ],
+  "ab-machine": [
+    {id:"cable-crunch", n:"Abdominal na polia alta (ajoelhado)", eq:"Polia", r:"12–15", d:45, anim:"cable-crunch", t:"Quem move é o abdômen, não o quadril.",
+      how:H(["Corda na polia alta. Ajoelhe de frente para o aparelho, corda ao lado da cabeça."],
+        ["Enrole o tronco levando os cotovelos em direção às coxas.","Volte devagar sem sentar sobre os calcanhares."],
+        ["Puxar com os braços.","Mexer o quadril para frente e para trás."],"abdominal polia alta ajoelhado execução")}
+  ]
+};
+Object.assign(ANIM, {
+  "bench-smith": {a:{hx:120, hy:140, t:-90, th:100, sh:-5, ua:40, fa:170}, b:{ua:175, fa:178}, hl:["chest","ua"],
+    props:(d,J)=>{ d.r(40,145,100,6); d.l([60,151],[60,170],4); d.l([125,151],[125,170],4); d.l([84,10],[84,170],2); d.c(J.ha,5) }},
+  "pec-fly": {front:true, a:{a:88, bend:0, len:1}, b:{len:.35}, cap:"vista de frente",
+    props:(d,J)=>{ d.r(78,136,44,5); d.l([100,141],[100,170],4); d.c(J.haR,4.5); d.c(J.haL,4.5) }},
+  "triceps-oh": {a:{hx:85, hy:94, t:158, th:5, sh:-5, ua:150, fa:-30}, b:{fa:150}, hl:["fa"],
+    props:(d,J)=>{ d.stack(30); d.c([40,150],5); d.l([40,150],J.ha,1.5) }},
+  "smith-squat": {a:{hx:95, hy:94, t:172, th:0, sh:0, ua:-40, fa:160}, b:{hx:75, hy:125, t:150, th:80, sh:-25, ua:-60, fa:140}, hl:["th"],
+    props:(d,J)=>{ d.l([108,10],[108,170],2); d.c(J.sh,5) }},
+  "straight-pull": {a:{hx:95, hy:94, t:165, th:5, sh:-5, ua:150, fa:150}, b:{ua:-5, fa:-5}, hl:["ua","torso"],
+    props:(d,J)=>{ d.stack(150); d.c([144,12],5); d.l([144,12],J.ha,1.5); d.c(J.ha,4) }},
+  "face-pull": {a:{hx:85, hy:94, t:180, th:5, sh:-5, ua:80, fa:85}, b:{ua:-80, fa:110}, hl:["ua"],
+    props:(d,J)=>{ d.stack(156); d.c([150,42],5); d.l([150,42],J.ha,1.5); d.c(J.ha,4) }},
+  "cable-curl": {a:{hx:85, hy:94, t:180, th:5, sh:-5, ua:5, fa:5}, b:{fa:170}, hl:["fa"],
+    props:(d,J)=>{ d.stack(136); d.c([130,160],5); d.l([130,160],J.ha,1.5); d.c(J.ha,4.5) }},
+  "seated-curl": {a:{...SEATED, t:190, ua:20, fa:60, sh:80}, b:{sh:-20}, hl:["th"],
+    props:(d,J,P)=>{ seat(d,J); back(d,J,P); const pad = pt(J.an,P.sh-90,6); d.l(J.kn,pad,3); d.c(J.kn,3); d.c(pad,5); d.c([J.kn[0]-6,J.kn[1]-9],5) }},
+  "stiff": {a:{hx:90, hy:94, t:178, th:2, sh:0, ua:0, fa:0}, b:{hx:80, hy:96, t:105, th:10, sh:8}, hl:["th"],
+    props:(d,J)=>{ d.c(J.ha,6) }},
+  "calf-stand": {a:{hx:90, hy:94, t:180, th:0, sh:0, ft:90, ua:-20, fa:170}, b:{hy:87, ft:40}, hl:["sh"],
+    props:(d,J)=>{ d.stack(50); d.l([59,J.sh[1]-4],[J.sh[0]+6,J.sh[1]-4],5) }},
+  "calf-seated": {a:{...SEATED, hy:128, ft:90, ua:20, fa:90}, b:{th:98, ft:50}, hl:["sh"],
+    props:(d,J)=>{ seat(d,J); d.r(118,166,18,5); d.c([J.kn[0]-2,J.kn[1]-8],5) }},
+  "cable-crunch": {a:{hx:90, hy:128, t:175, th:0, sh:-90, ua:160, fa:260}, b:{t:140, ua:100, fa:200}, hl:["torso"],
+    props:(d,J)=>{ d.stack(170); d.c([164,12],5); d.l([164,12],J.ha,1.5) }}
+});
+const EQ = {"chest-press":"Máquina","incline-press":"Máquina","shoulder-press":"Máquina","lateral-raise":"Máquina","triceps-rope":"Polia",
+  "leg-press":"Máquina","leg-ext":"Máquina","lat-pulldown":"Polia","seated-row":"Máquina","rear-delt":"Máquina","biceps-machine":"Máquina",
+  "leg-curl":"Máquina","calf":"Máquina","ab-machine":"Máquina"};
+let choice = store.get("pe-choice", {});
+let openSwap = null;
+const options = slot => [{...slot, eq:EQ[slot.id], how:HOW[slot.id], anim:slot.id}, ...(ALTS[slot.id] || []).map(a => ({...slot, ...a}))];
+const resolve = slot => options(slot).find(o => o.id === choice[slot.id]) || options(slot)[0];
+
+/* Cabeçalho */
+$("today").textContent = new Date().toLocaleDateString("pt-BR", {weekday:"long", day:"numeric", month:"long"});
+function renderSugg(){
+  const last = history[0];
+  $("sugg").innerHTML = last
+    ? `Último: ${WORKOUTS[last.type].name} em ${fmtDate(last.date)}. Hoje é dia de <b>${WORKOUTS[suggested].name}</b>.`
+    : `Primeiro treino? Comece pelo <b>Empurra</b> e alterne a cada ida.`;
+}
+function fmtDate(d){ const [y,m,dd] = d.split("-"); return `${dd}/${m}` }
+
+/* Seletor */
+function setType(t){
+  sess.type = t; save();
+  document.body.classList.toggle("pull", t === "pull");
+  $("bt-push").setAttribute("aria-pressed", t === "push");
+  $("bt-pull").setAttribute("aria-pressed", t === "pull");
+  $("t-name").textContent = WORKOUTS[t].name;
+  renderList();
+}
+$("bt-push").onclick = () => setType("push");
+$("bt-pull").onclick = () => setType("pull");
+
+/* Lista de máquinas */
+function renderList(){
+  const w = WORKOUTS[sess.type];
+  const ul = $("list"); ul.innerHTML = "";
+  w.exs.forEach((slot, i) => {
+    const e = resolve(slot), sid = slot.id;
+    const done = sess.sets[sid] || [];
+    const li = document.createElement("li");
+    li.className = "ex" + (done.filter(Boolean).length === e.s ? " complete" : "");
+    li.innerHTML = `
+      <div style="min-width:0">
+        <div class="ex-name">${i+1}. ${e.n}</div>
+        <div class="ex-meta"><span class="chip">${e.m}</span><span class="plain">${e.s} × ${e.r} · descanso ${e.d}s</span></div>
+        ${e.id !== sid ? `<div class="subst">No lugar de: ${slot.n}</div>` : ""}
+      </div>
+      <div class="kg">
+        <button aria-label="Diminuir peso" data-k="-">−</button>
+        <input id="kg-${e.id}" inputmode="decimal" aria-label="Peso em kg" value="${weights[e.id] ?? ""}" placeholder="kg">
+        <button aria-label="Aumentar peso" data-k="+">+</button>
+      </div>
+      <p class="tip">${e.t}</p>
+      <details class="swap"${openSwap === sid ? " open" : ""}>
+        <summary>⇄ Trocar exercício · ${options(slot).length - 1} opções</summary>
+        <p class="plain swap-note">Todas trabalham: <b>${TARGET[sid][0].map(k=>MNAME[k]).join(", ")}</b></p>
+        <div class="opts">${options(slot).map((o,j) => `<button class="opt" data-o="${o.id}" aria-pressed="${o.id === e.id}">
+          <span>${o.n}${j === 0 ? " <em>(original)</em>" : ""}</span><small>${o.eq} · ${o.s} × ${o.r}</small></button>`).join("")}</div>
+      </details>
+      <details class="how"${openHow.has(sid) ? " open" : ""}>
+        <summary>Como executar</summary>
+        <div class="how-body">
+          <div class="viz">
+            <figure><canvas data-id="${e.anim}" aria-label="Animação do movimento: ${e.n}"></canvas>
+              <figcaption>Movimento · ${ANIM[e.anim].cap || "vista lateral"}</figcaption></figure>
+            <figure>${bodyMap(sid)}<figcaption class="mlist">${muscleText(sid)}</figcaption></figure>
+          </div>
+          <div><h3>Preparação</h3><ul>${e.how.p.map(x=>`<li>${x}</li>`).join("")}</ul></div>
+          <div><h3>Movimento</h3><ol>${e.how.m.map(x=>`<li>${x}</li>`).join("")}</ol></div>
+          <div class="err"><h3>Evite</h3><ul>${e.how.x.map(x=>`<li>${x}</li>`).join("")}</ul></div>
+          <a class="vid" href="https://www.youtube.com/results?search_query=${encodeURIComponent(e.how.q)}" target="_blank" rel="noopener">▶ Ver vídeos no YouTube</a>
+        </div>
+      </details>
+      <div class="sets"></div>`;
+    const det = li.querySelector("details.how");
+    li.querySelector("details.swap").addEventListener("toggle", ev => { if (ev.target.open) openSwap = sid; else if (openSwap === sid) openSwap = null });
+    li.querySelectorAll(".opt").forEach(b => b.onclick = () => {
+      choice[sid] = b.dataset.o; store.set("pe-choice", choice); openSwap = null; renderList();
+    });
+    det.addEventListener("toggle", () => { det.open ? openHow.add(sid) : openHow.delete(sid); if (det.open && reduceMotion) animLoop(0) });
+    const inp = li.querySelector("input");
+    const setW = v => { weights[e.id] = v; store.set("pe-weights", weights) };
+    inp.onchange = () => { const v = parseFloat(inp.value.replace(",", ".")); setW(isNaN(v) ? "" : v); inp.value = weights[e.id] };
+    li.querySelectorAll("[data-k]").forEach(b => b.onclick = () => {
+      const cur = parseFloat(inp.value.replace(",", ".")) || 0;
+      const v = Math.max(0, cur + (b.dataset.k === "+" ? 2.5 : -2.5));
+      inp.value = v; setW(v);
+    });
+    const sets = li.querySelector(".sets");
+    for (let s = 0; s < e.s; s++){
+      const b = document.createElement("button");
+      b.className = "set"; b.setAttribute("aria-pressed", !!done[s]);
+      b.textContent = done[s] ? `Série ${s+1} ✓` : `Série ${s+1}`;
+      b.onclick = () => {
+        const arr = sess.sets[sid] || (sess.sets[sid] = []);
+        arr[s] = !arr[s]; save();
+        if (arr[s]) startRest(e.d);
+        renderList();
+      };
+      sets.appendChild(b);
+    }
+    ul.appendChild(li);
+  });
+  const total = w.exs.reduce((a,e)=>a+e.s,0);
+  const feitas = w.exs.reduce((a,e)=>a+(sess.sets[e.id]||[]).filter(Boolean).length,0);
+  $("progress").textContent = `${feitas}/${total} séries`;
+}
+
+/* Esteira */
+let tmTick = null;
+const tmElapsed = () => Math.min(TM_TOTAL, sess.tm.elapsed + (sess.tm.start ? (Date.now() - sess.tm.start)/1000 : 0));
+const mmss = s => { s = Math.max(0, Math.round(s)); return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}` };
+function renderTm(){
+  const el = tmElapsed();
+  $("tm-clock").textContent = mmss(TM_TOTAL - el).padStart(5,"0");
+  $("tm-bar").style.width = (el/TM_TOTAL*100) + "%";
+  $("ph1").classList.toggle("on", el < 300);
+  $("ph2").classList.toggle("on", el >= 300 && el < TM_TOTAL);
+  $("tm-toggle").textContent = sess.tm.start ? "Pausar" : (el > 0 && el < TM_TOTAL ? "Continuar" : "Iniciar");
+  $("tm-done").hidden = el < TM_TOTAL;
+  if (el >= TM_TOTAL && sess.tm.start){ sess.tm.elapsed = TM_TOTAL; sess.tm.start = null; save(); beep(3); clearInterval(tmTick); renderTm(); }
+}
+$("tm-toggle").onclick = () => {
+  unlockAudio();
+  if (sess.tm.start){ sess.tm.elapsed = tmElapsed(); sess.tm.start = null; clearInterval(tmTick) }
+  else { if (tmElapsed() >= TM_TOTAL) sess.tm.elapsed = 0; sess.tm.start = Date.now(); tmTick = setInterval(renderTm, 500); keepAwake() }
+  save(); renderTm();
+};
+$("tm-reset").onclick = () => { sess.tm = {elapsed:0, start:null}; clearInterval(tmTick); save(); renderTm() };
+
+/* Descanso */
+let restEnd = 0, restTick = null;
+function startRest(sec){
+  unlockAudio();
+  restEnd = Date.now() + sec*1000; $("rest").hidden = false;
+  clearInterval(restTick); restTick = setInterval(renderRest, 250); renderRest(); keepAwake();
+}
+function renderRest(){
+  const left = (restEnd - Date.now())/1000;
+  $("rest-clock").textContent = mmss(left);
+  if (left <= 0){ clearInterval(restTick); beep(2); setTimeout(()=>{ $("rest").hidden = true }, 1500) }
+}
+$("rest-add").onclick = () => { restEnd += 15000; renderRest() };
+$("rest-skip").onclick = () => { clearInterval(restTick); $("rest").hidden = true };
+
+/* Som e tela ligada */
+let actx = null;
+function unlockAudio(){ try{ actx = actx || new (window.AudioContext||window.webkitAudioContext)(); actx.resume() }catch(e){} }
+function beep(n){
+  if (!actx) return;
+  for (let i=0;i<n;i++){ const o = actx.createOscillator(), g = actx.createGain(); const t = actx.currentTime + i*0.3;
+    o.frequency.value = 880; g.gain.setValueAtTime(0.25, t); g.gain.exponentialRampToValueAtTime(0.001, t+0.22);
+    o.connect(g).connect(actx.destination); o.start(t); o.stop(t+0.25) }
+  try{ navigator.vibrate && navigator.vibrate(200) }catch(e){}
+}
+let lock = null;
+async function keepAwake(){ try{ if (!lock && navigator.wakeLock) { lock = await navigator.wakeLock.request("screen"); lock.addEventListener("release", ()=>lock=null) } }catch(e){} }
+
+/* Concluir + histórico */
+$("finish").onclick = () => {
+  const w = WORKOUTS[sess.type];
+  const sets = w.exs.reduce((a,e)=>a+(sess.sets[e.id]||[]).filter(Boolean).length,0);
+  history = history.filter(h => h.date !== todayKey);
+  history.unshift({date: todayKey, type: sess.type, sets, tm: tmElapsed() >= TM_TOTAL});
+  history = history.slice(0, 30); store.set("pe-history", history);
+  $("toast").textContent = `Treino ${w.name} salvo. Próximo: ${WORKOUTS[sess.type === "push" ? "pull" : "push"].name}.`;
+  $("toast").hidden = false; renderHist();
+};
+function renderHist(){
+  const ul = $("hist");
+  if (!history.length){ ul.innerHTML = `<li class="plain">Nenhum treino salvo ainda. Ao terminar, toque em “Concluir treino de hoje”.</li>`; return }
+  ul.innerHTML = history.slice(0,6).map(h => `<li><span><span class="dot" style="background:var(--${h.type})"></span>${fmtDate(h.date)} · ${WORKOUTS[h.type].name}</span><span class="plain">${h.tm ? "esteira ✓ · " : ""}${h.sets} séries</span></li>`).join("");
+}
+
+renderSugg(); setType(sess.type); renderTm(); renderHist();
+requestAnimationFrame(animLoop);
+if (sess.tm.start) tmTick = setInterval(renderTm, 500);
+</script>
+
+
+<span data-versao style="position:fixed;right:8px;bottom:6px;z-index:9999;font:500 11px ui-monospace,Menlo,monospace;opacity:.55;pointer-events:none"></span>
+<script>(function(){const VERSAO='1.0.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Treino v"+VERSAO})})();</script>
+</body></html>

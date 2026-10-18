@@ -1,0 +1,453 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}</style></head><body>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DD - Desenvolvedor Digital | Amarelo + Preto</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --amarelo: #FFC107;
+      --amarelo-dark: #FFB300;
+      --preto: #1a1a1a;
+      --light: #f5f5f5;
+      --text: #333;
+      --border: #e0e0e0;
+    }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(135deg, var(--light) 0%, #efefef 100%);
+      padding: 40px 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      color: var(--preto);
+      margin-bottom: 10px;
+      font-size: 2.5em;
+      font-weight: bold;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: var(--amarelo-dark);
+      margin-bottom: 50px;
+      font-size: 1.2em;
+      font-weight: 600;
+    }
+
+    /* Seção de Logos Simples */
+    .section {
+      margin-bottom: 60px;
+    }
+
+    .section-title {
+      font-size: 1.8em;
+      color: var(--preto);
+      margin-bottom: 30px;
+      padding-bottom: 15px;
+      border-bottom: 3px solid var(--amarelo);
+      font-weight: bold;
+    }
+
+    .logos-simples {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 30px;
+      margin-bottom: 40px;
+    }
+
+    .logo-card {
+      background: white;
+      border-radius: 12px;
+      padding: 40px 30px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      border-top: 4px solid var(--amarelo);
+    }
+
+    .logo-card h3 {
+      color: var(--preto);
+      margin-bottom: 20px;
+      font-size: 1.2em;
+      font-weight: bold;
+    }
+
+    .logo-display {
+      height: 240px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border: 2px solid var(--border);
+    }
+
+    .logo-display svg {
+      max-width: 95%;
+      max-height: 95%;
+    }
+
+    .logo-description {
+      color: #666;
+      font-size: 0.95em;
+      line-height: 1.6;
+      margin-top: 15px;
+    }
+
+    /* Mockups */
+    .mockups-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 40px;
+      margin-bottom: 50px;
+    }
+
+    .mockup-card {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      border-top: 4px solid var(--amarelo);
+    }
+
+    .mockup-card h3 {
+      color: var(--preto);
+      margin-bottom: 20px;
+      font-size: 1.1em;
+      font-weight: bold;
+    }
+
+    .mockup-display {
+      height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--amarelo) 0%, var(--amarelo-dark) 100%);
+      border-radius: 8px;
+      margin-bottom: 15px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .mockup-display svg {
+      max-width: 95%;
+      max-height: 95%;
+    }
+
+    .mockup-description {
+      color: #666;
+      font-size: 0.9em;
+      line-height: 1.6;
+    }
+
+    /* Paleta de cores */
+    .paleta {
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      margin-bottom: 40px;
+    }
+
+    .paleta h2 {
+      color: var(--preto);
+      margin-bottom: 30px;
+      font-size: 1.5em;
+      font-weight: bold;
+    }
+
+    .cores {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 20px;
+    }
+
+    .cor-item {
+      text-align: center;
+    }
+
+    .cor-box {
+      height: 120px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      border: 2px solid var(--border);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .cor-item strong {
+      display: block;
+      color: var(--preto);
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    .cor-item small {
+      display: block;
+      color: #888;
+      margin-top: 5px;
+    }
+
+    /* Final CTA */
+    .final {
+      background: linear-gradient(135deg, var(--amarelo) 0%, var(--amarelo-dark) 100%);
+      padding: 40px;
+      border-radius: 12px;
+      text-align: center;
+      color: var(--preto);
+    }
+
+    .final h2 {
+      font-size: 1.8em;
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+
+    .final p {
+      font-size: 1.1em;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>DD</h1>
+    <p class="subtitle">Desenvolvedor Digital — Logomarca Profissional</p>
+
+    <!-- SEÇÃO 1: LOGOS SIMPLES -->
+    <div class="section">
+      <h2 class="section-title">01 — As Logos</h2>
+
+      <div class="logos-simples">
+        <!-- D Simples (Preto) -->
+        <div class="logo-card">
+          <h3>D Simples</h3>
+          <div class="logo-display">
+            <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+              <text x="100" y="145" font-family="Arial, sans-serif" font-size="140" font-weight="bold" fill="#1a1a1a" text-anchor="middle">D</text>
+            </svg>
+          </div>
+          <p class="logo-description">
+            Letra "D" em preto puro. Simples, direto, confiável. Use para: favicon, app icon, assinatura.
+          </p>
+        </div>
+
+        <!-- D Digital (Amarelo + Circuito) -->
+        <div class="logo-card">
+          <h3>D Digital</h3>
+          <div class="logo-display">
+            <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+              <!-- Moldura com circuito -->
+              <rect x="35" y="35" width="130" height="130" fill="none" stroke="#FFC107" stroke-width="2.5" rx="10"/>
+
+              <!-- Linhas de circuito topo esquerdo -->
+              <line x1="60" y1="35" x2="60" y2="48" stroke="#FFC107" stroke-width="1.2"/>
+              <line x1="60" y1="48" x2="80" y2="48" stroke="#FFC107" stroke-width="1.2"/>
+              <line x1="80" y1="48" x2="80" y2="60" stroke="#FFC107" stroke-width="1.2"/>
+
+              <!-- Linhas de circuito topo direito -->
+              <line x1="140" y1="35" x2="140" y2="50" stroke="#FFC107" stroke-width="1.2"/>
+              <line x1="140" y1="50" x2="120" y2="50" stroke="#FFC107" stroke-width="1.2"/>
+              <line x1="120" y1="50" x2="120" y2="65" stroke="#FFC107" stroke-width="1.2"/>
+
+              <!-- Linhas de circuito esquerda -->
+              <line x1="35" y1="80" x2="48" y2="80" stroke="#FFC107" stroke-width="1.2"/>
+              <line x1="165" y1="110" x2="178" y2="110" stroke="#FFC107" stroke-width="1.2"/>
+
+              <!-- Linhas de circuito rodapé -->
+              <line x1="60" y1="150" x2="60" y2="165" stroke="#FFC107" stroke-width="1.2"/>
+              <line x1="140" y1="150" x2="140" y2="165" stroke="#FFC107" stroke-width="1.2"/>
+              <line x1="100" y1="155" x2="100" y2="165" stroke="#FFC107" stroke-width="1.2"/>
+
+              <!-- Pontos de conexão -->
+              <circle cx="60" cy="48" r="2.5" fill="#FFC107"/>
+              <circle cx="80" cy="48" r="2.5" fill="#FFC107"/>
+              <circle cx="80" cy="60" r="2.5" fill="#FFC107"/>
+              <circle cx="140" cy="50" r="2.5" fill="#FFC107"/>
+              <circle cx="120" cy="50" r="2.5" fill="#FFC107"/>
+              <circle cx="120" cy="65" r="2.5" fill="#FFC107"/>
+              <circle cx="35" cy="80" r="2.5" fill="#FFC107"/>
+              <circle cx="165" cy="110" r="2.5" fill="#FFC107"/>
+              <circle cx="60" cy="165" r="2.5" fill="#FFC107"/>
+              <circle cx="140" cy="165" r="2.5" fill="#FFC107"/>
+              <circle cx="100" cy="165" r="2.5" fill="#FFC107"/>
+
+              <!-- D em amarelo -->
+              <text x="100" y="140" font-family="Arial, sans-serif" font-size="110" font-weight="bold" fill="#FFC107" text-anchor="middle">D</text>
+            </svg>
+          </div>
+          <p class="logo-description">
+            Letra "D" em amarelo vibrante com padrão de circuito eletrônico. Tech, moderno, inovador.
+          </p>
+        </div>
+
+        <!-- D Amarelo (Simples) -->
+        <div class="logo-card">
+          <h3>D Amarelo</h3>
+          <div class="logo-display">
+            <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+              <text x="100" y="145" font-family="Arial, sans-serif" font-size="140" font-weight="bold" fill="#FFC107" text-anchor="middle">D</text>
+            </svg>
+          </div>
+          <p class="logo-description">
+            Letra "D" em amarelo puro. Energético, amigável. Use para: destaque visual, botões, chamadas.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEÇÃO 2: MOCKUPS -->
+    <div class="section">
+      <h2 class="section-title">02 — Mockups em Contexto</h2>
+
+      <div class="mockups-grid">
+        <!-- Mockup: Celular com D Simples -->
+        <div class="mockup-card">
+          <h3>📱 Celular — D Simples</h3>
+          <div class="mockup-display">
+            <svg viewBox="0 0 160 300" xmlns="http://www.w3.org/2000/svg">
+              <!-- Moldura do celular -->
+              <rect x="20" y="15" width="120" height="270" fill="white" stroke="#333" stroke-width="3" rx="20"/>
+              <!-- Tela do celular -->
+              <rect x="30" y="30" width="100" height="240" fill="#f5f5f5" rx="15"/>
+              <!-- D no celular -->
+              <text x="80" y="160" font-family="Arial, sans-serif" font-size="80" font-weight="bold" fill="#1a1a1a" text-anchor="middle">D</text>
+              <text x="80" y="200" font-family="Arial, sans-serif" font-size="12" font-weight="600" fill="#1a1a1a" text-anchor="middle">Desenvolvedor</text>
+              <text x="80" y="216" font-family="Arial, sans-serif" font-size="12" font-weight="600" fill="#1a1a1a" text-anchor="middle">Digital</text>
+            </svg>
+          </div>
+          <p class="mockup-description">
+            Versão simples no celular. Limpo, profissional, direto. Para app ou mobile primeiro.
+          </p>
+        </div>
+
+        <!-- Mockup: Celular com D Digital -->
+        <div class="mockup-card">
+          <h3>📱 Celular — D Digital</h3>
+          <div class="mockup-display">
+            <svg viewBox="0 0 160 300" xmlns="http://www.w3.org/2000/svg">
+              <!-- Moldura do celular -->
+              <rect x="20" y="15" width="120" height="270" fill="white" stroke="#333" stroke-width="3" rx="20"/>
+              <!-- Tela do celular (fundo amarelo) -->
+              <rect x="30" y="30" width="100" height="240" fill="#FFC107" rx="15"/>
+              <!-- D Digital no celular -->
+              <g>
+                <rect x="48" y="85" width="64" height="64" fill="none" stroke="#1a1a1a" stroke-width="1.5" rx="6"/>
+                <line x1="60" y1="85" x2="60" y2="93" stroke="#1a1a1a" stroke-width="0.8"/>
+                <line x1="60" y1="93" x2="72" y2="93" stroke="#1a1a1a" stroke-width="0.8"/>
+                <circle cx="60" cy="93" r="1.2" fill="#1a1a1a"/>
+                <circle cx="72" cy="93" r="1.2" fill="#1a1a1a"/>
+                <text x="80" y="150" font-family="Arial, sans-serif" font-size="50" font-weight="bold" fill="#1a1a1a" text-anchor="middle">D</text>
+              </g>
+              <text x="80" y="200" font-family="Arial, sans-serif" font-size="10" font-weight="600" fill="#1a1a1a" text-anchor="middle">Tech</text>
+            </svg>
+          </div>
+          <p class="mockup-description">
+            Versão tech no celular. Destaque amarelo, padrão digital. Para apresentações e destaques.
+          </p>
+        </div>
+
+        <!-- Mockup: Cartão de Visita -->
+        <div class="mockup-card">
+          <h3>🎫 Cartão de Visita</h3>
+          <div class="mockup-display">
+            <svg viewBox="0 0 280 180" xmlns="http://www.w3.org/2000/svg">
+              <!-- Cartão -->
+              <rect x="20" y="20" width="240" height="140" fill="white" stroke="#1a1a1a" stroke-width="2" rx="8"/>
+              <!-- Logo esquerda -->
+              <text x="50" y="110" font-family="Arial, sans-serif" font-size="60" font-weight="bold" fill="#1a1a1a" text-anchor="middle">D</text>
+              <!-- Divisor -->
+              <line x1="100" y1="30" x2="100" y2="150" stroke="#FFC107" stroke-width="2"/>
+              <!-- Texto direita -->
+              <text x="190" y="50" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#1a1a1a" text-anchor="middle">Gilson Bolívar</text>
+              <text x="190" y="70" font-family="Arial, sans-serif" font-size="11" fill="#666" text-anchor="middle">Desenvolvedor Digital</text>
+              <text x="190" y="90" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">gilsonbolivar@gmail.com</text>
+              <text x="190" y="110" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">77 98110-2138</text>
+            </svg>
+          </div>
+          <p class="mockup-description">
+            Cartão profissional com divisor amarelo. Logo + informações de contato em layout limpo.
+          </p>
+        </div>
+
+        <!-- Mockup: Apresentação/Slide -->
+        <div class="mockup-card">
+          <h3>📊 Slide Apresentação</h3>
+          <div class="mockup-display">
+            <svg viewBox="0 0 280 180" xmlns="http://www.w3.org/2000/svg">
+              <!-- Fundo slide (amarelo) -->
+              <rect x="0" y="0" width="280" height="180" fill="#FFC107"/>
+              <!-- Padrão de circuito na borda -->
+              <line x1="10" y1="10" x2="30" y2="10" stroke="#1a1a1a" stroke-width="0.8" opacity="0.3"/>
+              <line x1="250" y1="10" x2="270" y2="10" stroke="#1a1a1a" stroke-width="0.8" opacity="0.3"/>
+              <line x1="10" y1="170" x2="30" y2="170" stroke="#1a1a1a" stroke-width="0.8" opacity="0.3"/>
+              <line x1="250" y1="170" x2="270" y2="170" stroke="#1a1a1a" stroke-width="0.8" opacity="0.3"/>
+              <!-- Logo grande -->
+              <text x="100" y="130" font-family="Arial, sans-serif" font-size="70" font-weight="bold" fill="#1a1a1a" text-anchor="middle">D</text>
+              <!-- Texto -->
+              <text x="180" y="60" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#1a1a1a">Soluções Tecnológicas</text>
+              <text x="180" y="80" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#1a1a1a">Sob Medidas</text>
+            </svg>
+          </div>
+          <p class="mockup-description">
+            Slide de apresentação com fundo amarelo. Grande impacto visual para pitches e eventos.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEÇÃO 3: PALETA DE CORES -->
+    <div class="paleta">
+      <h2>03 — Paleta de Cores</h2>
+      <div class="cores">
+        <div class="cor-item">
+          <div class="cor-box" style="background: #FFC107; border-color: #FFB300;"></div>
+          <strong>Amarelo Primário</strong>
+          <small>#FFC107</small>
+        </div>
+        <div class="cor-item">
+          <div class="cor-box" style="background: #FFB300; border-color: #FF9800;"></div>
+          <strong>Amarelo Escuro</strong>
+          <small>#FFB300</small>
+        </div>
+        <div class="cor-item">
+          <div class="cor-box" style="background: #1a1a1a; border-color: #000;"></div>
+          <strong>Preto Sólido</strong>
+          <small>#1a1a1a</small>
+        </div>
+        <div class="cor-item">
+          <div class="cor-box" style="background: white; border-color: #ddd;"></div>
+          <strong>Branco</strong>
+          <small>#FFFFFF</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEÇÃO 4: CTA FINAL -->
+    <div class="final">
+      <h2>✅ Pronto para Usar!</h2>
+      <p>Suas logomarcas DD estão prontas para apresentação profissional.</p>
+      <p style="margin-top: 20px; font-size: 0.95em;">Próximos passos: Refinar, Exportar em Alta Resolução, Registrar no INPI</p>
+    </div>
+  </div>
+</body>
+</html>
+
+<span data-versao style="position:fixed;right:8px;bottom:6px;z-index:9999;font:500 11px ui-monospace,Menlo,monospace;opacity:.55;pointer-events:none"></span>
+<script>(function(){const VERSAO='1.0.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="DD v"+VERSAO})})();</script>
+</body></html>

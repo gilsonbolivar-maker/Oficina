@@ -1,0 +1,358 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}</style></head><body>
+<title>Harmonize por Dentro</title>
+<style>
+  :root {
+    --ground:  #EDF1EF;
+    --surface: #FFFFFF;
+    --ink:     #12201C;
+    --muted:   #5E6E69;
+    --line:    #D3DDD9;
+    --accent:  #0B7365;
+    --ok:      #2C7A4E;
+    --ok-bg:   #E2F0E7;
+    --bad:     #A83A2A;
+    --bad-bg:  #F7E3DF;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:  #0D1412;
+      --surface: #16201D;
+      --ink:     #E4EBE8;
+      --muted:   #94A49E;
+      --line:    #26332F;
+      --accent:  #45C3B0;
+      --ok:      #63C489;
+      --ok-bg:   #16302180;
+      --bad:     #E58876;
+      --bad-bg:  #3A1F1980;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:  #0D1412;
+    --surface: #16201D;
+    --ink:     #E4EBE8;
+    --muted:   #94A49E;
+    --line:    #26332F;
+    --accent:  #45C3B0;
+    --ok:      #63C489;
+    --ok-bg:   #16302180;
+    --bad:     #E58876;
+    --bad-bg:  #3A1F1980;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 54rem;
+    margin: 0 auto;
+    padding: 4rem 1.5rem 6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 4.5rem;
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: .72rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0;
+  }
+
+  h1 {
+    font-size: clamp(2.1rem, 6vw, 3.1rem);
+    line-height: 1.08;
+    letter-spacing: -.02em;
+    margin: .6rem 0 0;
+    text-wrap: balance;
+  }
+
+  h2 {
+    font-size: clamp(1.35rem, 3.4vw, 1.7rem);
+    line-height: 1.2;
+    letter-spacing: -.015em;
+    margin: .5rem 0 0;
+    text-wrap: balance;
+  }
+
+  p { margin: 0; max-width: 62ch; }
+  .lead { font-size: 1.12rem; color: var(--muted); margin-top: 1rem; }
+
+  header { border-bottom: 1px solid var(--line); padding-bottom: 2.5rem; }
+
+  section { display: flex; flex-direction: column; gap: 1.4rem; }
+
+  figure {
+    margin: 0;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 1.75rem 1.5rem 1.25rem;
+    overflow-x: auto;
+  }
+  figure svg { display: block; width: 100%; max-width: 100%; height: auto; min-width: 30rem; }
+  figcaption {
+    font-size: .95rem;
+    color: var(--muted);
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--line);
+    max-width: 62ch;
+  }
+
+  /* terminal */
+  .term {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: .95rem;
+    overflow-x: auto;
+  }
+  .term-cmd {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  .term-cmd .sig { color: var(--muted); user-select: none; }
+  .term-out { display: grid; grid-template-columns: auto 1fr; }
+  .term-out > div { padding: .9rem 1.25rem; white-space: nowrap; }
+  .term-out .tag { font-weight: 700; letter-spacing: .02em; }
+  .pass .tag, .pass { color: var(--ok); }
+  .fail .tag, .fail { color: var(--bad); }
+  .pass { background: var(--ok-bg); }
+  .fail { background: var(--bad-bg); }
+  .term-out .say { color: var(--ink); font-family: var(--sans); }
+
+  /* mapa de pastas */
+  .tree { display: flex; flex-direction: column; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .tree div { display: grid; grid-template-columns: minmax(11rem, 15rem) 1fr; gap: 1.25rem; background: var(--surface); padding: .8rem 1.25rem; }
+  .tree code { font-family: var(--mono); font-size: .9rem; color: var(--accent); white-space: nowrap; }
+  .tree span { color: var(--muted); font-size: .97rem; }
+  @media (max-width: 34rem) {
+    .tree div { grid-template-columns: 1fr; gap: .25rem; }
+  }
+
+  /* tabela de sabotagem */
+  table { width: 100%; border-collapse: collapse; font-size: .97rem; }
+  th, td { text-align: left; padding: .8rem 1rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th {
+    font-family: var(--mono); font-size: .7rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--muted); font-weight: 400;
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.caught { color: var(--ok); white-space: nowrap; font-weight: 600; }
+  .table-wrap { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; overflow-x: auto; }
+
+  .note {
+    border-left: 3px solid var(--accent);
+    padding: .3rem 0 .3rem 1.25rem;
+    color: var(--muted);
+  }
+  .note strong { color: var(--ink); }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 2rem;
+    color: var(--muted);
+    font-size: .95rem;
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
+  }
+  footer code { font-family: var(--mono); font-size: .88rem; color: var(--accent); }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Harmonize Clinical</p>
+    <h1>O que foi construído, e onde cada coisa mora</h1>
+    <p class="lead">
+      Uma página para consultar sem pressa. Cada parte começa pelo desenho — o texto
+      só complementa.
+    </p>
+  </header>
+
+  <!-- 1. por que o teste existe -->
+  <section>
+    <p class="eyebrow">Primeiro</p>
+    <h2>O teste não evita o erro. Ele antecipa a descoberta.</h2>
+
+    <figure>
+      <svg viewBox="0 0 720 300" role="img"
+           aria-label="Duas linhas do tempo. Sem teste, o erro no backup só aparece três meses depois, quando alguém perde o prontuário. Com teste, ele aparece um segundo depois de você mexer no código.">
+        <!-- SEM TESTE -->
+        <text x="20" y="22" font-family="ui-monospace, Menlo, monospace" font-size="12"
+              letter-spacing="1.6" fill="currentColor" opacity=".55">SEM TESTE</text>
+
+        <text x="20" y="62" font-size="13" fill="currentColor">você mexe no código</text>
+        <line x1="24" y1="80" x2="686" y2="80" stroke="currentColor" stroke-width="2" opacity=".3"/>
+        <circle cx="28" cy="80" r="6" fill="currentColor"/>
+        <circle cx="682" cy="80" r="7" fill="var(--bad)"/>
+        <text x="690" y="62" font-size="13" text-anchor="end" fill="currentColor">3 meses depois</text>
+        <text x="690" y="104" font-size="13" text-anchor="end" fill="var(--bad)"
+              font-weight="600">alguém perde o prontuário</text>
+
+        <!-- divisória -->
+        <line x1="20" y1="140" x2="700" y2="140" stroke="currentColor" stroke-width="1" opacity=".15"/>
+
+        <!-- COM TESTE -->
+        <text x="20" y="182" font-family="ui-monospace, Menlo, monospace" font-size="12"
+              letter-spacing="1.6" fill="currentColor" opacity=".55">COM TESTE</text>
+
+        <text x="20" y="222" font-size="13" fill="currentColor">você mexe no código</text>
+        <line x1="24" y1="240" x2="170" y2="240" stroke="currentColor" stroke-width="2" opacity=".3"/>
+        <line x1="170" y1="240" x2="686" y2="240" stroke="currentColor" stroke-width="2"
+              stroke-dasharray="3 7" opacity=".18"/>
+        <circle cx="28" cy="240" r="6" fill="currentColor"/>
+        <circle cx="170" cy="240" r="7" fill="var(--ok)"/>
+        <text x="170" y="222" font-size="13" text-anchor="middle" fill="currentColor">1 segundo depois</text>
+        <text x="170" y="264" font-size="13" text-anchor="middle" fill="var(--ok)"
+              font-weight="600">o teste fica vermelho</text>
+      </svg>
+      <figcaption>
+        O prontuário inteiro vive dentro do navegador. O arquivo de backup é a única
+        porta de saída — e uma falha nele não faz barulho nenhum na hora. O teste
+        transforma um estrago silencioso num aviso imediato.
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- 2. o comando -->
+  <section>
+    <p class="eyebrow">O único comando</p>
+    <h2>Você digita uma linha e lê uma cor.</h2>
+
+    <div class="term">
+      <div class="term-cmd"><span class="sig">$ </span>npm test</div>
+      <div class="term-out">
+        <div class="pass tag">32 passed</div>
+        <div class="pass say">Está tudo certo. Pode seguir.</div>
+        <div class="fail tag">1 failed</div>
+        <div class="fail say">Alguma coisa quebrou — e ele diz qual.</div>
+      </div>
+    </div>
+
+    <p class="note">
+      Rode <strong>antes de salvar qualquer mudança</strong> no arquivo de backup.
+      Leva menos de um segundo.
+    </p>
+  </section>
+
+  <!-- 3. onde as coisas moram -->
+  <section>
+    <p class="eyebrow">Mapa</p>
+    <h2>Onde cada coisa mora</h2>
+
+    <div class="tree">
+      <div><code>src/components/</code><span>As telas: Pacientes, Agenda, Estoque, Financeiro, Mapa Facial</span></div>
+      <div><code>src/utils/</code><span>Funções auxiliares que várias telas usam — backup, datas, armazenamento</span></div>
+      <div><code>src/hooks/</code><span>Comportamentos que se repetem entre telas</span></div>
+      <div><code>src/data/</code><span>Dados de exemplo, para testar sem cadastrar tudo à mão</span></div>
+      <div><code>src/types.ts</code><span>A ficha de cada coisa: o que um Paciente tem, o que um Agendamento tem</span></div>
+      <div><code>public/</code><span>Arquivos entregues como estão: ícones e o que faz o app funcionar offline</span></div>
+      <div><code>netlify/functions/</code><span>Código que roda no servidor (a IA), não no celular de quem usa</span></div>
+      <div><code>package.json</code><span>A lista de peças do projeto e os comandos disponíveis</span></div>
+    </div>
+  </section>
+
+  <!-- 4. a regra do teste -->
+  <section>
+    <p class="eyebrow">A regra</p>
+    <h2>O teste mora ao lado do arquivo que ele confere</h2>
+
+    <figure>
+      <svg viewBox="0 0 720 190" role="img"
+           aria-label="O arquivo backup.ts e o arquivo backup.test.ts ficam na mesma pasta src barra utils. O teste confere o código; o nome é o mesmo mais ponto test.">
+        <defs>
+          <marker id="seta" viewBox="0 0 10 10" refX="9" refY="5"
+                  markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+          </marker>
+        </defs>
+
+        <text x="20" y="24" font-family="ui-monospace, Menlo, monospace" font-size="12"
+              letter-spacing="1.6" fill="currentColor" opacity=".55">MESMA PASTA: src/utils/</text>
+
+        <rect x="20" y="50" width="290" height="72" rx="5"
+              fill="none" stroke="currentColor" stroke-width="1.5" opacity=".45"/>
+        <text x="44" y="86" font-family="ui-monospace, Menlo, monospace" font-size="15"
+              fill="currentColor">backup.ts</text>
+        <text x="44" y="107" font-size="12" fill="currentColor" opacity=".6">o código que faz o backup</text>
+
+        <rect x="410" y="50" width="290" height="72" rx="5"
+              fill="none" stroke="var(--accent)" stroke-width="1.5"/>
+        <text x="434" y="86" font-family="ui-monospace, Menlo, monospace" font-size="15"
+              fill="var(--accent)">backup.test.ts</text>
+        <text x="434" y="107" font-size="12" fill="var(--accent)" opacity=".75">o conferente dele</text>
+
+        <line x1="404" y1="86" x2="322" y2="86" stroke="var(--accent)" stroke-width="1.5"
+              marker-end="url(#seta)"/>
+        <text x="363" y="72" font-size="12" text-anchor="middle" fill="var(--accent)">confere</text>
+
+        <text x="20" y="168" font-size="13" fill="currentColor" opacity=".7">
+          mesmo nome  +  .test  —  serve para qualquer arquivo, sempre
+        </text>
+      </svg>
+      <figcaption>
+        Se um dia você quiser conferir o <code>date.ts</code>, o arquivo se chama
+        <code>date.test.ts</code> e vai na mesma pasta. Não existe pasta especial de testes.
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- 5. a prova -->
+  <section>
+    <p class="eyebrow">A prova</p>
+    <h2>Como sei que o conferente presta</h2>
+
+    <p>
+      Teste que passa de primeira não prova nada — pode estar conferindo o vazio.
+      Então quebrei o seu código de propósito, quatro vezes, para ver se ele reclamava.
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>O que eu quebrei de propósito</th><th>Resultado</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Deixei o arquivo antigo sobrescrever dados novos</td><td class="caught">✓ acusou</td></tr>
+          <tr><td>Tirei a checagem que recusa backup de outro app</td><td class="caught">✓ acusou</td></tr>
+          <tr><td>Fiz "cancelar" ser tratado como erro</td><td class="caught">✓ acusou</td></tr>
+          <tr><td>Troquei a contagem de pontos do mapa facial</td><td class="caught">✓ acusou</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="note">
+      Cada sabotagem derrubou <strong>exatamente um teste, e o certo</strong>.
+      Depois desfiz todas — seu código está intacto, só os testes são novos.
+    </p>
+  </section>
+
+  <footer>
+    <div>Mudou no projeto: <code>src/utils/backup.test.ts</code> (novo) e três linhas em <code>package.json</code>.</div>
+    <div>O arquivo <code>backup.ts</code> não foi alterado.</div>
+  </footer>
+
+</div>
+
+
+<span data-versao style="position:fixed;right:8px;bottom:6px;z-index:9999;font:500 11px ui-monospace,Menlo,monospace;opacity:.55;pointer-events:none"></span>
+<script>(function(){const VERSAO='1.0.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Harmonize v"+VERSAO})})();</script>
+</body></html>
