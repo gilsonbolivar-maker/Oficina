@@ -20,6 +20,24 @@ sem servidor, sem chave de API. A previsão vem do [Open-Meteo](https://open-met
 | Próximas 2 h | `minutely_15.precipitation` | ≥ 0,2 mm em 15 min |
 | Resto do prazo | `hourly.precipitation_probability` | chance ≥ limite **e** mm > 0 |
 
+Com risco alto de **granizo** no prazo, o alerta acrescenta "Risco de granizo!".
+
+## Tempo agora
+
+| Cartão | O que mostra | Fonte |
+|---|---|---|
+| Temperatura | atual, sensação, mín. e máx. do dia | `current`, `daily` |
+| Umidade do ar | % e se o ar está seco | `relative_humidity_2m` |
+| Índice UV | agora e máximo do dia, na escala da OMS | `uv_index`, `uv_index_max` |
+| Vento | velocidade, de onde vem e rajadas | `wind_*_10m` |
+| Nascer do sol | nascer e pôr, no fuso do local | `sunrise`, `sunset` |
+| Lua | fase e % iluminada | **calculada no aparelho**, sem rede |
+| Granizo | baixo / possível / alto | código 95/96/99 + CAPE |
+
+Granizo não vem pronto na previsão: **alto** = código 96/99 (só marcado em parte
+do mundo) ou trovoada com CAPE ≥ 2500; **possível** = trovoada ou CAPE ≥ 1500.
+É um indício, não certeza.
+
 Consulta a cada 10 minutos e ao voltar para o app. Avisa **uma vez por chuva**:
 só toca de novo depois que a previsão ficar seca.
 
@@ -37,10 +55,10 @@ só toca de novo depois que a previsão ficar seca.
 ## Estrutura
 
 ```
-index.html            tela única: local, previsão, barras por hora, ajustes e alerta
+index.html            tela única: local, previsão, tempo agora, barras por hora, ajustes e alerta
 app.css               estilos (tema escuro e claro)
 app.js                local, ajustes, consultas, disparo e som
-previsao.js           Open-Meteo, regra de decisão e estado compartilhado com o SW
+previsao.js           Open-Meteo, regra de decisão, granizo, lua e estado compartilhado com o SW
 sw.js                 app offline e conferência em segundo plano (Android)
 manifest.webmanifest  dados de instalação do PWA
 icones/               ícones 180, 192, 512 e maskable

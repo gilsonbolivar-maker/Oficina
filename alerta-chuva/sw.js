@@ -7,7 +7,7 @@
 
 importScripts('previsao.js');
 
-const VERSAO = '1.0.0';   // precisa casar com a VERSAO do app.js
+const VERSAO = '1.1.0';   // precisa casar com a VERSAO do app.js
 const CACHE_APP = 'alerta-chuva-app-' + VERSAO;
 
 const ARQUIVOS = [
@@ -84,7 +84,8 @@ async function conferirEmSegundoPlano() {
   if (estado.avisado) return;
   await Previsao.gravarEstado({ avisado: true });
   await self.registration.showNotification('Vai chover!', {
-    body: Previsao.frase(r) + ' em ' + estado.local.nome + '.',
+    body: Previsao.frase(r) + ' em ' + estado.local.nome + '.' +
+      (r.granizo === 'alto' ? ' Risco de granizo!' : ''),
     icon: 'icones/icone-192.png',
     tag: 'alerta-chuva',
     renotify: true,

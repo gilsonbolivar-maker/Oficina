@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.0.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.1.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -58,6 +58,13 @@ const el = {
   dChance: $('d-chance'),
   dIdade: $('d-idade'),
   horas: $('horas'),
+  tTemp: $('t-temp'), tTempNota: $('t-temp-nota'),
+  tUmidade: $('t-umidade'), tUmidadeNota: $('t-umidade-nota'),
+  tUv: $('t-uv'), tUvNota: $('t-uv-nota'),
+  tVento: $('t-vento'), tVentoNota: $('t-vento-nota'),
+  tSol: $('t-sol'), tSolNota: $('t-sol-nota'),
+  tLua: $('t-lua'), tLuaNota: $('t-lua-nota'),
+  cGranizo: $('c-granizo'), tGranizo: $('t-granizo'), tGranizoNota: $('t-granizo-nota'),
   vigiar: $('btn-vigiar'),
   atualizar: $('btn-atualizar'),
   janela: $('janela'),
@@ -105,7 +112,7 @@ function salvar() {
 
 /* ————————————————— estado da tela ————————————————— */
 
-let ultima = null;           // { r: avaliação, em: Date.now() }
+let ultima = null;           // { r: avaliação, tempo: resumo, em: Date.now() }
 let relogio = null;
 let consulta = null;
 let travaTela = null;
@@ -177,6 +184,7 @@ function desenhar() {
   el.dAgora.textContent = r.chovendo ? r.mmAgora.toFixed(1).replace('.', ',') + ' mm' : 'seco';
   el.dChance.textContent = r.chanceMax + '%';
   atualizarIdade();
+  desenharTempo(ultima.tempo, r);
 
   el.horas.textContent = '';
   const fim = Date.now() / 1000 + config.janela * 3600;
@@ -203,6 +211,42 @@ function desenhar() {
   }
 }
 
+const graus = v => v == null ? '—' : Math.round(v) + '°';
+const numero = (v, sufixo) => v == null ? '—' : Math.round(v) + sufixo;
+
+function desenharTempo(t, r) {
+  el.tTemp.textContent = graus(t.temp);
+  el.tTempNota.textContent = `sensação ${graus(t.sensacao)} · mín ${graus(t.min)} máx ${graus(t.max)}`;
+
+  el.tUmidade.textContent = numero(t.umidade, '%');
+  el.tUmidadeNota.textContent = t.umidade == null ? '—'
+    : t.umidade < 30 ? 'ar muito seco — beba água'
+    : t.umidade < 50 ? 'ar seco'
+    : t.umidade <= 80 ? 'confortável' : 'ar muito úmido';
+
+  el.tUv.textContent = t.uv == null ? '—' : String(Math.round(t.uv));
+  el.tUvNota.textContent = t.uv == null ? '—'
+    : `${Previsao.nivelUv(t.uv)} · máx. hoje ${t.uvMax == null ? '—' : Math.round(t.uvMax)} (${Previsao.nivelUv(t.uvMax)})`;
+
+  el.tVento.textContent = numero(t.vento, ' km/h');
+  el.tVentoNota.textContent = `do ${Previsao.direcaoVento(t.direcao) || '—'} · rajadas ${numero(t.rajada, ' km/h')}`;
+
+  el.tSol.textContent = t.nascer == null ? '—' : Previsao.horaLocal(t.nascer, r.fuso);
+  el.tSolNota.textContent = t.por == null ? '—' : `pôr do sol às ${Previsao.horaLocal(t.por, r.fuso)}`;
+
+  const lua = Previsao.faseDaLua();
+  el.tLua.textContent = lua.icone + ' ' + lua.luz + '%';
+  el.tLuaNota.textContent = lua.nome + ' · iluminada';
+
+  const GRANIZO = {
+    alto: ['Risco alto', 'trovoada com granizo prevista no prazo'],
+    possivel: ['Possível', 'trovoada ou ar muito instável no prazo'],
+    baixo: ['Baixo', `nada indica granizo nas próximas ${config.janela} h`]
+  };
+  el.cGranizo.dataset.risco = r.granizo;
+  [el.tGranizo.textContent, el.tGranizoNota.textContent] = GRANIZO[r.granizo];
+}
+
 function atualizarIdade() {
   if (!ultima) { el.dIdade.textContent = '—'; return; }
   const s = Math.round((Date.now() - ultima.em) / 1000);
@@ -217,7 +261,7 @@ async function verificar({ silencioso = false } = {}) {
   try {
     const dados = await Previsao.buscar(local.lat, local.lon);
     const r = Previsao.avaliar(dados, config);
-    ultima = { r, em: Date.now() };
+    ultima = { r, tempo: Previsao.resumirTempo(dados), em: Date.now() };
     desenhar();
     mostrarEstado();
     await decidirAlerta(r);
@@ -237,7 +281,8 @@ async function decidirAlerta(r) {
   }
   if (!config.vigiando || estado.avisado) return;
   Previsao.gravarEstado({ avisado: true });
-  disparar(Previsao.frase(r) + (local ? ' em ' + local.nome : '') + '.');
+  disparar(Previsao.frase(r) + (local ? ' em ' + local.nome : '') + '.' +
+    (r.granizo === 'alto' ? ' Risco de granizo!' : ''));
 }
 
 /* ————————————————— disparo ————————————————— */

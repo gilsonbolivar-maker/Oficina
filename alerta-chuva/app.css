@@ -188,8 +188,39 @@ a { color: var(--acento-texto); }
 .detalhes dt { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--texto-fraco); }
 .detalhes dd { margin: 2px 0 0; font-size: 14px; font-variant-numeric: tabular-nums; }
 
+/* ——— tempo agora ——— */
+.tempo-caixa { margin-top: 18px; }
+.tempo {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.cartao {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-borda);
+  padding: 10px 12px;
+  min-width: 0;
+}
+.cartao.largo { grid-column: 1 / -1; }
+.cartao p { margin: 0; }
+.cartao-rotulo { font-size: 12px; color: var(--texto-fraco); }
+.cartao-valor {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.cartao-nota { font-size: 12px; color: var(--texto-fraco); }
+.cartao[data-risco="possivel"] { border-color: var(--alerta); }
+.cartao[data-risco="possivel"] .cartao-valor { color: var(--alerta); }
+.cartao[data-risco="alto"] { border-color: var(--perigo); }
+.cartao[data-risco="alto"] .cartao-valor { color: var(--perigo); }
+
 /* ——— barras por hora ——— */
 .horas-caixa { margin-top: 18px; }
+.tempo-caixa h2,
 .horas-caixa h2,
 .ajustes h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .1em; color: var(--texto-fraco); }
 .horas {

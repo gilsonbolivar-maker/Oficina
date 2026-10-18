@@ -21,11 +21,15 @@ const Previsao = (() => {
     const p = new URLSearchParams({
       latitude: lat.toFixed(4),
       longitude: lon.toFixed(4),
-      current: 'precipitation,weather_code',
+      current: 'precipitation,weather_code,temperature_2m,apparent_temperature,relative_humidity_2m,' +
+               'wind_speed_10m,wind_gusts_10m,wind_direction_10m,uv_index,is_day',
       minutely_15: 'precipitation',
-      hourly: 'precipitation_probability,precipitation,weather_code',
+      hourly: 'precipitation_probability,precipitation,weather_code,cape',
+      daily: 'sunrise,sunset,temperature_2m_max,temperature_2m_min,uv_index_max',
       forecast_minutely_15: '8',   // 2 horas
       forecast_hours: '13',
+      forecast_days: '2',
+      wind_speed_unit: 'kmh',
       timeformat: 'unixtime',
       timezone: 'auto'
     });
@@ -90,6 +94,7 @@ const Previsao = (() => {
     const alerta = quando !== null;
     return {
       alerta,
+      granizo: riscoDeGranizo(h, agora, fim),
       nivel: alerta ? 'chuva' : chanceMax >= CHANCE_TALVEZ ? 'talvez' : 'seco',
       quando,
       chanceMax,
@@ -99,6 +104,79 @@ const Previsao = (() => {
       fuso: dados.utc_offset_seconds || 0,
       horas
     };
+  }
+
+  /**
+   * Granizo não vem pronto na previsão. Juntamos dois sinais dentro do prazo:
+   *   código 96/99 (trovoada com granizo — o modelo só marca isso em parte do mundo)
+   *   ou trovoada (95) com muita energia no ar (CAPE alto), que é o que forma pedra.
+   * Devolve 'alto' | 'possivel' | 'baixo'.
+   */
+  function riscoDeGranizo(h, agora, fim) {
+    let risco = 'baixo';
+    for (let i = 0; i < (h.time || []).length; i++) {
+      const t = h.time[i];
+      if (t + 3600 <= agora || t >= fim) continue;
+      const cod = h.weather_code ? h.weather_code[i] : 0;
+      const cape = h.cape ? (h.cape[i] || 0) : 0;
+      if (cod === 96 || cod === 99 || (cod === 95 && cape >= 2500)) return 'alto';
+      if (cod === 95 || cape >= 1500) risco = 'possivel';
+    }
+    return risco;
+  }
+
+  /** Temperatura, umidade, UV, vento e sol, no formato que a tela usa. */
+  function resumirTempo(dados) {
+    const c = dados.current || {};
+    const d = dados.daily || {};
+    return {
+      temp: c.temperature_2m,
+      sensacao: c.apparent_temperature,
+      min: d.temperature_2m_min ? d.temperature_2m_min[0] : null,
+      max: d.temperature_2m_max ? d.temperature_2m_max[0] : null,
+      umidade: c.relative_humidity_2m,
+      uv: c.uv_index,
+      uvMax: d.uv_index_max ? d.uv_index_max[0] : null,
+      vento: c.wind_speed_10m,
+      rajada: c.wind_gusts_10m,
+      direcao: c.wind_direction_10m,
+      nascer: d.sunrise ? d.sunrise[0] : null,
+      por: d.sunset ? d.sunset[0] : null
+    };
+  }
+
+  /** Nível do UV pela escala da OMS. */
+  function nivelUv(uv) {
+    if (uv == null) return '';
+    if (uv < 3) return 'baixo';
+    if (uv < 6) return 'moderado';
+    if (uv < 8) return 'alto';
+    if (uv < 11) return 'muito alto';
+    return 'extremo';
+  }
+
+  /** De onde o vento vem, em 8 pontos: 0° = vem do norte. */
+  function direcaoVento(graus) {
+    if (graus == null) return '';
+    return ['N', 'NE', 'L', 'SE', 'S', 'SO', 'O', 'NO'][Math.round(graus / 45) % 8];
+  }
+
+  /**
+   * Fase da lua calculada no aparelho, sem rede: idade desde uma lua nova
+   * conhecida (6/jan/2000 18:14 UTC), dividida pelo mês sinódico.
+   */
+  function faseDaLua(data = new Date()) {
+    const SINODICO = 29.530588853;
+    const dias = (data.getTime() - Date.UTC(2000, 0, 6, 18, 14)) / 86400000;
+    const idade = ((dias % SINODICO) + SINODICO) % SINODICO;
+    const fracao = idade / SINODICO;
+    const luz = Math.round((1 - Math.cos(2 * Math.PI * fracao)) / 2 * 100);
+    const FASES = [
+      ['Lua nova', '🌑'], ['Crescente', '🌒'], ['Quarto crescente', '🌓'], ['Crescente gibosa', '🌔'],
+      ['Lua cheia', '🌕'], ['Minguante gibosa', '🌖'], ['Quarto minguante', '🌗'], ['Minguante', '🌘']
+    ];
+    const [nome, icone] = FASES[Math.round(fracao * 8) % 8];
+    return { nome, icone, luz, idade };
   }
 
   /** Hora do local consultado (que pode ter outro fuso que o aparelho). */
@@ -141,5 +219,8 @@ const Previsao = (() => {
     }
   }
 
-  return { buscar, procurarCidade, avaliar, horaLocal, frase, lerEstado, gravarEstado };
+  return {
+    buscar, procurarCidade, avaliar, horaLocal, frase, lerEstado, gravarEstado,
+    resumirTempo, nivelUv, direcaoVento, faseDaLua
+  };
 })();
