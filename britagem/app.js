@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '4.6.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '4.7.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -471,18 +471,27 @@ function fichaDetector(d, t) {
   div.innerHTML =
     '<div class="corpo">' +
       '<div class="linha1">' +
-        '<span class="equip">Detector DT 1101</span>' +
         '<span class="horas"></span>' +
         (d.achou === true ? '<span class="etiqueta sim">👍 metal encontrado</span>' :
          d.achou === false ? '<span class="etiqueta nao">👎 não encontrado</span>' :
          '<span class="etiqueta aberta">sem resultado</span>') +
       '</div>' +
+      '<span class="motivo"></span>' +
       '<div class="acoes-linha">' +
+        (aberto ? '<button class="botao principal" data-liberar="1" type="button">Liberou agora</button>' : '') +
         '<button class="botao" data-editar="1" type="button">Editar</button>' +
       '</div>' +
     '</div>' +
     '<span class="dur"></span>';
-  div.querySelector('.horas').textContent = hhmm(d.inicio) + ' → ' + (d.fim ? hhmm(d.fim) : '…');
+  div.querySelector('.horas').textContent = 'Acionou ' + hhmm(d.inicio) + ' · Liberou ' + (d.fim ? hhmm(d.fim) : '—');
+  if (d.obs) div.querySelector('.motivo').textContent = d.obs;
+  else div.querySelector('.motivo').remove();
+  const lib = div.querySelector('[data-liberar]');
+  if (lib) lib.addEventListener('click', async () => {
+    d.fim = agora();
+    await salvar();
+    avisar('Detector liberado às ' + hhmm(d.fim) + '.');
+  });
   div.querySelector('.dur').textContent = duracao(d.fim ? minutos(d.inicio, d.fim) : null);
   div.querySelector('[data-editar]').addEventListener('click', () => formDetector(t, d));
   return div;
@@ -596,14 +605,41 @@ function desenharTurno() {
     alvo.appendChild(dica);
   }
 
-  if (t.detector.length) {
-    const det = document.createElement('div');
-    det.className = 'cartao';
-    det.innerHTML = '<h2>Detector DT 1101</h2>';
-    t.detector.slice().sort((a, b) => new Date(a.inicio) - new Date(b.inicio))
-      .forEach(d => det.appendChild(fichaDetector(d, t)));
-    alvo.appendChild(det);
+}
+
+/* ————————————————— detector: aba própria na lateral ————————————————— */
+
+function desenharDetector() {
+  const t = turnoAtual();
+  const alvo = $('#lista-detector');
+  alvo.innerHTML = '';
+  if (!t) return;
+  const lista = t.detector.slice().sort((a, b) => new Date(a.inicio) - new Date(b.inicio));
+  const achou = lista.filter(d => d.achou === true).length;
+  const naoAchou = lista.filter(d => d.achou === false).length;
+  const semResultado = lista.length - achou - naoAchou;
+  const abertos = lista.filter(d => !d.fim).length;
+  const parado = lista.reduce((s, d) => s + (minutos(d.inicio, d.fim || relogio(t)) || 0), 0);
+
+  const placar = document.createElement('div');
+  placar.className = 'placar';
+  placar.innerHTML =
+    '<div><b>' + lista.length + '</b><span>acionamentos' + (abertos ? ' · ' + abertos + ' aberto(s)' : '') + '</span></div>' +
+    '<div><b>' + achou + '</b><span>👍 metal encontrado</span></div>' +
+    '<div><b>' + naoAchou + '</b><span>👎 não encontrado</span></div>' +
+    '<div><b>' + duracao(parado) + '</b><span>tempo acionado' + (semResultado ? ' · ' + semResultado + ' sem resultado' : '') + '</span></div>';
+  alvo.appendChild(placar);
+
+  const c = document.createElement('div');
+  c.className = 'cartao';
+  c.innerHTML = '<h2>Acionamentos</h2>';
+  if (!lista.length) {
+    c.innerHTML += '<p class="fraco">Nenhum acionamento neste turno. Toque em <b>+ Acionamento</b> ' +
+      '(ou em 🧲 Detector, na tela do turno) quando o DT 1101 acionar.</p>';
+  } else {
+    lista.forEach(d => c.appendChild(fichaDetector(d, t)));
   }
+  alvo.appendChild(c);
 }
 
 /* ————————————————— leituras ————————————————— */
@@ -1266,6 +1302,7 @@ function desenhar() {
   $('#abas').hidden = false;
   desenharTurno();
   desenharLeituras();
+  desenharDetector();
   desenharResumo();
   desenharTurnos();
 }
@@ -2223,6 +2260,7 @@ function ligarEventos() {
   $('#editar-turno').addEventListener('click', () => formTurno(turnoAtual()));
   $('#nova-parada').addEventListener('click', () => formParada(turnoAtual(), null));
   $('#novo-detector').addEventListener('click', () => formDetector(turnoAtual(), null));
+  $('#novo-detector-2').addEventListener('click', () => formDetector(turnoAtual(), null));
   $('#nova-leitura').addEventListener('click', () => formLeitura(turnoAtual(), null));
   $('#nova-leitura-2').addEventListener('click', () => formLeitura(turnoAtual(), null));
   $$('.aba').forEach(a => a.addEventListener('click', () => trocarTela(a.dataset.tela)));
