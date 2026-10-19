@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '4.11.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '4.12.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -251,6 +251,9 @@ const equipamentosDaArea = t => areaDe(t).equipamentos.slice();
    retomam: ficam com aba e bloco próprios, mas não somam no parado da planta. */
 const OPERADORES = 'Operadores';
 const MAQUINAS = 'Máquinas';
+/* Na parada dos operadores: revezamento, ou uma parada com motivo de lista. */
+const REVEZAMENTO = 'Revezamento';
+const MOTIVOS_OPERADORES = ['Troca de turno', 'Jantar', 'Lanche', 'Ceia'];
 const FORA_DA_PLANTA = [MAQUINAS, OPERADORES];
 const daPlanta = e => !FORA_DA_PLANTA.includes(e);
 const rodandoDe = e => daPlanta(e) ? 'rodando' : 'trabalhando';
@@ -1523,6 +1526,19 @@ function formParada(t, p) {
         grupoEscolhas('g-tag-' + i, ['—'].concat(tagsDe(t, e)),
           p && p.equip === e && p.tag ? p.tag : '—') +
       '</div>').join('') +
+    (() => {
+      const deles = p && p.equip === OPERADORES;
+      const tipo = deles && p.motivo === REVEZAMENTO ? REVEZAMENTO : 'Parada';
+      return '<div class="grupo-oper" hidden>' +
+        '<p class="rotulo-grupo">Operadores</p>' +
+        grupoEscolhas('g-oper-tipo', [REVEZAMENTO, 'Parada'], tipo) +
+        '<div id="oper-paradas">' +
+          '<p class="rotulo-grupo">Parada</p>' +
+          grupoEscolhas('g-oper-motivo', MOTIVOS_OPERADORES,
+            deles && tipo === 'Parada' ? p.motivo : null, 'f-motivo') +
+        '</div>' +
+      '</div>';
+    })() +
     '<label class="campo">Motivo' +
       '<input id="f-motivo" type="text" list="motivos-usados" value="' + (p ? (p.motivo || '') : '') + '">' +
       '<datalist id="motivos-usados">' +
@@ -1551,7 +1567,17 @@ function formParada(t, p) {
     const fim = doCampo($('#f-fim').value, t);
     if (fim && new Date(fim) < new Date(inicio)) { erro('O fim está antes do início.'); return; }
 
-    const dados = { equip, tag, motivo: $('#f-motivo').value.trim(), inicio, fim };
+    let motivo = $('#f-motivo').value.trim();
+    if (equip === OPERADORES) {
+      const tipo = escolhido('#g-oper-tipo');
+      const m = escolhido('#g-oper-motivo');
+      if (tipo === REVEZAMENTO) motivo = REVEZAMENTO;
+      else if (!m) { erro('Escolha o motivo da parada.'); return; }
+      else if (m !== '__outro') motivo = m;
+      else if (!motivo) { erro('Escreva o motivo da parada.'); return; }
+    }
+
+    const dados = { equip, tag, motivo, inicio, fim };
     if (p) Object.assign(p, dados);
     else t.paradas.push(Object.assign({ id: id() }, dados));
     fecharCaixa();
@@ -1568,8 +1594,15 @@ function formParada(t, p) {
   const mostrarTags = () => {
     const equip = escolhido('#g-equip');
     $$('#formulario .grupo-tag').forEach(g => { g.hidden = g.dataset.equip !== equip; });
+    // Operadores: Revezamento ou Parada (Troca de turno, Jantar, Lanche, Ceia, Outro…).
+    const oper = equip === OPERADORES;
+    const tipo = escolhido('#g-oper-tipo');
+    $('#formulario .grupo-oper').hidden = !oper;
+    $('#oper-paradas').hidden = tipo !== 'Parada';
+    $('#f-motivo').closest('.campo').hidden =
+      oper && !(tipo === 'Parada' && escolhido('#g-oper-motivo') === '__outro');
   };
-  $('#g-equip').addEventListener('click', mostrarTags);
+  ['#g-equip', '#g-oper-tipo', '#g-oper-motivo'].forEach(s => $(s).addEventListener('click', mostrarTags));
   mostrarTags();
 }
 
