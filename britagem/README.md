@@ -10,10 +10,10 @@ adiante. Funciona **sem internet** e tudo fica neste aparelho.
 
 | Tela | Serve para |
 | ---- | ---------- |
-| **Turno** | Os três botões de registro e a linha do tempo do que já aconteceu. |
+| **Turno** | Os botões de registro e **um bloco por área** (AA140, Primário, Rebritagem…): funcionamento, tempo parado e rodando, e as paradas dela como **Parada** e **Retomada**. |
 | **Leituras** | A leitura **inicial** e **final** dos totalizadores, a tabela hora a hora e a **somatória do turno**. |
 | **Caçambas** | Contador de caçambas basculadas: um toque anota a hora; mostra o total e o **bruto estimado** (**23 t** cada, ajustável em *Peso médio*) — material bruto, **nunca somado à balança**, que pesa o britado, quantas por hora e o intervalo entre uma e outra. |
-| **Resumo** | Tempo parado e **tempo rodando** por equipamento, números do turno e a saída do relatório. |
+| **Resumo** | **Uma folha por área**, sem misturar: paradas (Parada · Retomada · Duração · Motivo), em campo, parado, rodando e %. Depois os números do turno, caçambas e a saída do relatório — o texto e os PDFs seguem a mesma divisão por área. |
 | **Turnos** | Todos os turnos guardados; toque em um para voltar a ele. No fim da tela ficam as **áreas carregadas**, a **aparência** (tema **Escuro** ou **Claro**, guardado no aparelho) e a **versão do app**. |
 
 ## Como se usa no turno

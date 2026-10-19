@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '3.8.1';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '4.0.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -375,6 +375,36 @@ function rodouAntes(t, p) {
 
 /* ————————————————— linha do tempo ————————————————— */
 
+/* ————————————————— cada área no seu bloco ————————————————— */
+
+/**
+ * Tudo de uma área (equipamento) no turno: janela, paradas dela, tempo parado
+ * dentro da janela, intervalos rodando e disponibilidade. As áreas não se misturam.
+ */
+function dadosArea(t, e) {
+  const j = janela(t, e);
+  const paradas = t.paradas.filter(p => p.equip === e)
+    .sort((a, b) => new Date(a.inicio) - new Date(b.inicio));
+  const parado = paradas.reduce((s, p) => s + minutosNaJanela(p.inicio, p.fim || j.fim, j), 0);
+  const faixas = intervalosRodando(t, e);
+  const rodando = faixas.reduce((s, f) => s + (minutos(f.inicio, f.fim) || 0), 0);
+  const emCampo = minutos(j.inicio, j.fim) || 0;
+  return { nome: e, j, paradas, parado, faixas, rodando, emCampo,
+    disp: emCampo ? Math.round(100 * rodando / emCampo) : 0 };
+}
+
+/** Áreas que entram no resumo e nos relatórios: as que tiveram janela própria ou parada. */
+const areasComRegistro = t => equipamentosDoTurno(t)
+  .filter(e => janela(t, e).propria || t.paradas.some(p => p.equip === e));
+
+/** "Parada 01h40 · Retomada 02h34" */
+const paradaRetomada = p => 'Parada ' + hhmm(p.inicio) + ' · Retomada ' + (p.fim ? hhmm(p.fim) : '—');
+
+function textoJanela(j) {
+  return !j.iniciou && !j.encerrou ? 'horário do turno: ' + hhmm(j.inicio) + ' → ' + (j.correndo ? 'agora' : hhmm(j.fim))
+    : hhmm(j.inicio) + ' → ' + (j.correndo ? 'em andamento' : hhmm(j.fim));
+}
+
 function fichaParada(p, t) {
   const min = minutos(p.inicio, p.fim || relogio(t));
   const aberta = !p.fim;
@@ -391,25 +421,23 @@ function fichaParada(p, t) {
       '<span class="rodou"></span>' +
       '<span class="acumulado"></span>' +
       '<div class="acoes-linha">' +
-        (aberta ? '<button class="botao principal" data-encerrar="1" type="button">Encerrar agora</button>' : '') +
+        (aberta ? '<button class="botao principal" data-encerrar="1" type="button">Retomada agora</button>' : '') +
         '<button class="botao" data-editar="1" type="button">Editar</button>' +
       '</div>' +
     '</div>' +
     '<span class="dur' + (aberta ? ' correndo' : '') + '"></span>';
 
-  div.querySelector('.equip').textContent = nomeParada(p);
-  div.querySelector('.horas').textContent = hhmm(p.inicio) + ' → ' + (p.fim ? hhmm(p.fim) : '…');
+  if (p.tag) div.querySelector('.equip').textContent = p.tag;
+  else div.querySelector('.equip').remove();
+  div.querySelector('.horas').textContent = paradaRetomada(p);
   div.querySelector('.motivo').textContent = p.motivo || 'sem motivo anotado';
   const antes = rodouAntes(t, p);
   const campoRodou = div.querySelector('.rodou');
   if (antes) campoRodou.textContent = '▶ rodou ' + duracao(antes) + ' antes desta parada';
   else campoRodou.remove();
 
-  const noEquip = acumuladoAte(t, p, p.equip);
-  const noTurno = acumuladoAte(t, p);
   div.querySelector('.acumulado').textContent =
-    'Σ parado até aqui: ' + p.equip + ' ' + duracao(noEquip) +
-    (noTurno !== noEquip ? ' · turno ' + duracao(noTurno) : '');
+    'Σ parado até aqui em ' + p.equip + ': ' + duracao(acumuladoAte(t, p, p.equip));
 
   div.querySelector('.dur').textContent = duracao(min);
 
@@ -417,7 +445,7 @@ function fichaParada(p, t) {
   if (enc) enc.addEventListener('click', async () => {
     p.fim = agora();
     await salvar();
-    avisar('Parada encerrada: ' + duracao(minutos(p.inicio, p.fim)));
+    avisar(p.equip + ': retomada às ' + hhmm(p.fim) + ' (' + duracao(minutos(p.inicio, p.fim)) + ' parado).');
   });
   div.querySelector('[data-editar]').addEventListener('click', () => formParada(t, p));
   return div;
@@ -447,46 +475,48 @@ function fichaDetector(d, t) {
   return div;
 }
 
-/** Cartão com a janela de cada equipamento, no alto da tela do turno. */
-function cartaoEquipamentos(t) {
+/** O bloco de uma área na tela do turno: funcionamento, contas e as paradas dela. */
+function cartaoArea(t, nome) {
+  const d = dadosArea(t, nome);
+  const j = d.j;
   const c = document.createElement('div');
-  c.className = 'cartao equipamentos';
-  c.innerHTML = '<h2>Funcionamento</h2>';
+  c.className = 'cartao bloco-area' + (j.correndo && j.iniciou ? ' rodando' : '') +
+    (d.paradas.some(p => !p.fim) ? ' parada-aberta' : '');
+  c.innerHTML =
+    '<div class="cabeca-area">' +
+      '<button class="nome-area" type="button"></button>' +
+      '<button class="botao pequeno" data-acao="1" type="button"></button>' +
+    '</div>' +
+    '<p class="janela-area"></p>' +
+    '<p class="contas-area"></p>';
+  c.querySelector('.nome-area').textContent = nome;
+  c.querySelector('.janela-area').textContent = 'Funcionamento: ' +
+    (!j.iniciou ? 'não iniciou' : j.encerrou ? hhmm(j.inicio) + ' → ' + hhmm(j.fim)
+      : 'desde ' + hhmm(j.inicio) + ' · ' + duracao(minutos(j.inicio, j.fim)));
+  c.querySelector('.contas-area').textContent = (!j.propria && !d.paradas.length)
+    ? 'Sem registro neste turno.'
+    : '⏸ ' + duracao(d.parado) + ' parado · ▶ ' + duracao(d.rodando) + ' rodando (' + d.disp + '%)';
 
-  equipamentosDoTurno(t).forEach(nome => {
-    const j = janela(t, nome);
-    const linha = document.createElement('div');
-    linha.className = 'linha-janela' + (j.correndo && j.iniciou ? ' rodando' : '');
-    linha.innerHTML =
-      '<button class="nome-equip" type="button"></button>' +
-      '<span class="quando"></span>' +
-      '<button class="botao pequeno" data-acao="1" type="button"></button>';
-
-    linha.querySelector('.nome-equip').textContent = nome;
-    linha.querySelector('.quando').textContent =
-      !j.iniciou ? 'não iniciou'
-      : j.encerrou ? hhmm(j.inicio) + ' → ' + hhmm(j.fim)
-      : 'desde ' + hhmm(j.inicio) + ' · ' + duracao(minutos(j.inicio, j.fim));
-
-    const acao = linha.querySelector('[data-acao]');
-    acao.textContent = !j.iniciou ? 'Iniciar' : j.encerrou ? 'Reabrir' : 'Encerrar';
-    acao.addEventListener('click', async () => {
-      const eq = (t.equipamentos = t.equipamentos || {});
-      const atual = (eq[nome] = eq[nome] || {});
-      if (!j.iniciou) { atual.inicio = agora(); avisar(nome + ' iniciou às ' + hhmm(atual.inicio) + '.'); }
-      else if (j.encerrou) { atual.fim = null; avisar(nome + ' reaberto.'); }
-      else { atual.fim = agora(); avisar(nome + ' encerrado às ' + hhmm(atual.fim) + '.'); }
-      await salvar();
-    });
-    linha.querySelector('.nome-equip').addEventListener('click', () => formJanela(t, nome));
-    c.appendChild(linha);
+  const acao = c.querySelector('[data-acao]');
+  acao.textContent = !j.iniciou ? 'Iniciar' : j.encerrou ? 'Reabrir' : 'Encerrar';
+  acao.addEventListener('click', async () => {
+    const eq = (t.equipamentos = t.equipamentos || {});
+    const atual = (eq[nome] = eq[nome] || {});
+    if (!j.iniciou) { atual.inicio = agora(); avisar(nome + ' iniciou às ' + hhmm(atual.inicio) + '.'); }
+    else if (j.encerrou) { atual.fim = null; avisar(nome + ' reaberto.'); }
+    else { atual.fim = agora(); avisar(nome + ' encerrado às ' + hhmm(atual.fim) + '.'); }
+    await salvar();
   });
+  c.querySelector('.nome-area').addEventListener('click', () => formJanela(t, nome));
 
-  const dica = document.createElement('p');
-  dica.className = 'fraco pequeno';
-  dica.textContent = 'Cada equipamento tem a sua hora de entrar e sair. ' +
-    'Toque no nome para corrigir os horários.';
-  c.appendChild(dica);
+  if (!d.paradas.length) {
+    const v = document.createElement('p');
+    v.className = 'fraco pequeno';
+    v.textContent = 'Nenhuma parada.';
+    c.appendChild(v);
+  } else {
+    d.paradas.forEach(p => c.appendChild(fichaParada(p, t)));
+  }
   return c;
 }
 
@@ -517,35 +547,22 @@ function desenharTurno() {
         .map(e => '<span>' + e + ' ' + duracao(c.porEquip[e]) + '</span>').join('');
   }
 
-  alvo.appendChild(cartaoEquipamentos(t));
+  // Cada área no seu bloco, com as paradas dela em ordem de hora.
+  equipamentosDoTurno(t).forEach(e => alvo.appendChild(cartaoArea(t, e)));
 
-  const abertas = t.paradas.filter(p => !p.fim);
-  if (abertas.length) {
-    const h = document.createElement('div');
-    h.className = 'grupo';
-    h.textContent = 'EM ANDAMENTO';
-    alvo.appendChild(h);
-    abertas.forEach(p => alvo.appendChild(fichaParada(p, t)));
+  const dica = document.createElement('p');
+  dica.className = 'fraco pequeno';
+  dica.textContent = 'Toque no nome da área para corrigir o horário de funcionamento.';
+  alvo.appendChild(dica);
+
+  if (t.detector.length) {
+    const det = document.createElement('div');
+    det.className = 'cartao';
+    det.innerHTML = '<h2>Detector DT 1101</h2>';
+    t.detector.slice().sort((a, b) => new Date(a.inicio) - new Date(b.inicio))
+      .forEach(d => det.appendChild(fichaDetector(d, t)));
+    alvo.appendChild(det);
   }
-
-  const eventos = t.paradas.filter(p => p.fim).map(p => ({ q: 'p', o: p, hora: p.inicio }))
-    .concat(t.detector.map(d => ({ q: 'd', o: d, hora: d.inicio })))
-    .sort((a, b) => new Date(a.hora) - new Date(b.hora));
-
-  if (!eventos.length && !abertas.length) {
-    const vazio = document.createElement('p');
-    vazio.className = 'vazio';
-    vazio.innerHTML = 'Nenhuma parada registrada.<br>' +
-      'Use os botões acima conforme as coisas forem acontecendo.';
-    alvo.appendChild(vazio);
-    return;
-  }
-
-  const h = document.createElement('div');
-  h.className = 'grupo';
-  h.textContent = 'REGISTRADO';
-  alvo.appendChild(h);
-  eventos.forEach(ev => alvo.appendChild(ev.q === 'p' ? fichaParada(ev.o, t) : fichaDetector(ev.o, t)));
 }
 
 /* ————————————————— leituras ————————————————— */
@@ -781,58 +798,43 @@ function desenharResumo() {
     '<div><b>' + c.encontrados + '</b><span>com metal encontrado</span></div>';
   alvo.appendChild(placar);
 
-  const cartao = document.createElement('div');
-  cartao.className = 'cartao';
-  cartao.innerHTML = '<h2>Tempo parado por equipamento</h2>';
-  const linhas = Object.keys(c.porEquip).sort();
-  if (!linhas.length) {
-    cartao.innerHTML += '<p class="fraco">Nenhuma parada registrada.</p>';
-  } else {
-    const tb = document.createElement('table');
-    tb.className = 'tabela';
-    tb.innerHTML = '<tbody>' + linhas.map(e =>
-      '<tr><td>' + e + '</td><td>' + duracao(c.porEquip[e]) + '</td></tr>').join('') +
-      '<tr><td><b>Total</b></td><td><b>' + duracao(c.totalParado) + '</b></td></tr></tbody>';
-    cartao.appendChild(tb);
+  // Uma folha por área: as áreas não se misturam.
+  const areas = areasComRegistro(t);
+  if (!areas.length) {
+    const v = document.createElement('div');
+    v.className = 'cartao';
+    v.innerHTML = '<p class="fraco">Nenhuma área iniciada nem parada registrada.</p>';
+    alvo.appendChild(v);
   }
-  alvo.appendChild(cartao);
-
-  // Tempo rodando: o avesso das paradas, equipamento por equipamento.
-  const equipamentos = Object.keys(c.porEquip).sort();
-  if (equipamentos.length) {
-    const rod = document.createElement('div');
-    rod.className = 'cartao';
-    rod.innerHTML = '<h2>Tempo rodando</h2>';
-    equipamentos.forEach(e => {
-      const j = janela(t, e);
-      const faixas = intervalosRodando(t, e);
-      const total = faixas.reduce((soma, f) => soma + (minutos(f.inicio, f.fim) || 0), 0);
-      const emCampo = minutos(j.inicio, j.fim) || 0;
-      const disp = emCampo ? Math.round(100 * total / emCampo) : 0;
-
-      const bloco = document.createElement('div');
-      bloco.className = 'bloco-equip';
-      bloco.innerHTML =
-        '<div class="linha-equip"><b></b><span></span></div>' +
-        '<p class="fraco pequeno janela-equip">' +
-          hhmm(j.inicio) + ' → ' + (j.correndo ? 'agora' : hhmm(j.fim)) +
-          ' · ' + duracao(emCampo) + ' em campo' +
-          (j.propria ? '' : ' (horário do turno)') +
-        '</p>' +
-        '<table class="tabela"><tbody>' +
-          (faixas.length
-            ? faixas.map(f =>
-                '<tr><td>' + hhmm(f.inicio) + ' → ' + (f.correndo ? 'agora' : hhmm(f.fim)) + '</td>' +
-                '<td>' + duracao(minutos(f.inicio, f.fim)) + '</td></tr>').join('')
-            : '<tr><td colspan="2" class="fraco">Não rodou em nenhum momento.</td></tr>') +
-        '</tbody></table>';
-      bloco.querySelector('b').textContent = e;
-      bloco.querySelector('span').textContent =
-        duracao(total) + ' rodando · ' + disp + '%';
-      rod.appendChild(bloco);
+  areas.forEach(e => {
+    const d = dadosArea(t, e);
+    const k = document.createElement('div');
+    k.className = 'cartao bloco-area';
+    k.innerHTML =
+      '<h2></h2>' +
+      '<p class="fraco pequeno"></p>' +
+      '<table class="tabela"><thead><tr><th>Parada</th><th>Retomada</th><th>Duração</th><th>Motivo</th></tr></thead><tbody>' +
+        (d.paradas.length ? d.paradas.map(p =>
+          '<tr><td>' + hhmm(p.inicio) + '</td><td>' + (p.fim ? hhmm(p.fim) : 'em andamento') + '</td><td>' +
+            duracao(minutos(p.inicio, p.fim || relogio(t))) + '</td><td class="motivo-celula"></td></tr>').join('')
+          : '<tr><td colspan="4" class="fraco">Nenhuma parada.</td></tr>') +
+      '</tbody></table>' +
+      '<table class="tabela"><tbody>' +
+        '<tr><td>Em campo</td><td>' + duracao(d.emCampo) + '</td></tr>' +
+        '<tr><td>Parado</td><td><b>' + duracao(d.parado) + '</b></td></tr>' +
+        '<tr><td>Rodando</td><td><b>' + duracao(d.rodando) + '</b> (' + d.disp + '%)</td></tr>' +
+      '</tbody></table>' +
+      '<p class="fraco pequeno">Rodou: ' + (d.faixas.length ? d.faixas.map(f =>
+        hhmm(f.inicio) + ' → ' + (f.correndo ? 'agora' : hhmm(f.fim)) + ' (' + duracao(minutos(f.inicio, f.fim)) + ')').join(' · ')
+        : 'em nenhum momento') + '</p>';
+    k.querySelector('h2').textContent = e;
+    k.querySelectorAll('p')[0].textContent = 'Funcionamento: ' + textoJanela(d.j);
+    k.querySelectorAll('.motivo-celula').forEach((td, n) => {
+      const p = d.paradas[n];
+      td.textContent = (p.tag ? p.tag + ' · ' : '') + (p.motivo || '—');
     });
-    alvo.appendChild(rod);
-  }
+    alvo.appendChild(k);
+  });
 
   const soma = somatoria(t);
   const completa = temLeitura(t.inicial, t) && temLeitura(t.final, t);
@@ -1747,41 +1749,23 @@ function relatorioTexto(t) {
   L.push('Início ' + hhmm(t.inicio) + (t.fim ? ' · fim ' + hhmm(t.fim) : ' · em andamento'));
   L.push('');
 
-  const comJanela = equipamentosDoTurno(t).filter(e => janela(t, e).propria);
-  if (comJanela.length) {
-    L.push('FUNCIONAMENTO');
-    comJanela.forEach(e => {
-      const j = janela(t, e);
-      L.push('· ' + e + '  ' + (j.iniciou ? hhmm(j.inicio) : 'não iniciou') +
-        (j.encerrou ? ' → ' + hhmm(j.fim) : j.iniciou ? ' → em andamento' : ''));
-    });
+  // Uma área por bloco, sem misturar.
+  areasComRegistro(t).forEach(e => {
+    const d = dadosArea(t, e);
+    L.push('═══ ' + e.toUpperCase() + ' ═══');
+    L.push('Funcionamento: ' + textoJanela(d.j) + ' (' + duracao(d.emCampo) + ' em campo)');
+    if (d.paradas.length) {
+      d.paradas.forEach(p => L.push('· ' + paradaRetomada(p) +
+        '  (' + duracao(minutos(p.inicio, p.fim || relogio(t))) + ')' +
+        (p.tag ? ' · ' + p.tag : '') + (p.motivo ? ' — ' + p.motivo : '')));
+    } else {
+      L.push('· Nenhuma parada.');
+    }
+    L.push('Parado: ' + duracao(d.parado) + ' · Rodando: ' + duracao(d.rodando) + ' (' + d.disp + '%)');
     L.push('');
-  }
-
+  });
   if (t.paradas.length) {
-    L.push('PARADAS');
-    t.paradas.slice().sort((a, b) => new Date(a.inicio) - new Date(b.inicio)).forEach(p => {
-      L.push('· ' + nomeParada(p) + '  ' + hhmm(p.inicio) + ' → ' + (p.fim ? hhmm(p.fim) : 'em andamento') +
-        '  (' + duracao(minutos(p.inicio, p.fim || relogio(t))) + ')' + (p.motivo ? ' — ' + p.motivo : '') +
-        '  [Σ ' + duracao(acumuladoAte(t, p)) + ']');
-    });
-    Object.keys(c.porEquip).sort().forEach(e => L.push('  ' + e + ': ' + duracao(c.porEquip[e])));
-    Object.keys(c.porTag).sort().forEach(e => L.push('    máquina ' + e + ': ' + duracao(c.porTag[e])));
-    L.push('  TOTAL PARADO: ' + duracao(c.totalParado));
-    L.push('');
-
-    L.push('TEMPO RODANDO');
-    Object.keys(c.porEquip).sort().forEach(e => {
-      const j = janela(t, e);
-      const faixas = intervalosRodando(t, e);
-      const total = faixas.reduce((soma, f) => soma + (minutos(f.inicio, f.fim) || 0), 0);
-      const emCampo = minutos(j.inicio, j.fim) || 0;
-      const disp = emCampo ? Math.round(100 * total / emCampo) : 0;
-      L.push('· ' + e + '  ' + hhmm(j.inicio) + ' → ' + (j.correndo ? 'agora' : hhmm(j.fim)) +
-        ':  ' + duracao(total) + ' rodando de ' + duracao(emCampo) + ' (' + disp + '%)');
-      faixas.forEach(f => L.push('    ' + hhmm(f.inicio) + ' → ' +
-        (f.correndo ? 'agora' : hhmm(f.fim)) + '  (' + duracao(minutos(f.inicio, f.fim)) + ')'));
-    });
+    L.push('TOTAL PARADO NO TURNO: ' + duracao(c.totalParado));
     L.push('');
   }
 
@@ -1916,48 +1900,31 @@ function blocosDoRelatorio(t, modo = 'hora') {
     (area.io ? '\n' + area.io : '') });
   B.push({ tipo: 'linha' });
 
-  const comJanela = equipamentosDoTurno(t).filter(e => janela(t, e).propria);
-  if (comJanela.length) {
-    B.push({ tipo: 'h1', texto: 'Funcionamento' });
-    B.push({ tipo: 'tabela', colunas: [150, 110, 110, 129],
-      cabecalho: ['Equipamento', 'Entrou', 'Saiu', 'Em campo'],
-      linhas: comJanela.map(e => {
-        const j = janela(t, e);
-        return [e, j.iniciou ? hhmm(j.inicio) : 'não iniciou',
-          j.encerrou ? hhmm(j.fim) : (j.iniciou ? 'em andamento' : '—'),
-          duracao(minutos(j.inicio, j.fim))];
-      }) });
-  }
-
-  if (t.paradas.length) {
-    B.push({ tipo: 'h1', texto: 'Paradas' });
-    B.push({ tipo: 'tabela', colunas: [96, 58, 58, 62, 225],
-      cabecalho: ['Equipamento', 'Início', 'Fim', 'Duração', 'Motivo'],
-      linhas: t.paradas.slice().sort((a, b) => new Date(a.inicio) - new Date(b.inicio))
-        .map(p => [nomeParada(p), hhmm(p.inicio), p.fim ? hhmm(p.fim) : '—',
-          duracao(minutos(p.inicio, p.fim || relogio(t))), p.motivo || '—']) });
+  // Uma área por bloco, sem misturar.
+  areasComRegistro(t).forEach(e => {
+    const d = dadosArea(t, e);
+    B.push({ tipo: 'h1', texto: e });
+    B.push({ tipo: 'pequeno', texto: 'Funcionamento: ' + textoJanela(d.j) + ' · ' + duracao(d.emCampo) + ' em campo' });
+    B.push({ tipo: 'tabela', colunas: [70, 70, 70, 289],
+      cabecalho: ['Parada', 'Retomada', 'Duração', 'Motivo'],
+      linhas: d.paradas.length
+        ? d.paradas.map(p => [hhmm(p.inicio), p.fim ? hhmm(p.fim) : 'em andamento',
+            duracao(minutos(p.inicio, p.fim || relogio(t))), (p.tag ? p.tag + ' · ' : '') + (p.motivo || '—')])
+        : [['—', '—', '—', 'Nenhuma parada']] });
     B.push({ tipo: 'tabela', colunas: [250, 249],
-      cabecalho: ['Tempo parado', 'Total'],
-      linhas: Object.keys(c.porEquip).sort().map(e => [e, duracao(c.porEquip[e])])
-        .concat(Object.keys(c.porTag).sort().map(e => ['  máquina ' + e, duracao(c.porTag[e])]))
-        .concat([['TOTAL PARADO', duracao(c.totalParado)]]) });
-
-    B.push({ tipo: 'h1', texto: 'Tempo rodando' });
-    Object.keys(c.porEquip).sort().forEach(e => {
-      const j = janela(t, e);
-      const faixas = intervalosRodando(t, e);
-      const total = faixas.reduce((acc, f) => acc + (minutos(f.inicio, f.fim) || 0), 0);
-      const emCampo = minutos(j.inicio, j.fim) || 0;
-      const disp = emCampo ? Math.round(100 * total / emCampo) : 0;
-      B.push({ tipo: 'h2', texto: e + ' — ' + duracao(total) + ' rodando de ' +
-        duracao(emCampo) + ' em campo (' + disp + '%)' });
+      cabecalho: [e, 'Total'],
+      linhas: [['Em campo', duracao(d.emCampo)], ['Parado', duracao(d.parado)],
+        ['Rodando', duracao(d.rodando) + ' (' + d.disp + '%)']] });
+    if (d.faixas.length) {
       B.push({ tipo: 'tabela', colunas: [250, 249],
-        cabecalho: ['Intervalo', 'Duração'],
-        linhas: faixas.length
-          ? faixas.map(f => [hhmm(f.inicio) + ' a ' + (f.correndo ? 'agora' : hhmm(f.fim)),
-              duracao(minutos(f.inicio, f.fim))])
-          : [['Não rodou em nenhum momento', '—']] });
-    });
+        cabecalho: ['Rodou', 'Duração'],
+        linhas: d.faixas.map(f => [hhmm(f.inicio) + ' a ' + (f.correndo ? 'agora' : hhmm(f.fim)),
+          duracao(minutos(f.inicio, f.fim))]) });
+    }
+  });
+  if (t.paradas.length) {
+    B.push({ tipo: 'tabela', colunas: [250, 249], cabecalho: ['Turno', 'Total'],
+      linhas: [['TOTAL PARADO NO TURNO', duracao(c.totalParado)]] });
   }
 
   if ((t.cacambas || []).length) {

@@ -556,3 +556,18 @@ body {
 .contador-cacambas p { margin: 0; }
 .botao.enorme { width: 100%; padding: 22px 12px; font-size: 22px; border-radius: 16px; }
 .tabela .num { color: var(--fraco); width: 3em; }
+
+/* ————— cada área no seu bloco ————— */
+.bloco-area { border-left: 4px solid var(--borda); }
+.bloco-area.rodando { border-left-color: var(--verde); }
+.bloco-area.parada-aberta { border-left-color: var(--acento); }
+.cabeca-area { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.nome-area {
+  padding: 0; border: 0; background: none; color: var(--texto);
+  font: inherit; font-size: 19px; font-weight: 700; cursor: pointer; text-align: left;
+}
+.bloco-area.rodando .nome-area { color: var(--verde); }
+.janela-area, .contas-area { margin: 4px 0 0; font-size: 14px; color: var(--fraco); }
+.contas-area { font-weight: 600; color: var(--texto); margin-bottom: 8px; }
+.bloco-area .registro { margin-top: 8px; }
+.bloco-area h2 + p { margin-top: -4px; }
