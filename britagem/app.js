@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '3.7.1';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '3.8.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -848,6 +848,8 @@ function desenharResumo() {
       (balancaAcumulada(t) != null ? '<tr><td>Balança acumulada <span class="fraco">(soma hora a hora)</span></td><td>' +
         comUnidade(balancaAcumulada(t), 't') + '</td></tr>' : '') +
       '<tr><td>Ácido médio <span class="fraco">(hora a hora)</span></td><td>' + comUnidade(c.acidoMedio, 'm³/h') + '</td></tr>' +
+      ((t.cacambas || []).length ? '<tr><td>Caçambas basculadas <span class="fraco">(× ' + mostrarNumero(pesoCacamba(t)) +
+        ' t)</span></td><td>' + t.cacambas.length + ' · ≈ ' + comUnidade(toneladasCacambas(t), 't') + '</td></tr>' : '') +
       linhasAcido(t, c, soma).map(([r, v]) => '<tr><td>' + r + '</td><td>' + v + '</td></tr>').join('') +
       '<tr><td>Balança inicial</td><td>' + comUnidade(t.toneladaInicial, 't') + '</td></tr>' +
       '<tr><td>Balança final</td><td>' + comUnidade(t.toneladaFinal, 't') + '</td></tr>' +
@@ -1023,6 +1025,128 @@ function desenharTurnos() {
   marcarTema();
 }
 
+/* ————————————————— caçambas ————————————————— */
+
+/** Peso médio de uma caçamba, em toneladas (dá para trocar por turno). */
+const PESO_CACAMBA_PADRAO = 23;
+const pesoCacamba = t => (t.pesoCacamba > 0 ? t.pesoCacamba : PESO_CACAMBA_PADRAO);
+const cacambasDe = t => (t.cacambas || []).slice().sort((a, b) => new Date(a.hora) - new Date(b.hora));
+const toneladasCacambas = t => +((t.cacambas || []).length * pesoCacamba(t)).toFixed(2);
+const nomeCacambas = n => n === 1 ? 'caçamba' : 'caçambas';
+
+function desenharCacambas() {
+  const t = turnoAtual();
+  const alvo = $('#lista-cacambas');
+  alvo.innerHTML = '';
+  if (!t) return;
+  const lista = cacambasDe(t);
+  $('#cacambas-total').textContent = lista.length;
+  $('#cacambas-rotulo').textContent = nomeCacambas(lista.length);
+  $('#cacambas-toneladas').textContent = '≈ ' + comUnidade(toneladasCacambas(t), 't') +
+    '  (' + mostrarNumero(pesoCacamba(t)) + ' t cada)';
+  $('#desfazer-cacamba').hidden = !lista.length;
+
+  if (!lista.length) {
+    alvo.innerHTML = '<div class="cartao"><p class="fraco">Toque em <b>＋ Caçamba basculou</b> cada vez' +
+      ' que um caminhão bascular na moega. O app anota a hora.</p></div>';
+    return;
+  }
+
+  // Quantas por hora do relógio.
+  const porHora = {};
+  lista.forEach(c => {
+    const h = String(new Date(c.hora).getHours()).padStart(2, '0') + 'h';
+    porHora[h] = (porHora[h] || 0) + 1;
+  });
+  const resumo = document.createElement('div');
+  resumo.className = 'cartao';
+  resumo.innerHTML = '<h2>Por hora</h2><table class="tabela"><tbody>' +
+    Object.keys(porHora).map(h => '<tr><td>' + h + '</td><td>' + porHora[h] + ' ' + nomeCacambas(porHora[h]) +
+      '</td><td>' + comUnidade(+(porHora[h] * pesoCacamba(t)).toFixed(2), 't') + '</td></tr>').join('') +
+    '</tbody></table>';
+  alvo.appendChild(resumo);
+
+  const cartao = document.createElement('div');
+  cartao.className = 'cartao';
+  cartao.innerHTML = '<h2>Basculadas</h2>';
+  const tab = document.createElement('table');
+  tab.className = 'tabela';
+  tab.innerHTML = '<thead><tr><th>Nº</th><th>Hora</th><th>Intervalo</th><th></th></tr></thead>';
+  const corpo = document.createElement('tbody');
+  lista.slice().reverse().forEach(c => {
+    const n = lista.indexOf(c);
+    const anterior = n > 0 ? lista[n - 1] : null;
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td class="num"></td><td></td><td class="fraco"></td>' +
+      '<td><button type="button">editar</button></td>';
+    const td = tr.querySelectorAll('td');
+    td[0].textContent = n + 1;
+    td[1].textContent = hhmm(c.hora);
+    td[2].textContent = anterior ? '+' + duracao(minutos(anterior.hora, c.hora)) : '—';
+    tr.querySelector('button').addEventListener('click', () => formCacamba(t, c));
+    corpo.appendChild(tr);
+  });
+  tab.appendChild(corpo);
+  cartao.appendChild(tab);
+  alvo.appendChild(cartao);
+}
+
+async function contarCacamba() {
+  const t = turnoAtual();
+  if (!t) return;
+  t.cacambas = t.cacambas || [];
+  const c = { id: id(), hora: agora() };
+  t.cacambas.push(c);
+  await salvar();
+  if (navigator.vibrate) navigator.vibrate(40);
+  avisar('Caçamba ' + t.cacambas.length + ' às ' + hhmm(c.hora) + '.');
+}
+
+async function desfazerCacamba() {
+  const t = turnoAtual();
+  const lista = t ? cacambasDe(t) : [];
+  if (!lista.length) return;
+  const ultima = lista[lista.length - 1];
+  if (!confirm('Apagar a caçamba ' + lista.length + ', das ' + hhmm(ultima.hora) + '?')) return;
+  t.cacambas = t.cacambas.filter(c => c.id !== ultima.id);
+  await salvar();
+  avisar('Caçamba das ' + hhmm(ultima.hora) + ' apagada.');
+}
+
+function formCacamba(t, c) {
+  const corpo =
+    '<label class="campo">Hora que basculou<input id="f-hora" type="time" value="' + paraCampo(c.hora) + '">' +
+      '<button class="agora" type="button" data-agora="f-hora">agora</button></label>';
+  abrirCaixa('Caçamba ' + (cacambasDe(t).indexOf(c) + 1), corpo, async () => {
+    const hora = doCampo($('#f-hora').value, t);
+    if (!hora) { erro('Informe a hora.'); return; }
+    c.hora = hora;
+    fecharCaixa();
+    await salvar();
+    avisar('Caçamba atualizada.');
+  }, async () => {
+    t.cacambas = t.cacambas.filter(x => x.id !== c.id);
+    fecharCaixa();
+    await salvar();
+    avisar('Caçamba apagada.');
+  });
+}
+
+function formPesoCacamba(t) {
+  const corpo =
+    '<label class="campo">Peso médio de uma caçamba (t)' +
+      '<input id="f-peso" type="text" inputmode="decimal" value="' + mostrarNumero(pesoCacamba(t)) + '"></label>' +
+    '<p class="fraco pequeno">Vale para este turno. O padrão é ' + PESO_CACAMBA_PADRAO + ' t.</p>';
+  abrirCaixa('Peso da caçamba', corpo, async () => {
+    const v = lerNumero($('#f-peso').value);
+    if (v == null || Number.isNaN(v) || v <= 0) { erro('Digite um peso maior que zero, em toneladas.'); return; }
+    t.pesoCacamba = v;
+    fecharCaixa();
+    await salvar();
+    avisar('Peso médio: ' + mostrarNumero(v) + ' t.');
+  });
+}
+
 function desenhar() {
   if (!turnoAtual()) {
     $$('.tela').forEach(s => { s.hidden = s.id !== 'tela-vazio'; });
@@ -1038,6 +1162,7 @@ function desenhar() {
   $('#abas').hidden = false;
   desenharTurno();
   desenharLeituras();
+  desenharCacambas();
   desenharResumo();
   desenharTurnos();
 }
@@ -1647,6 +1772,13 @@ function relatorioTexto(t) {
     L.push('');
   }
 
+  if ((t.cacambas || []).length) {
+    L.push('CAÇAMBAS: ' + t.cacambas.length + ' × ' + mostrarNumero(pesoCacamba(t)) + ' t ≈ ' +
+      comUnidade(toneladasCacambas(t), 't'));
+    L.push('· ' + cacambasDe(t).map((c, i) => (i + 1) + ') ' + hhmm(c.hora)).join('  '));
+    L.push('');
+  }
+
   if (t.detector.length) {
     L.push('DETECTOR DE METAL (DT 1101)');
     t.detector.slice().sort((a, b) => new Date(a.inicio) - new Date(b.inicio)).forEach(d => {
@@ -1815,6 +1947,21 @@ function blocosDoRelatorio(t, modo = 'hora') {
     });
   }
 
+  if ((t.cacambas || []).length) {
+    B.push({ tipo: 'h1', texto: 'Caçambas' });
+    if (modo !== 'resumo') {
+      const lista = cacambasDe(t);
+      B.push({ tipo: 'tabela', colunas: [60, 120, 319],
+        cabecalho: ['Nº', 'Basculou', 'Intervalo'],
+        linhas: lista.map((c, i) => [String(i + 1), hhmm(c.hora),
+          i ? '+' + duracao(minutos(lista[i - 1].hora, c.hora)) : '—']) });
+    }
+    B.push({ tipo: 'tabela', colunas: [250, 249], cabecalho: ['Caçambas', 'Total'],
+      linhas: [['Basculadas', String(t.cacambas.length)],
+        ['Peso médio', comUnidade(pesoCacamba(t), 't')],
+        ['Estimado (basculadas × peso)', comUnidade(toneladasCacambas(t), 't')]] });
+  }
+
   if (t.detector.length) {
     B.push({ tipo: 'h1', texto: 'Detector de metal (DT-1101)' });
     B.push({ tipo: 'tabela', colunas: [90, 90, 150, 169],
@@ -1953,6 +2100,15 @@ function baixarCsv(t) {
       '', balancaAcumulada(t), '', '']);
   }
 
+  cacambasDe(t).forEach((c, i) => {
+    L.push(['cacamba', String(i + 1), hhmm(c.hora), '', '', '', '', 'basculou',
+      '', pesoCacamba(t), '', '']);
+  });
+  if ((t.cacambas || []).length) {
+    L.push(['cacambas_total', String(t.cacambas.length), '', '', '', '', '', 'basculadas × peso médio',
+      '', toneladasCacambas(t), '', '']);
+  }
+
   // A produção vai na coluna da balança, que é de onde ela sai.
   areaDe(t).extras.forEach(e => {
     const v = (t.extras || {})[e.chave];
@@ -2002,6 +2158,9 @@ function ligarEventos() {
   $('#novo-detector').addEventListener('click', () => formDetector(turnoAtual(), null));
   $('#nova-leitura').addEventListener('click', () => formLeitura(turnoAtual(), null));
   $('#nova-leitura-2').addEventListener('click', () => formLeitura(turnoAtual(), null));
+  $('#contar-cacamba').addEventListener('click', contarCacamba);
+  $('#desfazer-cacamba').addEventListener('click', desfazerCacamba);
+  $('#peso-cacamba').addEventListener('click', () => formPesoCacamba(turnoAtual()));
   $$('.aba').forEach(a => a.addEventListener('click', () => trocarTela(a.dataset.tela)));
   $('#fundo').addEventListener('click', fecharCaixa);
   document.addEventListener('keydown', ev => { if (ev.key === 'Escape') fecharCaixa(); });

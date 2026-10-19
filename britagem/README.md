@@ -6,12 +6,13 @@ adiante. Funciona **sem internet** e tudo fica neste aparelho.
 
 - Publicado em: <https://gilsonbolivar-maker.github.io/Oficina/britagem/>
 
-## As quatro telas
+## As telas
 
 | Tela | Serve para |
 | ---- | ---------- |
 | **Turno** | Os três botões de registro e a linha do tempo do que já aconteceu. |
 | **Leituras** | A leitura **inicial** e **final** dos totalizadores, a tabela hora a hora e a **somatória do turno**. |
+| **Caçambas** | Contador de caçambas basculadas: um toque anota a hora; mostra o total, a estimativa em toneladas (**23 t** cada, ajustável em *Peso médio*), quantas por hora e o intervalo entre uma e outra. |
 | **Resumo** | Tempo parado e **tempo rodando** por equipamento, números do turno e a saída do relatório. |
 | **Turnos** | Todos os turnos guardados; toque em um para voltar a ele. No fim da tela ficam as **áreas carregadas**, a **aparência** (tema **Escuro** ou **Claro**, guardado no aparelho) e a **versão do app**. |
 

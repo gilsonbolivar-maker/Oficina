@@ -306,7 +306,7 @@ body {
   left: 0; right: 0; bottom: 0;
   z-index: 7;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   padding-bottom: var(--base);
   background: var(--barra);
   border-top: 1px solid var(--borda);
@@ -548,3 +548,11 @@ body {
   color: #10192a; background: var(--acento); border-color: var(--acento); font-weight: 600;
 }
 .tabela tfoot .acumulado td { font-weight: 700; border-top: 2px solid var(--borda); }
+
+/* ————— caçambas ————— */
+.contador-cacambas { display: grid; justify-items: center; gap: 8px; padding: 6px 0 4px; text-align: center; }
+.contador-cacambas .contagem { margin: 0; font-size: 18px; }
+.contador-cacambas .contagem b { font-size: 56px; line-height: 1; color: var(--acento-letra); }
+.contador-cacambas p { margin: 0; }
+.botao.enorme { width: 100%; padding: 22px 12px; font-size: 22px; border-radius: 16px; }
+.tabela .num { color: var(--fraco); width: 3em; }
