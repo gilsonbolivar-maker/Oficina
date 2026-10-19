@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '4.0.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '4.0.1';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -730,6 +730,21 @@ function distribuicaoBalanca(t) {
   return { total, soma, fator, valores };
 }
 
+/**
+ * Balança no turno: leitura final − leitura inicial da balança (aba Leituras).
+ * Turno antigo, anotado só em "Anotar balança", usa o que foi anotado lá.
+ */
+function balancaNoTurno(t) {
+  const ini = t.inicial && t.inicial.balanca, fim = t.final && t.final.balanca;
+  if (ini != null && fim != null) {
+    return { inicial: ini, final: fim, total: +(fim - ini).toFixed(2) };
+  }
+  if (t.toneladaInicial != null && t.toneladaFinal != null) {
+    return { inicial: t.toneladaInicial, final: t.toneladaFinal, total: +(t.toneladaFinal - t.toneladaInicial).toFixed(2) };
+  }
+  return t.producao != null ? { inicial: null, final: null, total: t.producao } : null;
+}
+
 /** Diferença entre o que o totalizador marcava no fim e no começo. */
 function somatoria(t) {
   const ini = t.inicial || {};
@@ -837,7 +852,7 @@ function desenharResumo() {
   });
 
   const soma = somatoria(t);
-  const completa = temLeitura(t.inicial, t) && temLeitura(t.final, t);
+  const bal = balancaNoTurno(t);
   const nums = document.createElement('div');
   nums.className = 'cartao';
   nums.innerHTML =
@@ -846,18 +861,16 @@ function desenharResumo() {
       '<tr><td>Duração do turno</td><td>' + duracao(c.duracaoTurno) + '</td></tr>' +
       '<tr><td>Horímetro rodado</td><td>' +
         comUnidade(soma.horimetro != null ? soma.horimetro : c.horimetro, 'h') + '</td></tr>' +
-      (completa ? '<tr><td>Balança no turno</td><td>' + comUnidade(soma.balanca, 't') + '</td></tr>' : '') +
       (balancaAcumulada(t) != null ? '<tr><td>Balança acumulada <span class="fraco">(soma hora a hora)</span></td><td>' +
         comUnidade(balancaAcumulada(t), 't') + '</td></tr>' : '') +
       '<tr><td>Ácido médio <span class="fraco">(hora a hora)</span></td><td>' + comUnidade(c.acidoMedio, 'm³/h') + '</td></tr>' +
       linhasAcido(t, c, soma).map(([r, v]) => '<tr><td>' + r + '</td><td>' + v + '</td></tr>').join('') +
-      '<tr><td>Balança inicial</td><td>' + comUnidade(t.toneladaInicial, 't') + '</td></tr>' +
-      '<tr><td>Balança final</td><td>' + comUnidade(t.toneladaFinal, 't') + '</td></tr>' +
-      '<tr><td><b>Produção</b> (final − inicial)</td><td><b>' + comUnidade(t.producao, 't') + '</b></td></tr>' +
+      '<tr><td>Balança inicial <span class="fraco">(leitura)</span></td><td>' + comUnidade(bal ? bal.inicial : (t.inicial && t.inicial.balanca), 't') + '</td></tr>' +
+      '<tr><td>Balança final <span class="fraco">(leitura)</span></td><td>' + comUnidade(bal ? bal.final : (t.final && t.final.balanca), 't') + '</td></tr>' +
+      '<tr><td><b>Balança no turno</b> (final − inicial)</td><td><b>' + comUnidade(bal ? bal.total : null, 't') + '</b></td></tr>' +
     '</tbody></table>' +
-    (completa ? '' : '<p class="fraco pequeno">Anote a leitura inicial e a final,' +
-      ' na aba Leituras, para o app somar o turno inteiro.</p>') +
-    '<div class="botoes"><button class="botao" id="editar-producao" type="button">Anotar balança</button></div>';
+    (bal && bal.inicial != null ? '' : '<p class="fraco pequeno">Anote a balança na leitura inicial e na final,' +
+      ' na aba Leituras: a balança no turno é a final menos a inicial.</p>');
   alvo.appendChild(nums);
 
   // Caçambas: material bruto que entrou. Fica à parte da balança, que pesa
@@ -911,7 +924,6 @@ function desenharResumo() {
     '</div>';
   alvo.appendChild(acoes);
 
-  $('#editar-producao').addEventListener('click', () => formToneladas(t, false));
   $('#copiar-relatorio').addEventListener('click', () => copiarRelatorio(t));
   $('#baixar-pdf').addEventListener('click', () => baixarPdf(t, 'hora'));
   $('#baixar-pdf-resumo').addEventListener('click', () => baixarPdf(t, 'resumo'));
@@ -930,7 +942,17 @@ function desenharResumo() {
       avisar('Turno reaberto.');
       return;
     }
-    formToneladas(t, true);
+    // A balança do turno sai das leituras: sem a final, pede a leitura final primeiro.
+    if (!(t.final && t.final.balanca != null)) {
+      avisar('Anote a leitura final (com a balança) antes de encerrar.');
+      formExtremo(t, 'final');
+      return;
+    }
+    if (!confirm('Encerrar o turno agora?')) return;
+    t.fim = agora();
+    await salvar();
+    const bal = balancaNoTurno(t);
+    avisar('Turno encerrado' + (bal ? ' · balança no turno ' + comUnidade(bal.total, 't') : '') + '.');
   });
 }
 
@@ -1825,7 +1847,7 @@ function relatorioTexto(t) {
     });
   }
 
-  if (t.producao != null) L.push('PRODUÇÃO: ' + mostrarNumero(t.producao) + ' t');
+  if (balancaNoTurno(t)) L.push('BALANÇA NO TURNO (final − inicial): ' + comUnidade(balancaNoTurno(t).total, 't'));
   const horimetroRodado = soma.horimetro != null ? soma.horimetro : c.horimetro;
   if (horimetroRodado != null) L.push('Horímetro rodado: ' + comUnidade(horimetroRodado, 'h'));
   if (balancaAcumulada(t) != null) L.push('Balança acumulada (soma hora a hora): ' + comUnidade(balancaAcumulada(t), 't'));
@@ -2007,7 +2029,7 @@ function blocosDoRelatorio(t, modo = 'hora') {
   if (dist) linhasFim.push(['Balança distribuída (soma)', comUnidade(dist.total, 't')]);
   if (c.acidoMedio != null) linhasFim.push(['Ácido médio (hora a hora)', comUnidade(c.acidoMedio, 'm³/h')]);
   linhasAcido(t, c, soma).forEach(l => linhasFim.push(l));
-  if (t.producao != null) linhasFim.push(['Produção', mostrarNumero(t.producao) + ' t']);
+  if (balancaNoTurno(t)) linhasFim.push(['Balança no turno (final - inicial)', comUnidade(balancaNoTurno(t).total, 't')]);
   area.extras.forEach(e => {
     const v = (t.extras || {})[e.chave];
     if (v == null || v === '') return;
@@ -2096,9 +2118,9 @@ function baixarCsv(t) {
     L.push(['dado_do_turno', '', '', '', '', '', '', e.rotulo,
       '', '', '', e.tipo === 'numero' ? comUnidade(v, e.unidade || '') : v]);
   });
-  if (t.producao != null) {
-    L.push(['producao', '', '', '', '', '', '', 'informada por quem fez o turno',
-      '', t.producao, '', 'toneladas']);
+  if (balancaNoTurno(t) && !(temLeitura(t.inicial, t) && temLeitura(t.final, t))) {
+    L.push(['balanca_no_turno', '', '', '', '', '', '', 'final menos inicial',
+      '', balancaNoTurno(t).total, '', 'toneladas']);
   }
 
   // A coluna da tag só a parada preenche; nas demais linhas ela vai vazia.
