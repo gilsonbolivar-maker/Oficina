@@ -66,6 +66,8 @@ equipamento, parâmetro ou medida das áreas reais: você carrega um arquivo
 
 Sem o arquivo, o app funciona com uma **área padrão** genérica. Para carregar:
 tela de partida → *carregar as áreas*, ou **Turnos → Áreas**.
+Em **Turnos → Áreas → Salvar JSON** o app grava as áreas em uso (as carregadas
+ou a padrão) num arquivo que o *Carregar áreas* aceita de volta.
 
 ### Formato do arquivo de áreas
 

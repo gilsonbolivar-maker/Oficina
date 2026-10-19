@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '4.8.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '4.9.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -1061,6 +1061,7 @@ function cartaoAreas() {
     '<div class="botoes">' +
       '<label class="botao">' + (cfg ? 'Trocar arquivo' : 'Carregar áreas') +
         '<input type="file" id="arquivo-areas-2" hidden></label>' +
+      '<button class="botao" id="salvar-areas" type="button">Salvar JSON</button>' +
       (cfg ? '<button class="botao" id="apagar-areas" type="button">Apagar</button>' : '') +
     '</div>' +
     '<p class="fraco pequeno" id="estado-areas-2" role="status" aria-live="polite"></p>';
@@ -1072,6 +1073,7 @@ function cartaoAreas() {
 
   c.querySelector('#arquivo-areas-2').addEventListener('change',
     ev => carregarAreas(ev.target.files[0], '#estado-areas-2'));
+  c.querySelector('#salvar-areas').addEventListener('click', salvarAreasJson);
   const apagar = c.querySelector('#apagar-areas');
   if (apagar) apagar.addEventListener('click', async () => {
     if (!confirm('Apagar as áreas deste aparelho? Os turnos continuam guardados.')) return;
@@ -2239,6 +2241,21 @@ function baixarCsv(t) {
 function trocarTela(nome) {
   $$('.tela').forEach(s => { s.hidden = s.id !== 'tela-' + nome; });
   $$('.aba').forEach(a => a.classList.toggle('ativa', a.dataset.tela === nome));
+}
+
+/** Salva as áreas em uso (as carregadas ou a padrão) num .json que o
+    "Carregar áreas" aceita de volta — para guardar, editar ou levar a outro aparelho. */
+function salvarAreasJson() {
+  const cfg = estado.config;
+  const dados = cfg
+    ? { fonte: cfg.fonte || {}, areas: cfg.areas }
+    : { fonte: { titulo: 'Área padrão do Britagem', data: new Date().toISOString().slice(0, 10) },
+        areas: [Object.assign({}, AREA_PADRAO, {
+          motivos: Array.from(new Set(MOTIVOS_SEMPRE.concat(AREA_PADRAO.motivos))),
+          tags: AREA_PADRAO.tags || TAGS_PADRAO
+        })] };
+  const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
+  entregarArquivo(blob, 'britagem-areas-' + new Date().toISOString().slice(0, 10) + '.json', 'Áreas salvas em JSON.');
 }
 
 async function carregarAreas(arquivo, onde) {
