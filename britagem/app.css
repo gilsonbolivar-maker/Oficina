@@ -572,22 +572,48 @@ body {
 .bloco-area .registro { margin-top: 8px; }
 .bloco-area h2 + p { margin-top: -4px; }
 
-/* ————— uma aba por área ————— */
+/* ————— uma aba por área: abas de pasta de arquivo ————— */
 .abas-area {
   position: sticky; top: 0; z-index: 2;
-  display: flex; gap: 6px; overflow-x: auto;
-  margin: 0 -2px 10px; padding: 6px 2px;
+  display: flex; align-items: flex-end; gap: 4px;
+  overflow-x: auto;
+  margin: 0; padding: 8px 10px 0;
   background: var(--fundo);
+  border-bottom: 1px solid var(--borda);
 }
 .aba-area {
-  flex: 1 0 auto; display: flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 10px 12px; border: 1px solid var(--borda); border-radius: 12px;
-  background: var(--cartao); color: var(--texto); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+  position: relative;
+  flex: 0 0 auto; display: flex; align-items: center; gap: 6px;
+  margin-bottom: -1px;
+  padding: 8px 16px 9px;
+  border: 1px solid var(--borda); border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  background: var(--cartao-alto);
+  color: var(--fraco);
+  font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
 }
-.aba-area.ativa { background: var(--acento); border-color: var(--acento); color: #10192a; }
+/* A aba aberta cresce, ganha a cor do cartão e “cola” nele, cobrindo a linha. */
+.aba-area.ativa {
+  z-index: 1;
+  padding-top: 12px;
+  background: var(--cartao);
+  color: var(--texto);
+  border-color: var(--borda);
+  border-top: 3px solid var(--acento);
+}
+.aba-area.ativa::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+  background: var(--cartao);
+}
 .aba-area .ponto { width: 8px; height: 8px; border-radius: 50%; background: var(--borda); }
 .aba-area.rodando .ponto { background: var(--verde); }
 .aba-area.parada .ponto { background: var(--alerta); }
+/* O cartão da área é a “folha” da pasta: sem cantos de cima, encostado nas abas. */
+.abas-area + .bloco-area {
+  margin-top: 0;
+  border-top: 0;
+  border-radius: 0 0 14px 14px;
+}
 
 /* ————— resultado da balança ————— */
 .resultado-balanca {

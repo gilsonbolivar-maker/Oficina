@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '4.1.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '4.2.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -12,14 +12,14 @@ for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textConten
 /* ————— tema: escuro (o padrão) ou claro —————
    O script no <head> do index.html já aplicou a escolha guardada antes de
    pintar; aqui ficam a troca na hora e o seletor "Tema: [Escuro] [Claro]". */
-const CHAVE_TEMA = 'britagem:tema';
+const CHAVE_TEMA = 'britagem:tema-v2';   // v2: o padrão passou a ser o claro
 const HTML_TEMA =
   '<div class="seletor-tema" role="group" aria-label="Tema"><span>Tema:</span>' +
   '<button type="button" data-tema-opcao="escuro">Escuro</button>' +
   '<button type="button" data-tema-opcao="claro">Claro</button></div>';
 
 function aplicarTema(tema) {
-  tema = tema === 'claro' ? 'claro' : 'escuro';
+  tema = tema === 'escuro' ? 'escuro' : 'claro';
   document.documentElement.dataset.tema = tema;
   const cor = document.querySelector('meta[name="theme-color"]');
   if (cor) cor.content = tema === 'claro' ? '#f2f4f8' : '#0b1220';
@@ -31,7 +31,7 @@ function aplicarTema(tema) {
 
 /** Marca no(s) seletor(es) qual tema está valendo. */
 function marcarTema() {
-  const atual = document.documentElement.dataset.tema === 'claro' ? 'claro' : 'escuro';
+  const atual = document.documentElement.dataset.tema === 'escuro' ? 'escuro' : 'claro';
   for (const b of document.querySelectorAll('[data-tema-opcao]')) {
     b.setAttribute('aria-pressed', String(b.dataset.temaOpcao === atual));
   }

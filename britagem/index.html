@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Britagem</title>
 <meta name="description" content="Relatório de turno da britagem: paradas, detector de metal e leituras, offline.">
-<meta name="theme-color" content="#0b1220">
+<meta name="theme-color" content="#f2f4f8">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Britagem">
@@ -16,8 +16,9 @@
 <script>
 /* Tema antes do CSS pintar, para não piscar. A escolha fica na aba Turnos. */
 (function () {
-  var t = 'escuro';
-  try { if (localStorage.getItem('britagem:tema') === 'claro') t = 'claro'; } catch (e) {}
+  // O padrão agora é o claro; só fica escuro quem escolher Escuro de novo.
+  var t = 'claro';
+  try { if (localStorage.getItem('britagem:tema-v2') === 'escuro') t = 'escuro'; } catch (e) {}
   document.documentElement.dataset.tema = t;
   if (t === 'claro') {
     document.querySelector('meta[name="theme-color"]').content = '#f2f4f8';
