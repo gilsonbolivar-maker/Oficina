@@ -693,3 +693,4 @@ body {
   .aba-area { flex: 0 0 auto; font-size: 13px; padding: 7px 10px 8px; scroll-snap-align: start; }
   .aba-area .nome { overflow: visible; }
 }
+.cabeca-area .nome-area small { display: block; font-size: 12px; font-weight: 500; }

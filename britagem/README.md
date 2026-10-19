@@ -8,13 +8,12 @@ adiante. Funciona **sem internet** e tudo fica neste aparelho.
 
 ## As telas
 
-As telas ficam em **abas na lateral esquerda** (Turno, Leituras, Caçambas, Resumo, Turnos), no estilo da Central GB — a aberta em laranja, um pouco para fora. O tema padrão é o claro, em **abóbora e creme**.
+As telas ficam em **abas na lateral esquerda** (Turno, Leituras, Resumo, Turnos), no estilo da Central GB — a aberta em laranja, um pouco para fora. O tema padrão é o claro, em **abóbora e creme**.
 
 | Tela | Serve para |
 | ---- | ---------- |
-| **Turno** | Os botões de registro e **uma aba por área** — e, no fim, a aba **Contagem** com o contador de caçambas — (Primário, Rebritagem, Pilhas): cada aba mostra só aquela área — funcionamento, tempo parado e rodando, e as paradas como **Parada** e **Retomada**. A parada nova já abre na área da aba. |
+| **Turno** | Os botões de registro e **uma aba por área** — na aba do **Primário** fica também o **contador de caçambas** (as caçambas são contadas ao abastecê-lo), com a contagem por hora e a lista das basculadas — (Primário, Rebritagem, Pilhas): cada aba mostra só aquela área — funcionamento, tempo parado e rodando, e as paradas como **Parada** e **Retomada**. A parada nova já abre na área da aba. |
 | **Leituras** | A leitura **inicial** e **final** dos totalizadores, a tabela hora a hora e a **somatória do turno**, com a **balança no turno = leitura final − leitura inicial** em destaque. |
-| **Caçambas** | Contador de caçambas basculadas: um toque anota a hora; mostra o total e o **bruto estimado** (**23 t** cada, ajustável em *Peso médio*) — material bruto, **nunca somado à balança**, que pesa o britado, quantas por hora e o intervalo entre uma e outra. |
 | **Resumo** | **Uma folha por área**, sem misturar: paradas (Parada · Retomada · Duração · Motivo), em campo, parado, rodando e %. Depois os números do turno, caçambas e a saída do relatório — o texto e os PDFs seguem a mesma divisão por área. |
 | **Turnos** | Todos os turnos guardados; toque em um para voltar a ele. No fim da tela ficam as **áreas carregadas**, a **aparência** (tema **Escuro** ou **Claro**, guardado no aparelho) e a **versão do app**. |
 
