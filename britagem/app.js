@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '4.4.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '4.5.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -399,9 +399,11 @@ const areasComRegistro = t => equipamentosDoTurno(t)
   .filter(e => janela(t, e).propria || t.paradas.some(p => p.equip === e));
 
 /** A área da aba aberta: a escolhida, ou a que tem parada aberta, ou a primeira. */
+const ABA_CONTAGEM = 'Contagem';   // a última aba: o contador de caçambas
+
 function areaDaAba(t) {
   const lista = equipamentosDoTurno(t);
-  if (lista.includes(estado.areaAba)) return estado.areaAba;
+  if (lista.includes(estado.areaAba) || estado.areaAba === ABA_CONTAGEM) return estado.areaAba;
   const comAberta = lista.find(e => t.paradas.some(p => p.equip === e && !p.fim));
   return comAberta || lista[0];
 }
@@ -561,7 +563,7 @@ function desenharTurno() {
   const abas = document.createElement('div');
   abas.className = 'abas-area';
   abas.setAttribute('role', 'tablist');
-  equipamentosDoTurno(t).forEach(e => {
+  equipamentosDoTurno(t).concat([ABA_CONTAGEM]).forEach(e => {
     const j = janela(t, e);
     const aberta = t.paradas.some(p => p.equip === e && !p.fim);
     const b = document.createElement('button');
@@ -570,17 +572,23 @@ function desenharTurno() {
     b.setAttribute('aria-selected', String(e === atual));
     b.className = 'aba-area' + (e === atual ? ' ativa' : '') + (aberta ? ' parada' : j.correndo && j.iniciou ? ' rodando' : '');
     b.innerHTML = '<span class="ponto" aria-hidden="true"></span><span class="nome"></span>';
-    b.querySelector('.nome').textContent = e;
+    b.querySelector('.nome').textContent = e === ABA_CONTAGEM ? e + ' ' + (t.cacambas || []).length : e;
+    if (e === ABA_CONTAGEM) b.classList.remove('rodando', 'parada');
     b.addEventListener('click', () => { estado.areaAba = e; desenharTurno(); });
     abas.appendChild(b);
   });
   alvo.appendChild(abas);
-  alvo.appendChild(cartaoArea(t, atual));
+  alvo.appendChild(atual === ABA_CONTAGEM ? cartaoContagem(t) : cartaoArea(t, atual));
+  // A aba aberta sempre à vista, mesmo quando a fileira desliza.
+  const ativa = abas.querySelector('.aba-area.ativa');
+  if (ativa) requestAnimationFrame(() => ativa.scrollIntoView({ block: 'nearest', inline: 'nearest' }));
 
-  const dica = document.createElement('p');
-  dica.className = 'fraco pequeno';
-  dica.textContent = 'Toque no nome da área para corrigir o horário de funcionamento.';
-  alvo.appendChild(dica);
+  if (atual !== ABA_CONTAGEM) {
+    const dica = document.createElement('p');
+    dica.className = 'fraco pequeno';
+    dica.textContent = 'Toque no nome da área para corrigir o horário de funcionamento.';
+    alvo.appendChild(dica);
+  }
 
   if (t.detector.length) {
     const det = document.createElement('div');
@@ -1105,6 +1113,35 @@ function desenharTurnos() {
 }
 
 /* ————————————————— caçambas ————————————————— */
+
+/** A aba Contagem, junto das áreas: o contador de caçambas na mão. */
+function cartaoContagem(t) {
+  const lista = cacambasDe(t);
+  const c = document.createElement('div');
+  c.className = 'cartao bloco-area contagem';
+  c.innerHTML =
+    '<div class="cabeca-area"><span class="nome-area">Contagem</span>' +
+      '<button class="botao pequeno" data-peso type="button">Peso médio</button></div>' +
+    '<div class="contador-cacambas">' +
+      '<p class="contagem-total"><b></b> <span></span></p>' +
+      '<p class="fraco"></p>' +
+      '<button class="botao principal enorme" data-contar type="button">＋ Caçamba basculou</button>' +
+      (lista.length ? '<button class="botao pequeno" data-desfazer type="button">Desfazer a última</button>' : '') +
+    '</div>' +
+    '<p class="fraco pequeno ultimas"></p>';
+  c.querySelector('.contagem-total b').textContent = lista.length;
+  c.querySelector('.contagem-total span').textContent = nomeCacambas(lista.length);
+  c.querySelectorAll('.contador-cacambas p')[1].textContent = '≈ ' + comUnidade(toneladasCacambas(t), 't') +
+    ' de material bruto (' + mostrarNumero(pesoCacamba(t)) + ' t cada)';
+  c.querySelector('.ultimas').textContent = lista.length
+    ? 'Últimas: ' + lista.slice(-5).reverse().map(x => hhmm(x.hora)).join(' · ') + ' — a lista completa fica na aba Caçambas.'
+    : 'Toque a cada caminhão que bascular na moega: o app anota a hora.';
+  c.querySelector('[data-contar]').addEventListener('click', contarCacamba);
+  const desf = c.querySelector('[data-desfazer]');
+  if (desf) desf.addEventListener('click', desfazerCacamba);
+  c.querySelector('[data-peso]').addEventListener('click', () => formPesoCacamba(t));
+  return c;
+}
 
 /** Peso médio de uma caçamba, em toneladas (dá para trocar por turno). */
 const PESO_CACAMBA_PADRAO = 23;

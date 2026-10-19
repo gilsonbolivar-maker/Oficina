@@ -12,7 +12,7 @@ As telas ficam em **abas na lateral esquerda** (Turno, Leituras, Caçambas, Resu
 
 | Tela | Serve para |
 | ---- | ---------- |
-| **Turno** | Os botões de registro e **uma aba por área** (Primário, Rebritagem, Pilhas, Caçamba, Máquina): cada aba mostra só aquela área — funcionamento, tempo parado e rodando, e as paradas como **Parada** e **Retomada**. A parada nova já abre na área da aba. |
+| **Turno** | Os botões de registro e **uma aba por área** — e, no fim, a aba **Contagem** com o contador de caçambas — (Primário, Rebritagem, Pilhas, Caçamba, Máquina): cada aba mostra só aquela área — funcionamento, tempo parado e rodando, e as paradas como **Parada** e **Retomada**. A parada nova já abre na área da aba. |
 | **Leituras** | A leitura **inicial** e **final** dos totalizadores, a tabela hora a hora e a **somatória do turno**, com a **balança no turno = leitura final − leitura inicial** em destaque. |
 | **Caçambas** | Contador de caçambas basculadas: um toque anota a hora; mostra o total e o **bruto estimado** (**23 t** cada, ajustável em *Peso médio*) — material bruto, **nunca somado à balança**, que pesa o britado, quantas por hora e o intervalo entre uma e outra. |
 | **Resumo** | **Uma folha por área**, sem misturar: paradas (Parada · Retomada · Duração · Motivo), em campo, parado, rodando e %. Depois os números do turno, caçambas e a saída do relatório — o texto e os PDFs seguem a mesma divisão por área. |

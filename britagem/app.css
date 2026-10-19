@@ -682,3 +682,14 @@ body {
   .aba-area.rodando .nome { box-shadow: inset 0 -2px 0 var(--verde); }
   .aba-area.parada .nome { box-shadow: inset 0 -2px 0 var(--alerta); }
 }
+.bloco-area.contagem { border-left-color: var(--acento); }
+.contagem .contador-cacambas { margin-top: 8px; }
+.contagem-total { margin: 0; font-size: 18px; }
+.contagem-total b { font-size: 52px; line-height: 1; color: var(--acento-letra); }
+/* Celular: as seis abas não cabem inteiras; o nome fica completo e a fileira desliza. */
+@media (max-width: 480px) {
+  .abas-area { scroll-snap-type: x proximity; scrollbar-width: none; }
+  .abas-area::-webkit-scrollbar { display: none; }
+  .aba-area { flex: 0 0 auto; font-size: 13px; padding: 7px 10px 8px; scroll-snap-align: start; }
+  .aba-area .nome { overflow: visible; }
+}
