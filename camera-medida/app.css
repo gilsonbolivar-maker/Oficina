@@ -58,9 +58,11 @@ body {
 }
 .palco canvas { touch-action: none; }
 .sem-camera {
-  position: absolute; inset: 0; display: grid; place-items: center; margin: 0; padding: 24px;
-  color: #e8edf7; text-align: center;
+  position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; margin: 0; padding: 24px;
+  color: #e8edf7; text-align: center; background: rgba(0, 0, 0, 0.6);
 }
+.sem-camera > div { display: grid; gap: 12px; max-width: 420px; }
+.sem-camera p { margin: 0; line-height: 1.5; }
 .nivel {
   position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
   padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 600;

@@ -9,7 +9,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.0.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.0.1';   // precisa casar com a VERSAO do sw.js
 
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
 
@@ -88,26 +88,57 @@ let fluxo = null;
 
 async function ligarCamera() {
   $('#sem-camera').hidden = true;
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    semCamera('Este navegador não abre a câmera. Use “Foto da galeria”.');
+  if (!window.isSecureContext) {
+    semCamera('A câmera só abre em endereço https. Abra pelo link da Oficina.');
     return;
   }
-  try {
-    fluxo = await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
-    });
-    video.srcObject = fluxo;
-    await video.play().catch(() => {});
-  } catch (e) {
-    semCamera(e && e.name === 'NotAllowedError'
-      ? 'A câmera foi negada. Libere nas permissões do navegador — ou use “Foto da galeria”.'
-      : 'Não deu para abrir a câmera. Use “Foto da galeria”.');
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    semCamera('Este navegador não abre a câmera. Use “Foto da galeria” — no iPhone/iPad ela oferece “Tirar foto”.');
+    return;
   }
+  desligarCamera();
+  // Do pedido mais exigente ao mais simples: alguns aparelhos recusam resolução
+  // ou câmera traseira e só abrem com o pedido básico.
+  const pedidos = [
+    { audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } },
+    { audio: false, video: { facingMode: 'environment' } },
+    { audio: false, video: true }
+  ];
+  let erro = null;
+  for (const pedido of pedidos) {
+    try {
+      fluxo = await navigator.mediaDevices.getUserMedia(pedido);
+      break;
+    } catch (e) {
+      erro = e;
+      if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')) break;   // negado: não adianta insistir
+    }
+  }
+  if (!fluxo) { semCamera(motivo(erro)); return; }
+  video.setAttribute('playsinline', '');
+  video.muted = true;
+  video.srcObject = fluxo;
+  try { await video.play(); } catch (e) { /* o iOS pode pedir um toque: o botão aparece abaixo */ }
+  // Se em 3 s a imagem não apareceu, oferece ligar com um toque.
+  setTimeout(() => {
+    if (estado.modo === 'vivo' && fluxo && !video.videoWidth) semCamera('A câmera não começou a mostrar a imagem.');
+  }, 3000);
 }
+
+function motivo(e) {
+  const n = e && e.name;
+  if (n === 'NotAllowedError' || n === 'SecurityError') {
+    return 'A câmera foi negada. No iPhone/iPad: Ajustes → Apps → Safari → Câmera → Permitir ' +
+      '(ou toque em “aA” → Ajustes do Site → Câmera). No Android: cadeado ao lado do endereço → Câmera.';
+  }
+  if (n === 'NotFoundError' || n === 'OverconstrainedError') return 'Não achei câmera neste aparelho.';
+  if (n === 'NotReadableError' || n === 'AbortError') return 'A câmera está em uso por outro app. Feche-o e tente de novo.';
+  return 'Não deu para abrir a câmera' + (n ? ' (' + n + ')' : '') + '.';
+}
+
 function semCamera(txt) {
   const el = $('#sem-camera');
-  el.textContent = txt;
+  $('#sem-camera-texto').textContent = txt;
   el.hidden = false;
 }
 function desligarCamera() {
@@ -555,6 +586,8 @@ function aplicarTema(tema) {
 /* ————————————————— partida ————————————————— */
 
 $('#fotografar').addEventListener('click', fotografar);
+$('#ligar-camera').addEventListener('click', () => { pedirSensor(); ligarCamera(); });
+$('#usar-galeria').addEventListener('click', () => $('#arquivo').click());
 $('#trocar-grade').addEventListener('click', trocarGrade);
 $('#abrir-galeria').addEventListener('click', () => { pedirSensor(); $('#arquivo').click(); });
 $('#arquivo').addEventListener('change', ev => { abrirArquivo(ev.target.files[0]); ev.target.value = ''; });
