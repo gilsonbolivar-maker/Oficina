@@ -12,7 +12,7 @@ As telas ficam em **abas na lateral esquerda** (Turno, Leituras, Caçambas, Resu
 
 | Tela | Serve para |
 | ---- | ---------- |
-| **Turno** | Os botões de registro e **uma aba por área** (AA140, Primário, Rebritagem…): cada aba mostra só aquela área — funcionamento, tempo parado e rodando, e as paradas como **Parada** e **Retomada**. A parada nova já abre na área da aba. |
+| **Turno** | Os botões de registro e **uma aba por área** (Primário, Rebritagem, Pilhas, Caçamba, Máquina): cada aba mostra só aquela área — funcionamento, tempo parado e rodando, e as paradas como **Parada** e **Retomada**. A parada nova já abre na área da aba. |
 | **Leituras** | A leitura **inicial** e **final** dos totalizadores, a tabela hora a hora e a **somatória do turno**, com a **balança no turno = leitura final − leitura inicial** em destaque. |
 | **Caçambas** | Contador de caçambas basculadas: um toque anota a hora; mostra o total e o **bruto estimado** (**23 t** cada, ajustável em *Peso médio*) — material bruto, **nunca somado à balança**, que pesa o britado, quantas por hora e o intervalo entre uma e outra. |
 | **Resumo** | **Uma folha por área**, sem misturar: paradas (Parada · Retomada · Duração · Motivo), em campo, parado, rodando e %. Depois os números do turno, caçambas e a saída do relatório — o texto e os PDFs seguem a mesma divisão por área. |
@@ -33,7 +33,7 @@ As telas ficam em **abas na lateral esquerda** (Turno, Leituras, Caçambas, Resu
 | Registro | Campos |
 | -------- | ------ |
 | **Funcionamento** | Por equipamento: hora de entrar e de sair |
-| **Parada** | Equipamento (AA140, Primário, Rebritagem — ou **Outro…**, que abre o campo para digitar o nome), a **máquina** pela tag do painel (opcional: BR-1101, TP-1103…), motivo, início e fim |
+| **Parada** | Área (Primário, Rebritagem, Pilhas, Caçamba, Máquina — ou **Outro…**, que abre o campo para digitar o nome), a **máquina** pela tag do painel (opcional: BR-1101, TP-1103…), motivo, início e fim |
 | **Detector DT 1101** | Hora que acionou, hora que liberou, 👍 metal encontrado / 👎 não encontrado |
 | **Leitura inicial / final** | Hora, o número cheio do totalizador do horímetro e da balança, e do totalizador do ácido (m³) |
 | **Leitura hora a hora** | Hora, horímetro, balança, ácido (m³/h) — ou a marca de **fora de operação**. Os campos abrem o **teclado numérico** e aceitam vírgula ou ponto. |
@@ -101,12 +101,12 @@ tela de partida → *carregar as áreas*, ou **Turnos → Áreas**.
 
 ## Cada equipamento tem a sua hora
 
-**AA140, Primário e Rebritagem entram e saem em horários próprios**, que não são
+**Primário, Rebritagem, Pilhas, Caçamba e Máquina entram e saem em horários próprios**, que não são
 os do turno. O cartão **Funcionamento**, no alto da tela do turno, guarda isso:
 
 ```
 Funcionamento
-AA140          07h00 → 15h00       [Reabrir]
+Pilhas         07h00 → 15h00       [Reabrir]
 Primário       06h30 → 14h00       [Reabrir]
 Rebritagem     desde 08h00 · 5h20  [Encerrar]
 ```
@@ -168,16 +168,16 @@ No alto da tela do turno fica a faixa com **quanto já parou**, somado, e a
 divisão por equipamento — sempre à vista, sem precisar ir ao resumo:
 
 ```
-[⏸ 1h35 parado]  [AA140 1h15]  [Rebritagem 20min]
+[⏸ 1h35 parado]  [Pilhas1h15]  [Rebritagem 20min]
 ```
 
 E cada parada na linha do tempo mostra o acumulado **até aquele ponto**:
 
 ```
-AA140   09h00 → 09h45                      45min
+Pilhas  09h00 → 09h45                      45min
 Entupimento
 ▶ rodou 1h30 antes desta parada
-Σ parado até aqui: AA140 1h15 · turno 1h35
+Σ parado até aqui: Pilhas1h15 · turno 1h35
 ```
 
 No relatório em texto, cada parada sai com `[Σ 1h35]` no fim da linha. No CSV
@@ -191,7 +191,7 @@ primeira parada, entre uma parada e a seguinte, e da última até o fim do turno
 com o total e a porcentagem do turno.
 
 ```
-AA140                            7h30 rodando · 94%
+Pilhas                           7h30 rodando · 94%
 07h00 → 15h00 · 8h em campo
   07h00 → 09h00                               2h
   09h30 → 15h00                             5h30
@@ -236,8 +236,8 @@ Início 06h00 · em andamento
 
 PARADAS
 · Rebritagem  06h20 → 06h48  (28min) — Afunilamento
-· AA140  07h35 → 08h40  (1h05) — Moega baixa
-  AA140: 1h05
+· Pilhas 07h35 → 08h40  (1h05) — Moega baixa
+  Pilhas: 1h05
   Rebritagem: 28min
   TOTAL PARADO: 1h33
 

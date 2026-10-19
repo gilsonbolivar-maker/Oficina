@@ -670,7 +670,15 @@ body {
 .botao { border-radius: 14px; }
 .botao.principal { background: linear-gradient(180deg, var(--acento), color-mix(in srgb, var(--acento) 85%, #8a2a00)); }
 .abas-area .aba-area.ativa { border-top-color: var(--acento); color: var(--acento-letra); }
+/* As cinco áreas dividem a largura; em tela estreita o nome encolhe. */
+.aba-area { flex: 1 1 auto; min-width: 0; justify-content: center; }
+.aba-area .nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 480px) {
-  .aba-area { padding: 7px 10px 8px; font-size: 14px; }
+  .abas-area { gap: 2px; padding: 8px 4px 0; }
+  .aba-area { padding: 7px 3px 8px; font-size: 11px; letter-spacing: -0.02em; gap: 0; border-radius: 10px 10px 0 0; }
   .aba-area.ativa { padding-top: 11px; }
+  /* Sem espaço para a bolinha: o estado vira um traço embaixo do nome. */
+  .aba-area .ponto { display: none; }
+  .aba-area.rodando .nome { box-shadow: inset 0 -2px 0 var(--verde); }
+  .aba-area.parada .nome { box-shadow: inset 0 -2px 0 var(--alerta); }
 }

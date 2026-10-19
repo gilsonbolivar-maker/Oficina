@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '4.3.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '4.4.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -54,7 +54,7 @@ const AREA_PADRAO = {
   nome: 'Turno',
   codigo: '',
   io: '',
-  equipamentos: ['AA140', 'Primário', 'Rebritagem'],
+  equipamentos: ['Primário', 'Rebritagem', 'Pilhas', 'Caçamba', 'Máquina'],
   motivos: [
     'Moega baixa', 'Moega vazia', 'Moega cheia', 'Troca de turno', 'Jantar',
     'Afunilamento', 'Entupimento', 'Obstrução no chute', 'Elétrica',
@@ -284,7 +284,7 @@ function avisar(txt) {
 /* ————————————————— janela de cada equipamento ————————————————— */
 
 /**
- * AA140, Britagem e Rebritagem entram e saem em horas próprias, que não são
+ * Primário, Rebritagem, Pilhas, Caçamba e Máquina entram e saem em horas próprias, que não são
  * as do turno. A janela é esse horário de início e término; quando não foi
  * informada, vale a do turno, para o que já estava registrado continuar certo.
  */
@@ -2255,17 +2255,26 @@ async function procurarAtualizacao() {
  * A versão 2.0.0 trouxe "Britagem" como equipamento, mas é o mesmo
  * Primário. Renomeia o que foi gravado naquele intervalo, uma vez só.
  */
+/**
+ * Nomes antigos de área viram os de hoje, uma vez só: "Britagem" (2.0.0) é o
+ * Primário, e "AA140" passou a se chamar Pilhas (4.4.0).
+ */
+const NOMES_ANTIGOS = { 'Britagem': 'Primário', 'AA140': 'Pilhas' };
 function renomearBritagem(turnos) {
   let mexeu = false;
   turnos.forEach(t => {
     t.paradas.forEach(p => {
-      if (p.equip === 'Britagem') { p.equip = 'Primário'; mexeu = true; }
+      if (NOMES_ANTIGOS[p.equip]) { p.equip = NOMES_ANTIGOS[p.equip]; mexeu = true; }
     });
     const eq = t.equipamentos;
-    if (eq && eq['Britagem']) {
-      eq['Primário'] = Object.assign({}, eq['Primário'], eq['Britagem']);
-      delete eq['Britagem'];
-      mexeu = true;
+    if (eq) {
+      Object.keys(NOMES_ANTIGOS).forEach(velho => {
+        if (!eq[velho]) return;
+        const novo = NOMES_ANTIGOS[velho];
+        eq[novo] = Object.assign({}, eq[novo], eq[velho]);
+        delete eq[velho];
+        mexeu = true;
+      });
     }
   });
   return mexeu;
