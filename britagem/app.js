@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '4.0.1';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '4.1.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -90,6 +90,7 @@ const estado = {
   turnos: [],
   atual: null,     // id do turno aberto na tela
   prefs: {},
+  areaAba: null,   // a área aberta na tela do turno
   form: null
 };
 
@@ -397,6 +398,14 @@ function dadosArea(t, e) {
 const areasComRegistro = t => equipamentosDoTurno(t)
   .filter(e => janela(t, e).propria || t.paradas.some(p => p.equip === e));
 
+/** A área da aba aberta: a escolhida, ou a que tem parada aberta, ou a primeira. */
+function areaDaAba(t) {
+  const lista = equipamentosDoTurno(t);
+  if (lista.includes(estado.areaAba)) return estado.areaAba;
+  const comAberta = lista.find(e => t.paradas.some(p => p.equip === e && !p.fim));
+  return comAberta || lista[0];
+}
+
 /** "Parada 01h40 · Retomada 02h34" */
 const paradaRetomada = p => 'Parada ' + hhmm(p.inicio) + ' · Retomada ' + (p.fim ? hhmm(p.fim) : '—');
 
@@ -547,8 +556,26 @@ function desenharTurno() {
         .map(e => '<span>' + e + ' ' + duracao(c.porEquip[e]) + '</span>').join('');
   }
 
-  // Cada área no seu bloco, com as paradas dela em ordem de hora.
-  equipamentosDoTurno(t).forEach(e => alvo.appendChild(cartaoArea(t, e)));
+  // Uma aba por área; só a área escolhida aparece.
+  const atual = areaDaAba(t);
+  const abas = document.createElement('div');
+  abas.className = 'abas-area';
+  abas.setAttribute('role', 'tablist');
+  equipamentosDoTurno(t).forEach(e => {
+    const j = janela(t, e);
+    const aberta = t.paradas.some(p => p.equip === e && !p.fim);
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('role', 'tab');
+    b.setAttribute('aria-selected', String(e === atual));
+    b.className = 'aba-area' + (e === atual ? ' ativa' : '') + (aberta ? ' parada' : j.correndo && j.iniciou ? ' rodando' : '');
+    b.innerHTML = '<span class="ponto" aria-hidden="true"></span><span class="nome"></span>';
+    b.querySelector('.nome').textContent = e;
+    b.addEventListener('click', () => { estado.areaAba = e; desenharTurno(); });
+    abas.appendChild(b);
+  });
+  alvo.appendChild(abas);
+  alvo.appendChild(cartaoArea(t, atual));
 
   const dica = document.createElement('p');
   dica.className = 'fraco pequeno';
@@ -587,9 +614,23 @@ function cartaoExtremo(t, qual) {
 
 function cartaoSomatoria(t) {
   const soma = somatoria(t);
+  const bal = balancaNoTurno(t);
   const c = document.createElement('div');
   c.className = 'cartao somatoria';
   c.innerHTML = '<h2>Somatória do turno</h2>';
+
+  // O resultado da balança: leitura final − leitura inicial.
+  const res = document.createElement('div');
+  res.className = 'resultado-balanca';
+  res.innerHTML = '<span>Balança no turno <small>(leitura final − leitura inicial)</small></span><b></b>';
+  res.querySelector('b').textContent = bal && bal.inicial != null ? comUnidade(bal.total, 't') : '—';
+  if (bal && bal.inicial != null) {
+    const conta = document.createElement('p');
+    conta.className = 'fraco pequeno conta-balanca';
+    conta.textContent = mostrarNumero(bal.final) + ' − ' + mostrarNumero(bal.inicial) + ' = ' + comUnidade(bal.total, 't');
+    res.appendChild(conta);
+  }
+  c.appendChild(res);
 
   if (!temLeitura(t.inicial, t) || !temLeitura(t.final, t)) {
     c.innerHTML += '<p class="fraco">Anote a leitura inicial e a final para o app' +
@@ -598,7 +639,7 @@ function cartaoSomatoria(t) {
   }
   const tb = document.createElement('table');
   tb.className = 'tabela';
-  tb.innerHTML = '<tbody>' + medidasDe(t).map(m =>
+  tb.innerHTML = '<tbody>' + medidasDe(t).filter(m => m.chave !== 'balanca').map(m =>
     '<tr><td>' + m.rotulo + ' ' + (m.complemento || '') + '</td>' +
     '<td class="total">' + comUnidade(soma[m.chave], m.unidade) + '</td></tr>').join('') + '</tbody>';
   c.appendChild(tb);
@@ -671,7 +712,7 @@ function desenharLeituras() {
     const acumulada = balancaAcumulada(t);
     if (acumulada != null) {
       const pe = document.createElement('tfoot');
-      pe.innerHTML = '<tr class="acumulado"><td>Σ</td><td></td><td></td><td></td><td></td></tr>';
+      pe.innerHTML = '<tr class="acumulado"><td>Σ hora</td><td></td><td></td><td></td><td></td></tr>';
       pe.querySelectorAll('td')[2].textContent = comUnidade(acumulada, 't');
       tab.appendChild(pe);
     }
@@ -679,7 +720,8 @@ function desenharLeituras() {
     if (acumulada != null) {
       const nota = document.createElement('p');
       nota.className = 'fraco pequeno';
-      nota.textContent = 'Σ balança: soma das leituras hora a hora, sem o totalizador da leitura inicial.';
+      nota.textContent = 'Σ hora: só a soma das leituras hora a hora. O resultado da balança no turno ' +
+        'é a leitura final − a leitura inicial (Somatória, abaixo).';
       horarias.appendChild(nota);
     }
   }
@@ -1393,7 +1435,7 @@ function formParada(t, p) {
   const corpo =
     '<p class="rotulo-grupo">Equipamento</p>' +
     grupoEscolhas('g-equip', equipamentosDaArea(t),
-      p ? p.equip : equipamentosDaArea(t)[0], 'f-equip-livre') +
+      p ? p.equip : (equipamentosDaArea(t).includes(areaDaAba(t)) ? areaDaAba(t) : equipamentosDaArea(t)[0]), 'f-equip-livre') +
     '<label class="campo"' + (p && !equipamentosDaArea(t).includes(p.equip) ? '' : ' hidden') + '>' +
       'Nome do equipamento' +
       '<input id="f-equip-livre" type="text" placeholder="ex.: Peneira 02, Correia TP 1407" value="' +

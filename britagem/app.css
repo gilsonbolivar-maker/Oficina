@@ -571,3 +571,31 @@ body {
 .contas-area { font-weight: 600; color: var(--texto); margin-bottom: 8px; }
 .bloco-area .registro { margin-top: 8px; }
 .bloco-area h2 + p { margin-top: -4px; }
+
+/* ————— uma aba por área ————— */
+.abas-area {
+  position: sticky; top: 0; z-index: 2;
+  display: flex; gap: 6px; overflow-x: auto;
+  margin: 0 -2px 10px; padding: 6px 2px;
+  background: var(--fundo);
+}
+.aba-area {
+  flex: 1 0 auto; display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px 12px; border: 1px solid var(--borda); border-radius: 12px;
+  background: var(--cartao); color: var(--texto); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.aba-area.ativa { background: var(--acento); border-color: var(--acento); color: #10192a; }
+.aba-area .ponto { width: 8px; height: 8px; border-radius: 50%; background: var(--borda); }
+.aba-area.rodando .ponto { background: var(--verde); }
+.aba-area.parada .ponto { background: var(--alerta); }
+
+/* ————— resultado da balança ————— */
+.resultado-balanca {
+  display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 4px 12px;
+  margin: 4px 0 12px; padding: 12px; border-radius: 12px;
+  background: var(--cartao-alto); border: 1px solid var(--acento);
+}
+.resultado-balanca span { font-weight: 600; }
+.resultado-balanca small { display: block; font-weight: 400; color: var(--fraco); }
+.resultado-balanca b { font-size: 24px; color: var(--acento-letra); }
+.resultado-balanca .conta-balanca { grid-column: 1 / -1; margin: 0; }
