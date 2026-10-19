@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '4.7.1';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '4.8.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -68,6 +68,10 @@ const AREA_PADRAO = {
   extras: [],
   tags: null       // null = usa TAGS_PADRAO
 };
+
+/* Motivos que valem para toda área, mesmo com a configuração carregada:
+   a frente de lavra (operador de máquina e caçamba) para qualquer sistema. */
+const MOTIVOS_SEMPRE = ['Operadores de máquina', 'Caçamba'];
 
 /* As máquinas de cada sistema, com a tag do painel (Logicon/Cimtec).
    Na parada, a tag é opcional: diz qual máquina, dentro do sistema, parou. */
@@ -1491,7 +1495,7 @@ function formParada(t, p) {
   const usados = Array.from(new Set(estado.turnos
     .filter(x => x.areaId === t.areaId)
     .flatMap(x => x.paradas.map(y => y.motivo)).filter(Boolean)));
-  const sugestoes = Array.from(new Set(motivosDaArea(t).concat(usados)));
+  const sugestoes = Array.from(new Set(MOTIVOS_SEMPRE.concat(motivosDaArea(t), usados)));
   const corpo =
     '<p class="rotulo-grupo">Equipamento</p>' +
     grupoEscolhas('g-equip', equipamentosDaArea(t),
