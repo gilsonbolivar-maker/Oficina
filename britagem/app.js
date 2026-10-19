@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '4.2.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '4.3.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -22,7 +22,7 @@ function aplicarTema(tema) {
   tema = tema === 'escuro' ? 'escuro' : 'claro';
   document.documentElement.dataset.tema = tema;
   const cor = document.querySelector('meta[name="theme-color"]');
-  if (cor) cor.content = tema === 'claro' ? '#f2f4f8' : '#0b1220';
+  if (cor) cor.content = tema === 'claro' ? '#fbf4ec' : '#0b1220';
   const barra = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
   if (barra) barra.content = tema === 'claro' ? 'default' : 'black-translucent';
   try { localStorage.setItem(CHAVE_TEMA, tema); } catch (e) {}

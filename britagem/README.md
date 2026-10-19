@@ -8,6 +8,8 @@ adiante. Funciona **sem internet** e tudo fica neste aparelho.
 
 ## As telas
 
+As telas ficam em **abas na lateral esquerda** (Turno, Leituras, Caçambas, Resumo, Turnos), no estilo da Central GB — a aberta em laranja, um pouco para fora. O tema padrão é o claro, em **abóbora e creme**.
+
 | Tela | Serve para |
 | ---- | ---------- |
 | **Turno** | Os botões de registro e **uma aba por área** (AA140, Primário, Rebritagem…): cada aba mostra só aquela área — funcionamento, tempo parado e rodando, e as paradas como **Parada** e **Retomada**. A parada nova já abre na área da aba. |

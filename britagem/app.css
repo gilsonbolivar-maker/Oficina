@@ -13,6 +13,8 @@
   --acento: #ffb020;
   --verde: #2fbf71;
   --acento-letra: #ffb020;   /* acento usado como letra (no claro, mais escuro) */
+  --sobre-acento: #10192a;   /* letra sobre o acento */
+  --trilho: 50px;            /* largura das abas na lateral */
   --alerta: #ff8a6b;
   --barra: #0e1626;
   --veu: rgba(4, 8, 16, 0.65);
@@ -74,7 +76,7 @@ body {
   border: 1px solid var(--acento);
   border-radius: 12px;
   background: var(--acento);
-  color: #10192a;
+  color: var(--sobre-acento);
   font-size: 22px;
   line-height: 1;
   cursor: pointer;
@@ -141,7 +143,7 @@ body {
   width: 40px; height: 40px;
   display: grid; place-content: center;
   font-size: 15px; font-weight: 700;
-  color: #10192a;
+  color: var(--sobre-acento);
   background: var(--acento);
   border-radius: 50%;
 }
@@ -193,7 +195,7 @@ body {
   border-radius: 12px;
   cursor: pointer;
 }
-.botao.principal { color: #10192a; background: var(--acento); border-color: var(--acento); font-weight: 600; }
+.botao.principal { color: var(--sobre-acento); background: var(--acento); border-color: var(--acento); font-weight: 600; }
 
 .tabela-pabx { width: 100%; border-collapse: collapse; font-size: 14px; }
 .tabela-pabx th, .tabela-pabx td { padding: 7px 4px; text-align: left; border-bottom: 1px solid var(--borda); }
@@ -333,7 +335,7 @@ body {
   margin: 0;
   padding: 10px 16px;
   font-size: 14px;
-  color: #10192a;
+  color: var(--sobre-acento);
   background: var(--acento);
   border-radius: 999px;
   box-shadow: 0 8px 24px var(--sombra-leve);
@@ -357,7 +359,7 @@ body {
 .faixa-acumulo b {
   flex: 0 0 auto;
   padding: 5px 11px; border-radius: 999px;
-  color: #10192a; background: var(--acento);
+  color: var(--sobre-acento); background: var(--acento);
 }
 .faixa-acumulo span {
   flex: 0 0 auto;
@@ -487,7 +489,7 @@ body {
   color: var(--fraco); background: var(--cartao-alto);
   border: 1px solid var(--borda); border-radius: 999px; cursor: pointer;
 }
-.escolhas button.ativo { color: #10192a; background: var(--acento); border-color: var(--acento); font-weight: 600; }
+.escolhas button.ativo { color: var(--sobre-acento); background: var(--acento); border-color: var(--acento); font-weight: 600; }
 
 .dupla-campo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .campo .agora {
@@ -512,21 +514,23 @@ body {
 
 /* ————— tema claro (escolhido em Ajustes; o padrão é o escuro) ————— */
 :root[data-tema="claro"] {
+  /* Abóbora e creme, como a Central GB. */
   color-scheme: light;
-  --fundo: #f2f4f8;
-  --cartao: #ffffff;
-  --cartao-alto: #e8ecf3;
-  --borda: #c3cddc;
-  --texto: #142033;
-  --fraco: #4d5b75;
-  --acento: #ffb020;          /* o mesmo âmbar nos preenchimentos */
-  --acento-letra: #8f5300;    /* âmbar escuro para letra sobre fundo claro */
-  --verde: #12783f;
-  --alerta: #b4371a;
-  --barra: #ffffff;
-  --veu: rgba(20, 32, 51, 0.38);
-  --sombra: rgba(20, 32, 51, 0.22);
-  --sombra-leve: rgba(20, 32, 51, 0.18);
+  --fundo: #fbf4ec;
+  --cartao: #fffdfa;
+  --cartao-alto: #f6e9dc;
+  --borda: #edd9c5;
+  --texto: #2a1a10;
+  --fraco: #7a5a45;
+  --acento: #e0662a;
+  --acento-letra: #b4461a;
+  --sobre-acento: #ffffff;
+  --verde: #2c7f47;
+  --alerta: #c0391b;
+  --barra: #fbf4ec;
+  --veu: rgba(60, 30, 10, 0.32);
+  --sombra: rgba(150, 90, 40, 0.18);
+  --sombra-leve: rgba(150, 90, 40, 0.12);
 }
 :root[data-tema="claro"] input::placeholder { color: var(--fraco); }
 
@@ -545,7 +549,7 @@ body {
 }
 :root:not([data-tema="claro"]) .seletor-tema [data-tema-opcao="escuro"],
 :root[data-tema="claro"] .seletor-tema [data-tema-opcao="claro"] {
-  color: #10192a; background: var(--acento); border-color: var(--acento); font-weight: 600;
+  color: var(--sobre-acento); background: var(--acento); border-color: var(--acento); font-weight: 600;
 }
 .tabela tfoot .acumulado td { font-weight: 700; border-top: 2px solid var(--borda); }
 
@@ -625,3 +629,48 @@ body {
 .resultado-balanca small { display: block; font-weight: 400; color: var(--fraco); }
 .resultado-balanca b { font-size: 24px; color: var(--acento-letra); }
 .resultado-balanca .conta-balanca { grid-column: 1 / -1; margin: 0; }
+
+
+/* ————— abas na lateral, como a Central GB ————— */
+.tela { left: var(--trilho); bottom: 0; }
+.abas {
+  top: 0; bottom: 0; right: auto;
+  width: var(--trilho);
+  display: flex; flex-direction: column; justify-content: center; gap: 8px;
+  padding: calc(var(--topo) + 12px) 0 calc(var(--base) + 12px);
+  background: transparent;
+  border-top: 0;
+  pointer-events: none;
+}
+.aba {
+  pointer-events: auto;
+  writing-mode: vertical-rl;
+  width: 40px; min-height: 104px;
+  padding: 14px 0;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--fraco);
+  background: var(--cartao);
+  border: 1px solid var(--borda); border-left: 0;
+  border-radius: 0 14px 14px 0;
+  box-shadow: 2px 3px 10px var(--sombra-leve);
+  transition: width .15s ease;
+}
+.aba.ativa {
+  width: 48px;
+  color: var(--sobre-acento);
+  background: linear-gradient(180deg, var(--acento), color-mix(in srgb, var(--acento) 80%, #8a2a00));
+  border-color: transparent;
+  box-shadow: 3px 4px 14px var(--sombra);
+}
+.abas .versao-app { position: absolute; top: auto; bottom: calc(var(--base) + 4px); left: 4px; right: auto; writing-mode: horizontal-tb; }
+.aviso { bottom: calc(24px + var(--base)); }
+
+/* Cartões macios: cantos maiores e sombra quente. */
+.cartao { border-radius: 18px; box-shadow: 0 6px 18px var(--sombra-leve); }
+.botao { border-radius: 14px; }
+.botao.principal { background: linear-gradient(180deg, var(--acento), color-mix(in srgb, var(--acento) 85%, #8a2a00)); }
+.abas-area .aba-area.ativa { border-top-color: var(--acento); color: var(--acento-letra); }
+@media (max-width: 480px) {
+  .aba-area { padding: 7px 10px 8px; font-size: 14px; }
+  .aba-area.ativa { padding-top: 11px; }
+}
