@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '4.10.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '4.10.1';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -944,10 +944,7 @@ function desenharResumo() {
       '<table class="tabela"><tbody>' +
         '<tr><td>Parado</td><td><b>' + duracao(d.parado) + '</b></td></tr>' +
         '<tr><td>' + Rodando(e) + '</td><td><b>' + duracao(d.rodando) + '</b> (' + d.disp + '%)</td></tr>' +
-      '</tbody></table>' +
-      '<p class="fraco pequeno">Rodou: ' + (d.faixas.length ? d.faixas.map(f =>
-        hhmm(f.inicio) + ' → ' + (f.correndo ? 'agora' : hhmm(f.fim)) + ' (' + duracao(minutos(f.inicio, f.fim)) + ')').join(' · ')
-        : 'em nenhum momento') + '</p>';
+      '</tbody></table>';
     k.querySelector('h2').textContent = e;
     k.querySelectorAll('p')[0].textContent = 'Funcionamento: ' + textoJanela(d.j);
     if (e === AREA_CACAMBAS && (t.cacambas || []).length) {
@@ -2068,12 +2065,6 @@ function blocosDoRelatorio(t, modo = 'hora') {
         linhas: [['Basculadas', String(t.cacambas.length)],
           ['Peso médio', comUnidade(pesoCacamba(t), 't')],
           ['Bruto estimado (basculadas × peso)', comUnidade(toneladasCacambas(t), 't')]] });
-    }
-    if (d.faixas.length) {
-      B.push({ tipo: 'tabela', colunas: [250, 249],
-        cabecalho: ['Rodou', 'Duração'],
-        linhas: d.faixas.map(f => [hhmm(f.inicio) + ' a ' + (f.correndo ? 'agora' : hhmm(f.fim)),
-          duracao(minutos(f.inicio, f.fim))]) });
     }
   });
   if (t.paradas.length) {
