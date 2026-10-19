@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '4.10.1';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '4.11.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -247,14 +247,17 @@ function areaDe(t) {
 }
 
 const equipamentosDaArea = t => areaDe(t).equipamentos.slice();
-/* Os operadores de máquina também param e retomam: ficam com aba e bloco
-   próprios, mas não somam no parado da planta. */
+/* As máquinas (escavadeira, carregadeira…) e os operadores também param e
+   retomam: ficam com aba e bloco próprios, mas não somam no parado da planta. */
 const OPERADORES = 'Operadores';
-const rodandoDe = e => e === OPERADORES ? 'trabalhando' : 'rodando';
-const Rodando = e => e === OPERADORES ? 'Trabalhando' : 'Rodando';
+const MAQUINAS = 'Máquinas';
+const FORA_DA_PLANTA = [MAQUINAS, OPERADORES];
+const daPlanta = e => !FORA_DA_PLANTA.includes(e);
+const rodandoDe = e => daPlanta(e) ? 'rodando' : 'trabalhando';
+const Rodando = e => daPlanta(e) ? 'Rodando' : 'Trabalhando';
 const equipamentosParada = t => {
   const l = equipamentosDaArea(t);
-  if (!l.includes(OPERADORES)) l.push(OPERADORES);
+  FORA_DA_PLANTA.forEach(e => { if (!l.includes(e)) l.push(e); });
   return l;
 };
 const motivosDaArea = t => areaDe(t).motivos.slice();
@@ -460,7 +463,7 @@ function fichaParada(p, t) {
   div.querySelector('.motivo').textContent = p.motivo || 'sem motivo anotado';
   const antes = rodouAntes(t, p);
   const campoRodou = div.querySelector('.rodou');
-  if (antes) campoRodou.textContent = '▶ ' + (p.equip === OPERADORES ? 'trabalhou ' : 'rodou ') + duracao(antes) + ' antes desta parada';
+  if (antes) campoRodou.textContent = '▶ ' + (daPlanta(p.equip) ? 'rodou ' : 'trabalhou ') + duracao(antes) + ' antes desta parada';
   else campoRodou.remove();
 
   div.querySelector('.acumulado').textContent =
@@ -578,7 +581,7 @@ function desenharTurno() {
   } else {
     faixa.classList.add('tem-parada');
     faixa.innerHTML =
-      '<b>' + (t.paradas.some(p => p.equip !== OPERADORES)
+      '<b>' + (t.paradas.some(p => daPlanta(p.equip))
         ? '⏸ ' + duracao(c.totalParado) + ' parado' : 'Planta sem parada') + '</b>' +
       Object.keys(c.porEquip).sort()
         .map(e => '<span>' + e + ' ' + duracao(c.porEquip[e]) + '</span>').join('');
@@ -883,7 +886,7 @@ function contasDoTurno(t) {
     const m = minutosNaJanela(p.inicio, p.fim || j.fim, j);
     porEquip[p.equip] = (porEquip[p.equip] || 0) + m;
     if (p.tag) porTag[p.tag] = (porTag[p.tag] || 0) + m;
-    if (p.equip !== OPERADORES) totalParado += m;
+    if (daPlanta(p.equip)) totalParado += m;
   });
   const leituras = t.leituras.filter(l => !l.parada && l.horimetro != null)
     .sort((a, b) => new Date(a.hora) - new Date(b.hora));
