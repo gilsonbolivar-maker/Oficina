@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '4.7.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '4.7.1';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -927,7 +927,6 @@ function desenharResumo() {
           : '<tr><td colspan="4" class="fraco">Nenhuma parada.</td></tr>') +
       '</tbody></table>' +
       '<table class="tabela"><tbody>' +
-        '<tr><td>Em campo</td><td>' + duracao(d.emCampo) + '</td></tr>' +
         '<tr><td>Parado</td><td><b>' + duracao(d.parado) + '</b></td></tr>' +
         '<tr><td>Rodando</td><td><b>' + duracao(d.rodando) + '</b> (' + d.disp + '%)</td></tr>' +
       '</tbody></table>' +
@@ -1878,7 +1877,7 @@ function relatorioTexto(t) {
   areasComRegistro(t).forEach(e => {
     const d = dadosArea(t, e);
     L.push('═══ ' + e.toUpperCase() + ' ═══');
-    L.push('Funcionamento: ' + textoJanela(d.j) + ' (' + duracao(d.emCampo) + ' em campo)');
+    L.push('Funcionamento: ' + textoJanela(d.j));
     if (d.paradas.length) {
       d.paradas.forEach(p => L.push('· ' + paradaRetomada(p) +
         '  (' + duracao(minutos(p.inicio, p.fim || relogio(t))) + ')' +
@@ -2028,7 +2027,7 @@ function blocosDoRelatorio(t, modo = 'hora') {
   areasComRegistro(t).forEach(e => {
     const d = dadosArea(t, e);
     B.push({ tipo: 'h1', texto: e });
-    B.push({ tipo: 'pequeno', texto: 'Funcionamento: ' + textoJanela(d.j) + ' · ' + duracao(d.emCampo) + ' em campo' });
+    B.push({ tipo: 'pequeno', texto: 'Funcionamento: ' + textoJanela(d.j) });
     B.push({ tipo: 'tabela', colunas: [70, 70, 70, 289],
       cabecalho: ['Parada', 'Retomada', 'Duração', 'Motivo'],
       linhas: d.paradas.length
@@ -2037,7 +2036,7 @@ function blocosDoRelatorio(t, modo = 'hora') {
         : [['—', '—', '—', 'Nenhuma parada']] });
     B.push({ tipo: 'tabela', colunas: [250, 249],
       cabecalho: [e, 'Total'],
-      linhas: [['Em campo', duracao(d.emCampo)], ['Parado', duracao(d.parado)],
+      linhas: [['Parado', duracao(d.parado)],
         ['Rodando', duracao(d.rodando) + ' (' + d.disp + '%)']] });
     if (e === AREA_CACAMBAS && (t.cacambas || []).length) {
       B.push({ tipo: 'h2', texto: 'Caçambas (material bruto)' });

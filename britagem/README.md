@@ -15,7 +15,7 @@ As telas ficam em **abas na lateral esquerda** (Turno, Leituras, Detector, Resum
 | **Turno** | Os botões de registro e **uma aba por área** — na aba do **Primário** fica também o **contador de caçambas** (as caçambas são contadas ao abastecê-lo), com a contagem por hora e a lista das basculadas — (Primário, Rebritagem, Pilhas): cada aba mostra só aquela área — funcionamento, tempo parado e rodando, e as paradas como **Parada** e **Retomada**. A parada nova já abre na área da aba. |
 | **Leituras** | A leitura **inicial** e **final** dos totalizadores, a tabela hora a hora e a **somatória do turno**, com a **balança no turno = leitura final − leitura inicial** em destaque. |
 | **Detector** | Área só do detector DT 1101: acionamentos, metal encontrado, não encontrado e tempo acionado; cada registro com **Acionou** e **Liberou** (botão *Liberou agora* no que está aberto) e a observação. |
-| **Resumo** | **Uma folha por área**, sem misturar: paradas (Parada · Retomada · Duração · Motivo), em campo, parado, rodando e %. Depois os números do turno, caçambas e a saída do relatório — o texto e os PDFs seguem a mesma divisão por área. |
+| **Resumo** | **Uma folha por área**, sem misturar: paradas (Parada · Retomada · Duração · Motivo), parado, rodando e %. Depois os números do turno, caçambas e a saída do relatório — o texto e os PDFs seguem a mesma divisão por área. |
 | **Turnos** | Todos os turnos guardados; toque em um para voltar a ele. No fim da tela ficam as **áreas carregadas**, a **aparência** (tema **Escuro** ou **Claro**, guardado no aparelho) e a **versão do app**. |
 
 ## Como se usa no turno
@@ -192,7 +192,7 @@ com o total e a porcentagem do turno.
 
 ```
 Pilhas                           7h30 rodando · 94%
-07h00 → 15h00 · 8h em campo
+07h00 → 15h00
   07h00 → 09h00                               2h
   09h30 → 15h00                             5h30
 ```
