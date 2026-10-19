@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '4.5.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '4.5.1';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -54,7 +54,7 @@ const AREA_PADRAO = {
   nome: 'Turno',
   codigo: '',
   io: '',
-  equipamentos: ['Primário', 'Rebritagem', 'Pilhas', 'Caçamba', 'Máquina'],
+  equipamentos: ['Primário', 'Rebritagem', 'Pilhas'],
   motivos: [
     'Moega baixa', 'Moega vazia', 'Moega cheia', 'Troca de turno', 'Jantar',
     'Afunilamento', 'Entupimento', 'Obstrução no chute', 'Elétrica',
@@ -284,7 +284,7 @@ function avisar(txt) {
 /* ————————————————— janela de cada equipamento ————————————————— */
 
 /**
- * Primário, Rebritagem, Pilhas, Caçamba e Máquina entram e saem em horas próprias, que não são
+ * Primário, Rebritagem e Pilhas entram e saem em horas próprias, que não são
  * as do turno. A janela é esse horário de início e término; quando não foi
  * informada, vale a do turno, para o que já estava registrado continuar certo.
  */
