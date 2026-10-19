@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '3.8.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '3.8.1';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -848,8 +848,6 @@ function desenharResumo() {
       (balancaAcumulada(t) != null ? '<tr><td>Balança acumulada <span class="fraco">(soma hora a hora)</span></td><td>' +
         comUnidade(balancaAcumulada(t), 't') + '</td></tr>' : '') +
       '<tr><td>Ácido médio <span class="fraco">(hora a hora)</span></td><td>' + comUnidade(c.acidoMedio, 'm³/h') + '</td></tr>' +
-      ((t.cacambas || []).length ? '<tr><td>Caçambas basculadas <span class="fraco">(× ' + mostrarNumero(pesoCacamba(t)) +
-        ' t)</span></td><td>' + t.cacambas.length + ' · ≈ ' + comUnidade(toneladasCacambas(t), 't') + '</td></tr>' : '') +
       linhasAcido(t, c, soma).map(([r, v]) => '<tr><td>' + r + '</td><td>' + v + '</td></tr>').join('') +
       '<tr><td>Balança inicial</td><td>' + comUnidade(t.toneladaInicial, 't') + '</td></tr>' +
       '<tr><td>Balança final</td><td>' + comUnidade(t.toneladaFinal, 't') + '</td></tr>' +
@@ -859,6 +857,21 @@ function desenharResumo() {
       ' na aba Leituras, para o app somar o turno inteiro.</p>') +
     '<div class="botoes"><button class="botao" id="editar-producao" type="button">Anotar balança</button></div>';
   alvo.appendChild(nums);
+
+  // Caçambas: material bruto que entrou. Fica à parte da balança, que pesa
+  // o material britado — os dois números não se somam.
+  if ((t.cacambas || []).length) {
+    const cac = document.createElement('div');
+    cac.className = 'cartao';
+    cac.innerHTML = '<h2>Caçambas <span class="fraco">(material bruto)</span></h2>' +
+      '<table class="tabela"><tbody>' +
+        '<tr><td>Basculadas</td><td>' + t.cacambas.length + '</td></tr>' +
+        '<tr><td>Peso médio</td><td>' + comUnidade(pesoCacamba(t), 't') + '</td></tr>' +
+        '<tr><td><b>Bruto estimado</b> (basculadas × peso)</td><td><b>' + comUnidade(toneladasCacambas(t), 't') + '</b></td></tr>' +
+      '</tbody></table>' +
+      '<p class="fraco pequeno">Material bruto, separado da balança (material britado).</p>';
+    alvo.appendChild(cac);
+  }
 
   const extras = areaDe(t).extras;
   if (extras.length) {
@@ -1773,7 +1786,7 @@ function relatorioTexto(t) {
   }
 
   if ((t.cacambas || []).length) {
-    L.push('CAÇAMBAS: ' + t.cacambas.length + ' × ' + mostrarNumero(pesoCacamba(t)) + ' t ≈ ' +
+    L.push('CAÇAMBAS (material bruto): ' + t.cacambas.length + ' × ' + mostrarNumero(pesoCacamba(t)) + ' t ≈ ' +
       comUnidade(toneladasCacambas(t), 't'));
     L.push('· ' + cacambasDe(t).map((c, i) => (i + 1) + ') ' + hhmm(c.hora)).join('  '));
     L.push('');
@@ -1948,7 +1961,7 @@ function blocosDoRelatorio(t, modo = 'hora') {
   }
 
   if ((t.cacambas || []).length) {
-    B.push({ tipo: 'h1', texto: 'Caçambas' });
+    B.push({ tipo: 'h1', texto: 'Caçambas (material bruto)' });
     if (modo !== 'resumo') {
       const lista = cacambasDe(t);
       B.push({ tipo: 'tabela', colunas: [60, 120, 319],
@@ -1959,7 +1972,7 @@ function blocosDoRelatorio(t, modo = 'hora') {
     B.push({ tipo: 'tabela', colunas: [250, 249], cabecalho: ['Caçambas', 'Total'],
       linhas: [['Basculadas', String(t.cacambas.length)],
         ['Peso médio', comUnidade(pesoCacamba(t), 't')],
-        ['Estimado (basculadas × peso)', comUnidade(toneladasCacambas(t), 't')]] });
+        ['Bruto estimado (basculadas × peso)', comUnidade(toneladasCacambas(t), 't')]] });
   }
 
   if (t.detector.length) {
@@ -2101,12 +2114,12 @@ function baixarCsv(t) {
   }
 
   cacambasDe(t).forEach((c, i) => {
-    L.push(['cacamba', String(i + 1), hhmm(c.hora), '', '', '', '', 'basculou',
-      '', pesoCacamba(t), '', '']);
+    L.push(['cacamba', String(i + 1), hhmm(c.hora), '', '', '', '', 'basculou (material bruto)',
+      '', '', '', comUnidade(pesoCacamba(t), 't')]);
   });
   if ((t.cacambas || []).length) {
-    L.push(['cacambas_total', String(t.cacambas.length), '', '', '', '', '', 'basculadas × peso médio',
-      '', toneladasCacambas(t), '', '']);
+    L.push(['cacambas_total', String(t.cacambas.length), '', '', '', '', '', 'bruto estimado: basculadas × peso médio',
+      '', '', '', comUnidade(toneladasCacambas(t), 't')]);
   }
 
   // A produção vai na coluna da balança, que é de onde ela sai.
