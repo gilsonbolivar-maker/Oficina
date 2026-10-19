@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '4.9.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '4.10.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -247,6 +247,16 @@ function areaDe(t) {
 }
 
 const equipamentosDaArea = t => areaDe(t).equipamentos.slice();
+/* Os operadores de máquina também param e retomam: ficam com aba e bloco
+   próprios, mas não somam no parado da planta. */
+const OPERADORES = 'Operadores';
+const rodandoDe = e => e === OPERADORES ? 'trabalhando' : 'rodando';
+const Rodando = e => e === OPERADORES ? 'Trabalhando' : 'Rodando';
+const equipamentosParada = t => {
+  const l = equipamentosDaArea(t);
+  if (!l.includes(OPERADORES)) l.push(OPERADORES);
+  return l;
+};
 const motivosDaArea = t => areaDe(t).motivos.slice();
 const tagsDe = (t, equip) => ((areaDe(t).tags || TAGS_PADRAO)[equip] || []).slice();
 /** "Primário · BR-1101", ou só "Primário" quando a máquina não foi dita. */
@@ -316,7 +326,7 @@ function minutosNaJanela(a, b, j) {
 
 /** Lista para a tela: os três de sempre, mais o que apareceu no turno. */
 function equipamentosDoTurno(t) {
-  const nomes = equipamentosDaArea(t);
+  const nomes = equipamentosParada(t);
   t.paradas.forEach(p => { if (!nomes.includes(p.equip)) nomes.push(p.equip); });
   Object.keys(t.equipamentos || {}).forEach(n => { if (!nomes.includes(n)) nomes.push(n); });
   return nomes;
@@ -450,7 +460,7 @@ function fichaParada(p, t) {
   div.querySelector('.motivo').textContent = p.motivo || 'sem motivo anotado';
   const antes = rodouAntes(t, p);
   const campoRodou = div.querySelector('.rodou');
-  if (antes) campoRodou.textContent = '▶ rodou ' + duracao(antes) + ' antes desta parada';
+  if (antes) campoRodou.textContent = '▶ ' + (p.equip === OPERADORES ? 'trabalhou ' : 'rodou ') + duracao(antes) + ' antes desta parada';
   else campoRodou.remove();
 
   div.querySelector('.acumulado').textContent =
@@ -521,7 +531,7 @@ function cartaoArea(t, nome) {
       : 'desde ' + hhmm(j.inicio) + ' · ' + duracao(minutos(j.inicio, j.fim)));
   c.querySelector('.contas-area').textContent = (!j.propria && !d.paradas.length)
     ? 'Sem registro neste turno.'
-    : '⏸ ' + duracao(d.parado) + ' parado · ▶ ' + duracao(d.rodando) + ' rodando (' + d.disp + '%)';
+    : '⏸ ' + duracao(d.parado) + ' parado · ▶ ' + duracao(d.rodando) + ' ' + rodandoDe(nome) + ' (' + d.disp + '%)';
 
   const acao = c.querySelector('[data-acao]');
   acao.textContent = !j.iniciou ? 'Iniciar' : j.encerrou ? 'Reabrir' : 'Encerrar';
@@ -568,7 +578,8 @@ function desenharTurno() {
   } else {
     faixa.classList.add('tem-parada');
     faixa.innerHTML =
-      '<b>⏸ ' + duracao(c.totalParado) + ' parado</b>' +
+      '<b>' + (t.paradas.some(p => p.equip !== OPERADORES)
+        ? '⏸ ' + duracao(c.totalParado) + ' parado' : 'Planta sem parada') + '</b>' +
       Object.keys(c.porEquip).sort()
         .map(e => '<span>' + e + ' ' + duracao(c.porEquip[e]) + '</span>').join('');
   }
@@ -872,7 +883,7 @@ function contasDoTurno(t) {
     const m = minutosNaJanela(p.inicio, p.fim || j.fim, j);
     porEquip[p.equip] = (porEquip[p.equip] || 0) + m;
     if (p.tag) porTag[p.tag] = (porTag[p.tag] || 0) + m;
-    totalParado += m;
+    if (p.equip !== OPERADORES) totalParado += m;
   });
   const leituras = t.leituras.filter(l => !l.parada && l.horimetro != null)
     .sort((a, b) => new Date(a.hora) - new Date(b.hora));
@@ -932,7 +943,7 @@ function desenharResumo() {
       '</tbody></table>' +
       '<table class="tabela"><tbody>' +
         '<tr><td>Parado</td><td><b>' + duracao(d.parado) + '</b></td></tr>' +
-        '<tr><td>Rodando</td><td><b>' + duracao(d.rodando) + '</b> (' + d.disp + '%)</td></tr>' +
+        '<tr><td>' + Rodando(e) + '</td><td><b>' + duracao(d.rodando) + '</b> (' + d.disp + '%)</td></tr>' +
       '</tbody></table>' +
       '<p class="fraco pequeno">Rodou: ' + (d.faixas.length ? d.faixas.map(f =>
         hhmm(f.inicio) + ' → ' + (f.correndo ? 'agora' : hhmm(f.fim)) + ' (' + duracao(minutos(f.inicio, f.fim)) + ')').join(' · ')
@@ -1500,12 +1511,12 @@ function formParada(t, p) {
   const sugestoes = Array.from(new Set(MOTIVOS_SEMPRE.concat(motivosDaArea(t), usados)));
   const corpo =
     '<p class="rotulo-grupo">Equipamento</p>' +
-    grupoEscolhas('g-equip', equipamentosDaArea(t),
-      p ? p.equip : (equipamentosDaArea(t).includes(areaDaAba(t)) ? areaDaAba(t) : equipamentosDaArea(t)[0]), 'f-equip-livre') +
-    '<label class="campo"' + (p && !equipamentosDaArea(t).includes(p.equip) ? '' : ' hidden') + '>' +
+    grupoEscolhas('g-equip', equipamentosParada(t),
+      p ? p.equip : (equipamentosParada(t).includes(areaDaAba(t)) ? areaDaAba(t) : equipamentosParada(t)[0]), 'f-equip-livre') +
+    '<label class="campo"' + (p && !equipamentosParada(t).includes(p.equip) ? '' : ' hidden') + '>' +
       'Nome do equipamento' +
       '<input id="f-equip-livre" type="text" placeholder="ex.: Peneira 02, Correia TP 1407" value="' +
-      (p && !equipamentosDaArea(t).includes(p.equip) ? p.equip : '') + '"></label>' +
+      (p && !equipamentosParada(t).includes(p.equip) ? p.equip : '') + '"></label>' +
     equipamentosDaArea(t).filter(e => tagsDe(t, e).length).map((e, i) =>
       '<div class="grupo-tag" data-equip="' + e.replace(/"/g, '&quot;') + '" hidden>' +
         '<p class="rotulo-grupo">Qual máquina? <span class="fraco">(opcional)</span></p>' +
@@ -1891,7 +1902,7 @@ function relatorioTexto(t) {
     } else {
       L.push('· Nenhuma parada.');
     }
-    L.push('Parado: ' + duracao(d.parado) + ' · Rodando: ' + duracao(d.rodando) + ' (' + d.disp + '%)');
+    L.push('Parado: ' + duracao(d.parado) + ' · ' + Rodando(e) + ': ' + duracao(d.rodando) + ' (' + d.disp + '%)');
     if (e === AREA_CACAMBAS && (t.cacambas || []).length) {
       L.push('Caçambas (material bruto): ' + t.cacambas.length + ' × ' + mostrarNumero(pesoCacamba(t)) + ' t ≈ ' +
         comUnidade(toneladasCacambas(t), 't'));
@@ -2043,7 +2054,7 @@ function blocosDoRelatorio(t, modo = 'hora') {
     B.push({ tipo: 'tabela', colunas: [250, 249],
       cabecalho: [e, 'Total'],
       linhas: [['Parado', duracao(d.parado)],
-        ['Rodando', duracao(d.rodando) + ' (' + d.disp + '%)']] });
+        [Rodando(e), duracao(d.rodando) + ' (' + d.disp + '%)']] });
     if (e === AREA_CACAMBAS && (t.cacambas || []).length) {
       B.push({ tipo: 'h2', texto: 'Caçambas (material bruto)' });
       if (modo !== 'resumo') {

@@ -33,7 +33,7 @@ As telas ficam em **abas na lateral esquerda** (Turno, Leituras, Detector, Resum
 | Registro | Campos |
 | -------- | ------ |
 | **Funcionamento** | Por equipamento: hora de entrar e de sair |
-| **Parada** | Área (Primário, Rebritagem, Pilhas — ou **Outro…**, que abre o campo para digitar o nome), a **máquina** pela tag do painel (opcional: BR-1101, TP-1103…), motivo (sempre sugere **Operadores de máquina** e **Caçamba**), início e fim |
+| **Parada** | Área (Primário, Rebritagem, Pilhas, **Operadores** — ou **Outro…**, que abre o campo para digitar o nome), a **máquina** pela tag do painel (opcional: BR-1101, TP-1103…), motivo (sempre sugere **Operadores de máquina** e **Caçamba**), início e fim. **Operadores** (parada e retomada dos operadores de máquina) tem aba e bloco próprios e **não soma** no total parado da planta |
 | **Detector DT 1101** | Hora que acionou, hora que liberou, 👍 metal encontrado / 👎 não encontrado |
 | **Leitura inicial / final** | Hora, o número cheio do totalizador do horímetro e da balança, e do totalizador do ácido (m³) |
 | **Leitura hora a hora** | Hora, horímetro, balança, ácido (m³/h) — ou a marca de **fora de operação**. Os campos abrem o **teclado numérico** e aceitam vírgula ou ponto. |
