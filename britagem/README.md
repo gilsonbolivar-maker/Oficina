@@ -210,13 +210,14 @@ turno (ou em 16h), para não inventar um total de dias.
 
 ## Passar adiante
 
-**Três PDFs**, no Resumo:
+**Quatro PDFs**, no Resumo:
 
 | Botão | O que traz |
 |---|---|
 | **PDF com hora a hora** | O relatório inteiro, com as leituras hora a hora como foram lidas |
 | **PDF balança distribuída** | A hora a hora com a balança **distribuída** — a diferença dos totalizadores (final − inicial) repartida na proporção de cada leitura, fechando exato no total |
 | **PDF resumo** | Sem a hora a hora |
+| **PDF resumo em cartões** | A cara da tela Resumo: placar no topo (parado, paradas, detector) e um cartão por área, em folha creme — mais os números do turno e o detector |
 
 
 | Botão | Resultado |

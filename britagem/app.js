@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '4.12.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '4.13.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -1024,6 +1024,7 @@ function desenharResumo() {
       '<button class="botao" id="baixar-pdf" type="button">PDF com hora a hora</button>' +
       '<button class="botao" id="baixar-pdf-distribuido" type="button">PDF balança distribuída</button>' +
       '<button class="botao" id="baixar-pdf-resumo" type="button">PDF resumo (sem hora a hora)</button>' +
+      '<button class="botao" id="baixar-pdf-cartoes" type="button">PDF resumo em cartões</button>' +
       '<button class="botao" id="baixar-csv" type="button">Baixar CSV</button>' +
       '<button class="botao" id="fechar-turno" type="button">' +
         (t.fim ? 'Reabrir turno' : 'Encerrar turno') + '</button>' +
@@ -1033,6 +1034,7 @@ function desenharResumo() {
   $('#copiar-relatorio').addEventListener('click', () => copiarRelatorio(t));
   $('#baixar-pdf').addEventListener('click', () => baixarPdf(t, 'hora'));
   $('#baixar-pdf-resumo').addEventListener('click', () => baixarPdf(t, 'resumo'));
+  $('#baixar-pdf-cartoes').addEventListener('click', () => baixarPdf(t, 'cartoes'));
   $('#baixar-pdf-distribuido').addEventListener('click', () => {
     if (!distribuicaoBalanca(t)) {
       avisar('Para distribuir, anote a balança na leitura inicial, na final e na hora a hora.');
@@ -2055,8 +2057,87 @@ function copiarRelatorio(t) {
 const MODOS_PDF = {
   hora: { nome: 'com hora a hora', arquivo: 'hora-a-hora' },
   distribuido: { nome: 'balança distribuída', arquivo: 'distribuido' },
-  resumo: { nome: 'resumo', arquivo: 'resumo' }
+  resumo: { nome: 'resumo', arquivo: 'resumo' },
+  cartoes: { nome: 'resumo em cartões', arquivo: 'resumo-cartoes' }
 };
+
+/** O PDF em cartões: a mesma cara da tela Resumo — placar no topo e um cartão por área. */
+function blocosCartoes(t) {
+  const c = contasDoTurno(t);
+  const area = areaDe(t);
+  const soma = somatoria(t);
+  const bal = balancaNoTurno(t);
+  const B = [];
+  const PAR = [0.68, 0.32];
+  const par = (r, v, negrito) => ({ k: 'linha', colunas: PAR, celulas: [r, v], negrito });
+
+  B.push({ tipo: 'titulo', texto: 'Resumo do turno' });
+  B.push({ tipo: 'sub', texto: (area.codigo ? area.codigo + ' · ' : '') + area.nome + ' · ' +
+    dataBonita(t.data) + ' · ' + nomeTurno(t) + (t.operador ? ' · ' + t.operador : '') +
+    ' · início ' + hhmm(t.inicio) + (t.fim ? ' · fim ' + hhmm(t.fim) : ' · em andamento') });
+
+  B.push({ tipo: 'placar', itens: [
+    [duracao(c.totalParado), 'parado no total'],
+    [String(c.paradas), 'paradas' + (c.abertas ? ' · ' + c.abertas + ' aberta(s)' : '')],
+    [String(c.acionamentos), 'acionamentos do detector'],
+    [String(c.encontrados), 'com metal encontrado']] });
+
+  const COLS = [0.2, 0.22, 0.18, 0.4];
+  areasComRegistro(t).forEach(e => {
+    const d = dadosArea(t, e);
+    const itens = [
+      { k: 'h', texto: e },
+      { k: 'sub', texto: 'Funcionamento: ' + textoJanela(d.j) },
+      { k: 'cab', colunas: COLS, celulas: ['Parada', 'Retomada', 'Duração', 'Motivo'] }];
+    if (!d.paradas.length) itens.push({ k: 'vazio', texto: 'Nenhuma parada.' });
+    d.paradas.forEach(p => itens.push({ k: 'linha', colunas: COLS, celulas: [
+      hhmm(p.inicio), p.fim ? hhmm(p.fim) : 'em andamento',
+      duracao(minutos(p.inicio, p.fim || relogio(t))), (p.tag ? p.tag + ' · ' : '') + (p.motivo || '—')] }));
+    itens.push(par('Parado', duracao(d.parado), true));
+    itens.push(par(Rodando(e), duracao(d.rodando) + ' (' + d.disp + '%)', true));
+    if (e === AREA_CACAMBAS && (t.cacambas || []).length) {
+      itens.push({ k: 'secao', texto: 'Caçambas (material bruto)' });
+      itens.push(par('Basculadas', String(t.cacambas.length)));
+      itens.push(par('Peso médio', comUnidade(pesoCacamba(t), 't')));
+      itens.push(par('Bruto estimado (basculadas × peso)', comUnidade(toneladasCacambas(t), 't'), true));
+    }
+    B.push({ tipo: 'cartao', itens });
+  });
+
+  const nums = [{ k: 'h', texto: 'Números do turno' },
+    par('Duração do turno', duracao(c.duracaoTurno)),
+    par('Horímetro rodado', comUnidade(soma.horimetro != null ? soma.horimetro : c.horimetro, 'h'))];
+  if (balancaAcumulada(t) != null) nums.push(par('Balança acumulada (soma hora a hora)', comUnidade(balancaAcumulada(t), 't')));
+  nums.push(par('Ácido médio (hora a hora)', comUnidade(c.acidoMedio, 'm³/h')));
+  linhasAcido(t, c, soma).forEach(([r, v]) => nums.push(par(r, v)));
+  nums.push(par('Balança inicial (leitura)', comUnidade(bal ? bal.inicial : (t.inicial && t.inicial.balanca), 't')));
+  nums.push(par('Balança final (leitura)', comUnidade(bal ? bal.final : (t.final && t.final.balanca), 't')));
+  nums.push(par('Balança no turno (final − inicial)', comUnidade(bal ? bal.total : null, 't'), true));
+  B.push({ tipo: 'cartao', itens: nums });
+
+  if (t.detector.length) {
+    const DET = [0.17, 0.17, 0.26, 0.4];
+    B.push({ tipo: 'cartao', itens: [{ k: 'h', texto: 'Detector de metal (DT-1101)' },
+      { k: 'cab', colunas: DET, celulas: ['Acionou', 'Liberou', 'Resultado', 'Observação'] }]
+      .concat(t.detector.slice().sort((a, b) => new Date(a.inicio) - new Date(b.inicio))
+        .map(d => ({ k: 'linha', colunas: DET, celulas: [hhmm(d.inicio), d.fim ? hhmm(d.fim) : '—',
+          d.achou === true ? 'Metal encontrado' : d.achou === false ? 'Não encontrado' : 'Sem resultado',
+          d.obs || ''] }))) });
+  }
+
+  const extras = area.extras.filter(e => { const v = (t.extras || {})[e.chave]; return v != null && v !== ''; });
+  if (extras.length) {
+    B.push({ tipo: 'cartao', itens: [{ k: 'h', texto: area.nome + ' — dados do turno' }].concat(extras.map(e => {
+      const v = t.extras[e.chave];
+      return par(e.rotulo, e.tipo === 'numero' ? comUnidade(v, e.unidade || '') : String(v));
+    })) });
+  }
+
+  B.push({ tipo: 'pequeno', texto:
+    'Gerado pelo app Britagem ' + VERSAO + ' em ' + dataBonita(hoje()) + ' às ' + hhmm(agora()) +
+    '. Registro de apoio: o lançamento oficial continua no Livro de Turno e no SCPC.' });
+  return B;
+}
 
 function blocosDoRelatorio(t, modo = 'hora') {
   const c = contasDoTurno(t);
@@ -2193,9 +2274,10 @@ function blocosDoRelatorio(t, modo = 'hora') {
 
 function baixarPdf(t, modo = 'hora') {
   const area = areaDe(t);
-  const blob = PDF.gerar(blocosDoRelatorio(t, modo),
+  const blob = PDF.gerar(modo === 'cartoes' ? blocosCartoes(t) : blocosDoRelatorio(t, modo),
     (area.codigo ? area.codigo + ' ' : '') + area.nome + ' · ' +
-    dataBonita(t.data) + ' · ' + nomeTurno(t) + ' · ' + MODOS_PDF[modo].nome);
+    dataBonita(t.data) + ' · ' + nomeTurno(t) + ' · ' + MODOS_PDF[modo].nome,
+    modo === 'cartoes' ? { tema: 'cartoes' } : {});
   entregarArquivo(blob, 'britagem-' + t.data + '-turno-' + t.nome.replace(/\W+/g, '') +
     '-' + MODOS_PDF[modo].arquivo + '.pdf', 'PDF baixado.');
 }
