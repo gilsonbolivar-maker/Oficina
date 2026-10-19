@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Câmera Medida</title>
+<meta name="description" content="Câmera que lança linhas para avaliar dimensão e distância do objeto fotografado.">
+<meta name="theme-color" content="#0b1220">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Medida">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icones/icone-192.png">
+<link rel="apple-touch-icon" href="icones/icone-180.png">
+<script>
+  // Tema guardado, aplicado antes de pintar para não piscar.
+  (function () {
+    var t = 'escuro';
+    try { if (localStorage.getItem('camera-medida:tema') === 'claro') t = 'claro'; } catch (e) {}
+    document.documentElement.dataset.tema = t;
+    var m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.setAttribute('content', t === 'claro' ? '#f3f5f9' : '#0b1220');
+  })();
+</script>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header class="topo">
+  <div class="marca">
+    <b>Câmera Medida</b>
+    <span class="versao" data-versao></span>
+  </div>
+  <p class="estado" id="estado">Aponte para o objeto</p>
+  <button class="botao pequeno" id="abrir-ajustes" type="button" aria-label="Ajustes">⚙</button>
+</header>
+
+<main class="palco" id="palco">
+  <video id="video" playsinline muted autoplay></video>
+  <img id="foto" alt="Foto congelada para medir" hidden>
+  <canvas id="sobre"></canvas>
+  <div class="nivel" id="nivel" hidden><span id="nivel-texto"></span></div>
+  <p class="sem-camera" id="sem-camera" hidden></p>
+</main>
+
+<footer class="barra">
+  <!-- câmera ao vivo -->
+  <div class="grupo" id="grupo-vivo">
+    <button class="botao" id="trocar-grade" type="button">Grade: perspectiva</button>
+    <button class="obturador" id="fotografar" type="button" aria-label="Fotografar"></button>
+    <button class="botao" id="abrir-galeria" type="button">Foto da galeria</button>
+    <input type="file" id="arquivo" hidden>
+  </div>
+  <!-- medição sobre a foto -->
+  <div class="grupo" id="grupo-medir" hidden>
+    <div class="modos" role="group" aria-label="Ferramenta">
+      <button class="modo ativo" data-modo="referencia" type="button">1 · Referência</button>
+      <button class="modo" data-modo="linha" type="button">2 · Linha</button>
+      <button class="modo" data-modo="retangulo" type="button">3 · Retângulo</button>
+    </div>
+    <p class="dica" id="dica"></p>
+    <div class="acoes">
+      <button class="botao" id="desfazer" type="button">Desfazer</button>
+      <button class="botao" id="salvar" type="button">Salvar foto</button>
+      <button class="botao principal" id="nova-foto" type="button">Nova foto</button>
+    </div>
+  </div>
+</footer>
+
+<!-- ajustes -->
+<div class="fundo" id="fundo" hidden></div>
+<aside class="painel" id="painel" hidden role="dialog" aria-modal="true" aria-label="Ajustes">
+  <div class="cabeca"><h2>Ajustes</h2><button class="botao pequeno" id="fechar-ajustes" type="button">Fechar</button></div>
+
+  <h3>Objeto de referência</h3>
+  <div class="opcoes" id="referencias"></div>
+  <label class="campo" id="campo-livre" hidden>Tamanho conhecido (cm)
+    <input id="ref-livre" type="text" inputmode="decimal" placeholder="ex.: 30">
+  </label>
+
+  <h3>Câmera</h3>
+  <label class="campo">Ângulo de visão horizontal (graus)
+    <input id="fov" type="text" inputmode="decimal">
+  </label>
+  <p class="fraco pequeno">Usado só para estimar a <b>distância</b>. Celular comum: 65° a 70°. Lente
+    ultra-angular (0,5×): perto de 110°.</p>
+
+  <h3>Aparência</h3>
+  <div class="opcoes" role="group" aria-label="Tema">
+    <span>Tema:</span>
+    <button class="opcao" data-tema-opcao="escuro" type="button" aria-pressed="true">Escuro</button>
+    <button class="opcao" data-tema-opcao="claro" type="button" aria-pressed="false">Claro</button>
+  </div>
+
+  <details class="ajuda">
+    <summary>Como medir</summary>
+    <ol>
+      <li>Coloque ao lado do objeto algo de tamanho conhecido — cartão, folha A4, moeda, uma trena.</li>
+      <li>Fotografe <b>de frente</b>, com o celular paralelo ao objeto (o nível ajuda).</li>
+      <li><b>1 · Referência</b>: arraste uma linha sobre o objeto conhecido.</li>
+      <li><b>2 · Linha</b> ou <b>3 · Retângulo</b>: arraste sobre o que quer medir.</li>
+    </ol>
+    <p>A medida vale para o que está <b>no mesmo plano</b> e na mesma distância da referência. Inclinado
+      ou mais longe, o número erra. A distância até a câmera é uma estimativa pelo ângulo de visão.</p>
+    <p>No iPhone/iPad com LiDAR, o app <b>Medida</b> da Apple usa o sensor de profundidade — o navegador
+      não tem acesso a ele.</p>
+  </details>
+  <p class="fraco pequeno">Câmera Medida <b data-versao></b> · funciona sem internet · nenhuma foto sai do aparelho.</p>
+</aside>
+
+<p class="aviso" id="aviso" role="status" aria-live="polite" hidden></p>
+
+<script src="app.js"></script>
+</body>
+</html>
