@@ -262,7 +262,7 @@ body {
    extra de "Outro…" aparece sempre. */
 .campo[hidden], #campos-leitura[hidden], #form-pessoa[hidden] { display: none; }
 .campo small { display: block; margin-top: 4px; font-size: 12px; color: var(--fraco); }
-.campo input, .campo select, .linha-numero input {
+.campo input, .campo select, .campo textarea, .linha-numero input {
   display: block;
   width: 100%;
   margin-top: 5px;
@@ -274,7 +274,7 @@ body {
   border-radius: 12px;
   appearance: none;
 }
-.campo input:focus, .campo select:focus, .linha-numero input:focus {
+.campo input:focus, .campo select:focus, .campo textarea:focus, .linha-numero input:focus {
   outline: none; border-color: var(--acento);
 }
 .rotulo-grupo { margin: 16px 0 8px; font-size: 13px; color: var(--fraco); }
@@ -694,3 +694,4 @@ body {
   .aba-area .nome { overflow: visible; }
 }
 .cabeca-area .nome-area small { display: block; font-size: 12px; font-weight: 500; }
+.campo textarea { resize: vertical; min-height: 64px; font: inherit; }

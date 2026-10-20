@@ -113,7 +113,7 @@ Primário       06h30 → 14h00       [Reabrir]
 Rebritagem     desde 08h00 · 5h20  [Encerrar]
 ```
 
-- **Iniciar** / **Encerrar** marcam a hora na mesma batida;
+- **Iniciar** / **Encerrar** abrem uma janelinha com a hora (agora, já preenchida) e um campo de **observação** — que aparece no cartão da área, no resumo, no texto e nos PDFs;
 - toque no **nome** para corrigir ou limpar os horários;
 - sem horário informado, vale o do turno — o que já estava registrado
   continua valendo.

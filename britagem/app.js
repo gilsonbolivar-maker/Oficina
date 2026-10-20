@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '4.14.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '4.15.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -430,6 +430,15 @@ function areaDaAba(t) {
 /** "Parada 01h40 · Retomada 02h34" */
 const paradaRetomada = p => 'Parada ' + hhmm(p.inicio) + ' · Retomada ' + (p.fim ? hhmm(p.fim) : '—');
 
+/** As observações anotadas ao iniciar e ao encerrar a área. */
+function obsJanela(t, nome) {
+  const e = (t.equipamentos || {})[nome] || {};
+  const l = [];
+  if (e.obsInicio) l.push('Obs. início: ' + e.obsInicio);
+  if (e.obsFim) l.push('Obs. término: ' + e.obsFim);
+  return l;
+}
+
 function textoJanela(j) {
   return !j.iniciou && !j.encerrou ? 'horário do turno: ' + hhmm(j.inicio) + ' → ' + (j.correndo ? 'agora' : hhmm(j.fim))
     : hhmm(j.inicio) + ' → ' + (j.correndo ? 'em andamento' : hhmm(j.fim));
@@ -529,6 +538,12 @@ function cartaoArea(t, nome) {
     '<p class="janela-area"></p>' +
     '<p class="contas-area"></p>';
   c.querySelector('.nome-area').textContent = nome;
+  obsJanela(t, nome).reverse().forEach(o => {
+    const p = document.createElement('p');
+    p.className = 'janela-area obs-area';
+    p.textContent = o;
+    c.querySelector('.janela-area').after(p);
+  });
   c.querySelector('.janela-area').textContent = 'Funcionamento: ' +
     (!j.iniciou ? 'não iniciou' : j.encerrou ? hhmm(j.inicio) + ' → ' + hhmm(j.fim)
       : 'desde ' + hhmm(j.inicio) + ' · ' + duracao(minutos(j.inicio, j.fim)));
@@ -539,12 +554,12 @@ function cartaoArea(t, nome) {
   const acao = c.querySelector('[data-acao]');
   acao.textContent = !j.iniciou ? 'Iniciar' : j.encerrou ? 'Reabrir' : 'Encerrar';
   acao.addEventListener('click', async () => {
-    const eq = (t.equipamentos = t.equipamentos || {});
-    const atual = (eq[nome] = eq[nome] || {});
-    if (!j.iniciou) { atual.inicio = agora(); avisar(nome + ' iniciou às ' + hhmm(atual.inicio) + '.'); }
-    else if (j.encerrou) { atual.fim = null; avisar(nome + ' reaberto.'); }
-    else { atual.fim = agora(); avisar(nome + ' encerrado às ' + hhmm(atual.fim) + '.'); }
+    if (!j.iniciou) { formMarco(t, nome, 'inicio'); return; }
+    if (!j.encerrou) { formMarco(t, nome, 'fim'); return; }
+    const atual = t.equipamentos[nome];
+    atual.fim = null;
     await salvar();
+    avisar(nome + ' reaberto.');
   });
   c.querySelector('.nome-area').addEventListener('click', () => formJanela(t, nome));
 
@@ -950,6 +965,12 @@ function desenharResumo() {
       '</tbody></table>';
     k.querySelector('h2').textContent = e;
     k.querySelectorAll('p')[0].textContent = 'Funcionamento: ' + textoJanela(d.j);
+    obsJanela(t, e).reverse().forEach(o => {
+      const p = document.createElement('p');
+      p.className = 'fraco pequeno';
+      p.textContent = o;
+      k.querySelectorAll('p')[0].after(p);
+    });
     if (e === AREA_CACAMBAS && (t.cacambas || []).length) {
       // Caçambas que abasteceram o Primário: material bruto, separado da balança.
       const cac = document.createElement('table');
@@ -1468,6 +1489,34 @@ function formTurno(t) {
 
 /* ——— janela do equipamento ——— */
 
+/** Iniciar ou encerrar a área: a hora (agora, por padrão) e uma observação. */
+function formMarco(t, nome, qual) {
+  const inicio = qual === 'inicio';
+  const corpo =
+    '<label class="campo">' + (inicio ? 'Início' : 'Término') +
+      '<input id="f-hora" type="time" value="' + paraCampo(agora()) + '">' +
+      '<button class="agora" type="button" data-agora="f-hora">agora</button></label>' +
+    '<label class="campo">Observação <span class="fraco">(opcional)</span>' +
+      '<textarea id="f-obs" rows="3" placeholder="' +
+        (inicio ? 'ex.: partida após troca de mandíbula' : 'ex.: encerrado por falta de material') +
+      '"></textarea></label>';
+  abrirCaixa((inicio ? 'Iniciar · ' : 'Encerrar · ') + nome, corpo, async () => {
+    const hora = doCampo($('#f-hora').value, t);
+    if (!hora) { erro('Informe a hora.'); return; }
+    const eq = (t.equipamentos = t.equipamentos || {});
+    const atual = (eq[nome] = eq[nome] || {});
+    if (!inicio && atual.inicio && new Date(hora) < new Date(atual.inicio)) {
+      erro('O término está antes do início.'); return;
+    }
+    const obs = $('#f-obs').value.trim();
+    if (inicio) { atual.inicio = hora; atual.obsInicio = obs || null; }
+    else { atual.fim = hora; atual.obsFim = obs || null; }
+    fecharCaixa();
+    await salvar();
+    avisar(nome + (inicio ? ' iniciou às ' : ' encerrado às ') + hhmm(hora) + '.');
+  });
+}
+
 function formJanela(t, nome) {
   const j = janela(t, nome);
   const e = (t.equipamentos || {})[nome] || {};
@@ -1480,6 +1529,10 @@ function formJanela(t, nome) {
         (e.fim ? paraCampo(e.fim) : '') + '">' +
         '<button class="agora" type="button" data-agora="f-fim">agora</button></label>' +
     '</div>' +
+    '<label class="campo">Observação do início' +
+      '<textarea id="f-obs-ini" rows="2"></textarea></label>' +
+    '<label class="campo">Observação do término' +
+      '<textarea id="f-obs-fim" rows="2"></textarea></label>' +
     '<p class="fraco pequeno">Deixe em branco enquanto não começou ou enquanto' +
     ' ainda está rodando. Sem horário, vale o do turno (' + hhmm(t.inicio) + ').</p>';
 
@@ -1491,8 +1544,10 @@ function formJanela(t, nome) {
       return;
     }
     const eq = (t.equipamentos = t.equipamentos || {});
-    if (!inicio && !fim) delete eq[nome];
-    else eq[nome] = { inicio, fim };
+    const obsInicio = $('#f-obs-ini').value.trim() || null;
+    const obsFim = $('#f-obs-fim').value.trim() || null;
+    if (!inicio && !fim && !obsInicio && !obsFim) delete eq[nome];
+    else eq[nome] = { inicio, fim, obsInicio, obsFim };
     fecharCaixa();
     await salvar();
     avisar('Horário de ' + nome + ' guardado.');
@@ -1502,6 +1557,9 @@ function formJanela(t, nome) {
     await salvar();
     avisar('Horário de ' + nome + ' limpo.');
   } : null);
+  // O texto entra pelo .value: sem escapar HTML à mão.
+  $('#f-obs-ini').value = e.obsInicio || '';
+  $('#f-obs-fim').value = e.obsFim || '';
 }
 
 /* ——— parada ——— */
@@ -1897,6 +1955,7 @@ function relatorioTexto(t) {
     const d = dadosArea(t, e);
     L.push('═══ ' + e.toUpperCase() + ' ═══');
     L.push('Funcionamento: ' + textoJanela(d.j));
+    obsJanela(t, e).forEach(o => L.push(o));
     if (d.paradas.length) {
       d.paradas.forEach(p => L.push('· ' + paradaRetomada(p) +
         '  (' + duracao(minutos(p.inicio, p.fim || relogio(t))) + ')' +
@@ -2054,8 +2113,9 @@ function blocosCartoes(t) {
     const d = dadosArea(t, e);
     const itens = [
       { k: 'h', texto: e },
-      { k: 'sub', texto: 'Funcionamento: ' + textoJanela(d.j) },
-      { k: 'cab', colunas: COLS, celulas: ['Parada', 'Retomada', 'Duração', 'Motivo'] }];
+      { k: 'sub', texto: 'Funcionamento: ' + textoJanela(d.j) }]
+      .concat(obsJanela(t, e).map(o => ({ k: 'sub', texto: o })), [
+      { k: 'cab', colunas: COLS, celulas: ['Parada', 'Retomada', 'Duração', 'Motivo'] }]);
     if (!d.paradas.length) itens.push({ k: 'vazio', texto: 'Nenhuma parada.' });
     d.paradas.forEach(p => itens.push({ k: 'linha', colunas: COLS, celulas: [
       hhmm(p.inicio), p.fim ? hhmm(p.fim) : 'em andamento',
@@ -2126,6 +2186,7 @@ function blocosDoRelatorio(t, modo = 'hora') {
     const d = dadosArea(t, e);
     B.push({ tipo: 'h1', texto: e });
     B.push({ tipo: 'pequeno', texto: 'Funcionamento: ' + textoJanela(d.j) });
+    obsJanela(t, e).forEach(o => B.push({ tipo: 'pequeno', texto: o }));
     B.push({ tipo: 'tabela', colunas: [70, 70, 70, 289],
       cabecalho: ['Parada', 'Retomada', 'Duração', 'Motivo'],
       linhas: d.paradas.length
