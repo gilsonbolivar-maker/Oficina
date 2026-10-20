@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '4.15.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '4.15.1';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -928,15 +928,6 @@ function desenharResumo() {
   alvo.innerHTML = '';
   if (!t) return;
   const c = contasDoTurno(t);
-
-  const placar = document.createElement('div');
-  placar.className = 'placar';
-  placar.innerHTML =
-    '<div><b>' + duracao(c.totalParado) + '</b><span>parado no total</span></div>' +
-    '<div><b>' + c.paradas + '</b><span>paradas' + (c.abertas ? ' · ' + c.abertas + ' aberta(s)' : '') + '</span></div>' +
-    '<div><b>' + c.acionamentos + '</b><span>acionamentos do detector</span></div>' +
-    '<div><b>' + c.encontrados + '</b><span>com metal encontrado</span></div>';
-  alvo.appendChild(placar);
 
   // Uma folha por área: as áreas não se misturam.
   const areas = areasComRegistro(t);
@@ -2087,7 +2078,7 @@ const MODOS_PDF = {
   cartoes: { nome: 'resumo em cartões', arquivo: 'resumo-cartoes' }
 };
 
-/** O PDF em cartões: a mesma cara da tela Resumo — placar no topo e um cartão por área. */
+/** O PDF em cartões: a mesma cara da tela Resumo — um cartão por área. */
 function blocosCartoes(t) {
   const c = contasDoTurno(t);
   const area = areaDe(t);
@@ -2102,11 +2093,6 @@ function blocosCartoes(t) {
     dataBonita(t.data) + ' · ' + nomeTurno(t) + (t.operador ? ' · ' + t.operador : '') +
     ' · início ' + hhmm(t.inicio) + (t.fim ? ' · fim ' + hhmm(t.fim) : ' · em andamento') });
 
-  B.push({ tipo: 'placar', itens: [
-    [duracao(c.totalParado), 'parado no total'],
-    [String(c.paradas), 'paradas' + (c.abertas ? ' · ' + c.abertas + ' aberta(s)' : '')],
-    [String(c.acionamentos), 'acionamentos do detector'],
-    [String(c.encontrados), 'com metal encontrado']] });
 
   const COLS = [0.2, 0.22, 0.18, 0.4];
   areasComRegistro(t).forEach(e => {
