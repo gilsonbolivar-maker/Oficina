@@ -1,0 +1,46 @@
+/* SINAL e PAINEL — o mesmo visual: escuro, com vermelho de alerta. */
+:root { --bg: #141210; --surface: #221F1B; --fg: #F3EDE4; --muted: #9C9388; --alert: #E10600; --line: #3A342C; --ok: #3fbf6f; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.4 system-ui, sans-serif; }
+body { min-height: 100dvh; }
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+.app { max-width: 28rem; margin: 0 auto; padding: 1.25rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom)); }
+.bar { height: 4px; background: var(--alert); }
+.eye { letter-spacing: .18em; color: var(--muted); font-size: .8rem; margin: 0; }
+h1 { font-family: "Arial Narrow", Impact, sans-serif; font-size: 4.2rem; line-height: .9; margin: .4rem 0; letter-spacing: .04em; }
+h1 .versao { font: 600 .8rem system-ui, sans-serif; letter-spacing: 0; color: var(--muted); vertical-align: top; }
+h2 { font-family: "Arial Narrow", Impact, sans-serif; font-size: 2rem; margin: 1.6rem 0 .4rem; letter-spacing: .04em; }
+p { margin: .4rem 0; }
+.muted { color: var(--muted); font-size: .92rem; }
+label { display: block; margin-top: 1rem; color: var(--muted); font-size: .9rem; }
+input, textarea { width: 100%; margin-top: .4rem; border: 1px solid var(--line); background: var(--surface); border-radius: 1rem; padding: .9rem 1rem; }
+textarea { min-height: 8rem; background: var(--alert); text-align: center; font-family: "Arial Narrow", Impact, sans-serif; font-size: 2rem; line-height: 1; letter-spacing: .03em; }
+textarea.convite { min-height: 5rem; background: var(--surface); font: .95rem/1.3 ui-monospace, monospace; text-align: left; letter-spacing: 0; }
+textarea::placeholder { color: rgba(243, 237, 228, .7); }
+.big { font-family: "Arial Narrow", Impact, sans-serif; font-size: 3.4rem; letter-spacing: .18em; margin: .2rem 0; }
+.btn { display: block; width: 100%; margin-top: .7rem; min-height: 3.4rem; border: 0; border-radius: 1rem; background: var(--fg); color: var(--bg); font-weight: 650; }
+.btn.surface { background: var(--surface); color: var(--fg); border: 1px solid var(--line); }
+.btn.alert { background: var(--alert); color: var(--fg); }
+.btn.ghost { background: transparent; color: var(--muted); }
+.row { display: flex; gap: .4rem; align-items: center; margin-top: .6rem; }
+.row .pick { flex: 1; min-width: 0; min-height: 3.4rem; text-align: left; padding: 0 1rem; border-radius: 1rem; border: 1px solid var(--line); background: var(--surface); display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+.row .pick span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .pick.on { background: var(--alert); border-color: var(--alert); }
+.mini { min-height: 3.4rem; padding: 0 .7rem; border: 1px solid var(--line); border-radius: 1rem; background: transparent; color: var(--fg); font-size: .85rem; }
+.erase { min-height: 3.4rem; border: 0; background: transparent; color: var(--alert); font-size: .85rem; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; margin-top: .8rem; }
+.tone { min-height: 6.2rem; border-radius: 1rem; border: 1px solid var(--line); background: var(--surface); text-align: left; padding: 1rem; }
+.tone b { display: block; font-family: "Arial Narrow", Impact, sans-serif; font-size: 1.7rem; line-height: .95; letter-spacing: .03em; }
+.tone.hot { background: var(--alert); border-color: var(--alert); }
+.tone small { color: var(--muted); }
+.tone.hot small { color: var(--fg); }
+#status { min-height: 1.3rem; margin-top: 1rem; }
+#status.ok { color: var(--ok); }
+.envio { min-height: 1.4rem; margin-top: .8rem; font-weight: 650; }
+.envio[data-estado="chegou"], .envio[data-estado="viu"] { color: var(--ok); }
+.envio[data-estado="falhou"] { color: #ff8a80; }
+#alarm { position: fixed; inset: 0; background: var(--alert); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 1.5rem; z-index: 5; }
+#alarm[hidden] { display: none; }
+#alarm h1 { font-size: 3.2rem; }
+#alarm .from { font-family: "Arial Narrow", Impact, sans-serif; font-size: 2rem; margin-top: .6rem; }
