@@ -14,7 +14,8 @@ As pastas são separadas (e não uma dentro da outra) para o Android instalar os
 
 1. No PAINEL: escreva seu nome, **Ligar e escutar**, e em *Nova pessoa* escreva o nome e
    toque em **Adicionar e mandar convite**.
-2. Mande o convite (link) por mensagem. A pessoa abre o link, escreve o nome e toca em **Entrar**
+2. Mande o convite por mensagem. Ele traz primeiro o link para **instalar o SINAL** (o link já leva o
+   convite junto) e depois o código para colar, se precisar. A pessoa instala, escreve o nome e toca em **Entrar**
    e **Ligar e escutar**.
 3. Escolha a pessoa, escreva o cartão (opcional) e toque num dos quatro toques.
    Embaixo aparece **Enviando… → Chegou ✓ → viu ✓✓** — ou **Não chegou**.

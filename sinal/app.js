@@ -16,7 +16,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.1.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.2.0';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // sem 0, 1, O e I
@@ -469,8 +469,13 @@ function ligarBotoesEscuta(redesenhar) {
 
 async function compartilharConvite(p) {
   const link = linkConvite(p);
-  const texto = 'Instale o SINAL e abra este convite:\n' + link +
-    '\n\nOu, dentro do SINAL, cole: ' + p.code + '-' + p.chave;
+  // O link instala o SINAL e já leva o convite (no Android, o app instalado
+  // enxerga o que o Chrome guardou). No iPhone, o código vai colado à mão.
+  const texto = 'SINAL — convite de ' + myName() + ' para ' + p.name + '\n\n' +
+    '📲 1. Instale o SINAL: abra o link no Chrome (ou Safari) e toque em "Instalar o SINAL":\n' + link +
+    '\n\n🔑 2. Abra o SINAL instalado. Se o convite não vier preenchido, cole este código:\n' +
+    p.code + '-' + p.chave +
+    '\n\n3. Escreva seu nome, toque em Entrar e em Ligar e escutar.';
   if (navigator.share) {
     try { await navigator.share({ title: 'SINAL', text: texto }); return; } catch (e) { if (e.name === 'AbortError') return; }
   }
