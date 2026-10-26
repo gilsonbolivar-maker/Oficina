@@ -62,3 +62,23 @@ textarea::placeholder { color: rgba(243, 237, 228, .7); }
 #resposta-recebida[hidden] { display: none; }
 #resposta-recebida .quem { font-family: "Arial Narrow", Impact, sans-serif; font-size: 1.4rem; margin: .2rem 0 0; }
 #resposta-recebida .texto { font-family: "Arial Narrow", Impact, sans-serif; font-size: 2rem; line-height: 1.05; margin: .2rem 0 .4rem; color: var(--ok); }
+.row .pick span small { display: block; font-size: .78rem; color: var(--muted); font-weight: 400; }
+.row .pick.on span small { color: rgba(243, 237, 228, .85); }
+.pres::before { content: ""; display: inline-block; width: .55rem; height: .55rem; margin-right: .35rem; border-radius: 50%; background: #6b645c; vertical-align: .05rem; }
+.pres.on-line { color: var(--ok) !important; }
+.pres.on-line::before { background: var(--ok); box-shadow: 0 0 0 3px rgba(63, 191, 111, .25); }
+.pick.on .pres.on-line { color: #d9ffe6 !important; }
+.pres-painel { margin: .2rem 0 0; color: var(--muted); font-size: .92rem; }
+.pick.todos { border-style: dashed; }
+.envio .por-pessoa { list-style: none; margin: .4rem 0 0; padding: 0; font-weight: 400; }
+.envio .por-pessoa li { padding: .35rem 0; border-bottom: 1px solid var(--line); }
+.envio .por-pessoa li[data-estado="chegou"], .envio .por-pessoa li[data-estado="viu"], .envio .por-pessoa li[data-estado="respondeu"] { color: var(--ok); }
+.envio .por-pessoa li[data-estado="falhou"] { color: #ff8a80; }
+.envio[data-estado="guardada"] { color: #ffd27a; }
+.historico { margin-top: 1.8rem; border-top: 1px solid var(--line); padding-top: .8rem; }
+.historico summary { cursor: pointer; font-family: "Arial Narrow", Impact, sans-serif; font-size: 1.5rem; letter-spacing: .04em; }
+.historico ul { list-style: none; margin: .6rem 0 0; padding: 0; }
+.historico li { padding: .55rem 0; border-bottom: 1px solid var(--line); font-size: .9rem; }
+.historico li small { color: var(--muted); }
+.historico li.entrou { color: #ffd9d6; }
+.historico .fim { color: var(--ok); }

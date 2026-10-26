@@ -16,7 +16,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.4.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.5.0';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // sem 0, 1, O e I
@@ -25,9 +25,15 @@ const dec = new TextDecoder();
 // window.SINAL_BROKERS existe só para os testes apontarem para um servidor local.
 const BROKERS = window.SINAL_BROKERS || ['wss://broker.hivemq.com:8884/mqtt', 'wss://broker.emqx.io:8084/mqtt'];
 const PREFIXO = 'app-sinal/v2/';
-const VALIDADE_MS = 15 * 60 * 1000;   // mensagem mais velha que isso é descartada
-const REPETIR_MS = 4000;              // sem "chegou", manda de novo…
-const TENTATIVAS = 4;                 // …até 4 vezes
+// window.SINAL_TEMPOS também só para os testes (encurta as esperas).
+const T = Object.assign({
+  validade: 60 * 60 * 1000,   // alarme guardado no servidor vale 1 hora
+  repetir: 4000,              // sem "chegou", manda de novo a cada 4 s…
+  tentativas: 4,              // …4 vezes; depois, a cada 30 s, até a validade
+  repetirLongo: 30000,
+  presenca: 30000,            // "estou aqui" a cada 30 s
+  onlineAte: 75000            // sem notícia há mais que isso: fora do ar
+}, window.SINAL_TEMPOS);
 
 const TONES = [
   ['urgente', 'É urgente', ['É', 'URGENTE'], 'Sirene', true],
@@ -46,7 +52,10 @@ let bus = null;            // ligação com os servidores, enquanto escuta
 let wakeLock = null;
 let selected = '';
 let alarmeAberto = null;   // { ref, chave } do alarme na tela, para o "viu"
-const pendentes = new Map();   // id → { destino, nome, tentativas, timer, estado }
+const pendentes = new Map();   // id → { chave, nome, topico, msg, estado, tentativas, timer, grupo }
+const presenca = new Map();    // chave → { online, ts } do outro lado
+let envioNaTela = null;        // o que a linha de envio está mostrando: id ou grupo
+let anuncio = null;            // timer do "estou aqui"
 
 /* ————————————————— guardar no aparelho ————————————————— */
 
@@ -104,7 +113,9 @@ async function derivar(chave) {
   const d = {
     aes,
     paraSinal: PREFIXO + (await hashHex('para-sinal|' + chave)).slice(0, 32),
-    paraPainel: PREFIXO + (await hashHex('para-painel|' + chave)).slice(0, 32)
+    paraPainel: PREFIXO + (await hashHex('para-painel|' + chave)).slice(0, 32),
+    presSinal: PREFIXO + (await hashHex('presenca-sinal|' + chave)).slice(0, 32),
+    presPainel: PREFIXO + (await hashHex('presenca-painel|' + chave)).slice(0, 32)
   };
   chaves.set(chave, d);
   return d;
@@ -150,7 +161,7 @@ function concat(...parts) {
 function packet(first, body) { return concat(Uint8Array.of(first), remLen(body.length), body); }
 
 /** Uma ligação com um servidor. Guarda pedaços de pacote entre um quadro e outro. */
-function conexao(url, topicos, aoMudar, aoReceber) {
+function conexao(url, topicos, aoMudar, aoReceber, aoPronto) {
   let ws = null, parado = false, pronto = false, ping = null, espera = 2000, resto = new Uint8Array(0), pid = 1;
   const enviar = bytes => { if (ws && ws.readyState === 1) ws.send(bytes); };
 
@@ -169,6 +180,7 @@ function conexao(url, topicos, aoMudar, aoReceber) {
       clearInterval(ping);
       ping = setInterval(() => enviar(Uint8Array.of(0xC0, 0)), 20000);
       aoMudar();
+      aoPronto();
     } else if (tipo === 3) {                  // PUBLISH
       const tl = (corpo[0] << 8) | corpo[1];
       const topico = dec.decode(corpo.slice(2, 2 + tl));
@@ -219,9 +231,10 @@ function conexao(url, topicos, aoMudar, aoReceber) {
 
   return {
     get pronto() { return pronto; },
-    publicar(topico, texto) {
+    /** `reter`: o servidor guarda a última mensagem do tópico e entrega a quem chegar depois. */
+    publicar(topico, texto, reter) {
       if (!pronto) return false;
-      enviar(packet(0x30, concat(encStr(topico), enc.encode(texto))));
+      enviar(packet(reter ? 0x31 : 0x30, concat(encStr(topico), enc.encode(texto))));
       return true;
     },
     parar() { parado = true; clearInterval(ping); try { ws && ws.close(); } catch {} }
@@ -232,10 +245,12 @@ function conexao(url, topicos, aoMudar, aoReceber) {
  * Escuta nos dois servidores ao mesmo tempo. `rotas` diz, para cada tópico
  * que se escuta, qual chave abre a mensagem e de quem ela é.
  */
-function ligar(rotas, aoMensagem) {
-  const vistos = new Set();
+function ligar(rotas, aoMensagem, aoPronto) {
+  // Os vistos ficam guardados: o servidor entrega de novo a mensagem guardada a
+  // cada vez que o app abre, e ela não pode tocar outra vez.
+  const vistos = new Set(read('vistos', []));
   const topicos = Object.keys(rotas);
-  const conns = BROKERS.map(url => conexao(url, topicos, mostrarLigacao, receber));
+  const conns = BROKERS.map(url => conexao(url, topicos, mostrarLigacao, receber, aoPronto));
 
   function mostrarLigacao() {
     const n = conns.filter(c => c.pronto).length;
@@ -244,22 +259,29 @@ function ligar(rotas, aoMensagem) {
   }
   async function receber(topico, texto) {
     const rota = rotas[topico];
-    if (!rota) return;
+    if (!rota || !texto) return;   // vazio = mensagem guardada que foi apagada
     const msg = await decifrar(rota.chave, texto);
-    if (!msg || !msg.id || Math.abs(Date.now() - msg.ts) > VALIDADE_MS) return;
-    // Repetição do mesmo alarme: não toca de novo, mas confirma de novo.
+    if (!msg || !msg.id) return;
+    if (msg.kind === 'presenca') { aoMensagem(msg, rota, false); return; }
+    if (Math.abs(Date.now() - msg.ts) > T.validade) return;
+    // Repetição da mesma mensagem: não toca de novo, mas confirma de novo.
     const repetida = vistos.has(msg.id);
-    vistos.add(msg.id);
-    if (vistos.size > 500) vistos.delete(vistos.values().next().value);
+    if (!repetida) {
+      vistos.add(msg.id);
+      if (vistos.size > 300) vistos.delete(vistos.values().next().value);
+      write('vistos', [...vistos]);
+    }
     aoMensagem(msg, rota, repetida);
   }
   setLigacao('Conectando…', false);
   return {
     pronto: () => conns.some(c => c.pronto),
-    async mandar(chave, topico, obj) {
+    async mandar(chave, topico, obj, reter) {
       const texto = await cifrar(chave, obj);
-      return conns.map(c => c.publicar(topico, texto)).some(Boolean);
+      return conns.map(c => c.publicar(topico, texto, reter)).some(Boolean);
     },
+    /** Apaga a mensagem guardada no tópico (já chegou). */
+    limpar(topico) { conns.forEach(c => c.publicar(topico, '', true)); },
     parar() { conns.forEach(c => c.parar()); }
   };
 }
@@ -269,14 +291,17 @@ function ligar(rotas, aoMensagem) {
 /** Para onde vai e por onde volta, para cada pessoa (PAINEL) ou para o PAINEL (SINAL). */
 async function montarRotas() {
   const rotas = {};
+  const por = async (chave, rota) => {
+    const d = await derivar(chave);
+    // Escuta as mensagens que vêm para mim e o "estou aqui" do outro lado.
+    rotas[ROLE === 'painel' ? d.paraPainel : d.paraSinal] = rota;
+    rotas[ROLE === 'painel' ? d.presSinal : d.presPainel] = rota;
+  };
   if (ROLE === 'painel') {
-    for (const p of people()) {
-      const d = await derivar(p.chave);
-      rotas[d.paraPainel] = { chave: p.chave, nome: p.name, code: p.code };
-    }
+    for (const p of people()) await por(p.chave, { chave: p.chave, nome: p.name, code: p.code });
   } else {
     const chave = read('chave', '');
-    if (chave) rotas[(await derivar(chave)).paraSinal] = { chave, nome: 'PAINEL' };
+    if (chave) await por(chave, { chave, nome: 'PAINEL' });
   }
   return rotas;
 }
@@ -284,64 +309,290 @@ async function destinoDe(chave) {
   const d = await derivar(chave);
   return ROLE === 'painel' ? d.paraSinal : d.paraPainel;
 }
+/** As chaves com quem este aparelho conversa. */
+const minhasChaves = () => ROLE === 'painel' ? people().map(p => p.chave) : [read('chave', '')].filter(Boolean);
 
 async function escutar() {
   unlock();
   pedirTelaAcesa();
   write('escutar', true);
   if (bus) bus.parar();
-  bus = ligar(await montarRotas(), recebeu);
+  bus = ligar(await montarRotas(), recebeu, () => anunciar(true));
+  clearInterval(anuncio);
+  anuncio = setInterval(() => anunciar(true), T.presenca);
 }
 /** `lembrar`: a pessoa tocou em "Parar" — o app não liga sozinho na próxima vez. */
 function pararEscuta(lembrar) {
-  if (bus) bus.parar();
+  anunciar(false);
+  clearInterval(anuncio);
+  const b = bus;
   bus = null;
+  // Dá tempo do "saí" partir antes de fechar a ligação.
+  if (b) setTimeout(() => b.parar(), 300);
   if (lembrar) write('escutar', false);
   if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
 }
 
+/* ——— quem está online ——— */
+
+/** "Estou aqui" (ou "saí"), guardado no servidor: quem chega depois já sabe quando fui visto. */
+async function anunciar(online) {
+  const b = bus;
+  if (!b) return;
+  for (const chave of minhasChaves()) {
+    const d = await derivar(chave);
+    b.mandar(chave, ROLE === 'painel' ? d.presPainel : d.presSinal,
+      { kind: 'presenca', online, id: crypto.randomUUID(), ts: Date.now() }, true);
+  }
+}
+window.addEventListener('pagehide', () => { if (bus) anunciar(false); });
+
+function textoPresenca(chave) {
+  const p = presenca.get(chave);
+  if (!p) return { texto: 'nunca conectou', classe: '' };
+  const idade = Date.now() - p.ts;
+  if (p.online && idade < T.onlineAte) return { texto: 'online', classe: 'on-line' };
+  return { texto: 'visto ' + quando(p.ts), classe: '' };
+}
+function quando(ts) {
+  const min = Math.round((Date.now() - ts) / 60000);
+  if (min < 1) return 'agora';
+  if (min < 60) return 'há ' + min + ' min';
+  const d = new Date(ts);
+  const hoje = new Date().toDateString() === d.toDateString();
+  return (hoje ? 'às ' : 'em ' + d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' às ') + hora(ts);
+}
+const hora = ts => { const d = new Date(ts); return String(d.getHours()).padStart(2, '0') + 'h' + String(d.getMinutes()).padStart(2, '0'); };
+
+function atualizarPresenca() {
+  document.querySelectorAll('[data-pres]').forEach(el => {
+    const chave = ROLE === 'painel'
+      ? (people().find(p => p.code === el.dataset.pres) || {}).chave
+      : read('chave', '');
+    if (!chave) return;
+    const t = textoPresenca(chave);
+    el.textContent = (el.dataset.prefixo || '') + t.texto;
+    el.classList.toggle('on-line', t.classe === 'on-line');
+  });
+}
+setInterval(atualizarPresenca, 15000);
+
 /*
- * O navegador só deixa tocar som, vibrar e pedir notificação depois que a
- * pessoa toca na tela. A escuta liga sozinha ao abrir; o primeiro toque em
- * qualquer lugar libera o resto.
+ * O PAINEL lembra o "visto por último" de cada pessoa entre uma abertura e outra.
+ * (O servidor também guarda, mas só quando a pessoa já anunciou alguma vez.)
  */
-const somLiberado = () => !!audioCtx && audioCtx.state === 'running';
-function aoPrimeiroToque() {
-  unlock().then(mostrarAvisoSom);
-  if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
+function guardarPresenca() {
+  const o = {};
+  presenca.forEach((v, k) => { o[k] = v; });
+  write('presenca', o);
 }
-document.addEventListener('pointerdown', aoPrimeiroToque, { capture: true });
-function mostrarAvisoSom() {
-  const el = $('#aviso-som');
-  if (el) el.hidden = !bus || somLiberado();
-}
+Object.entries(read('presenca', {})).forEach(([k, v]) => presenca.set(k, Object.assign(v, { online: false })));
+
+/* ——— receber ——— */
 
 async function recebeu(msg, rota, repetida) {
-  if (msg.kind === 'alarme') {
-    responder(rota.chave, { kind: 'chegou', ref: msg.id });
-    if (!repetida) {
-      // No PAINEL, o nome vem da lista dele, não do que a mensagem diz.
-      showAlarm(msg, ROLE === 'painel' ? rota.nome : (clean(msg.who, 24) || 'PAINEL'));
-      alarmeAberto = { ref: msg.id, chave: rota.chave };
+  const quem = ROLE === 'painel' ? rota.nome : (clean(msg.who, 24) || 'PAINEL');
+  if (msg.kind === 'presenca') {
+    const atual = presenca.get(rota.chave);
+    if (!atual || msg.ts >= atual.ts) {
+      presenca.set(rota.chave, { online: !!msg.online, ts: msg.ts });
+      guardarPresenca();
+      atualizarPresenca();
     }
+    return;
+  }
+  // Toda mensagem que importa (alarme, resposta) é confirmada — mesmo repetida,
+  // porque é o "chegou" que faz o outro lado parar de mandar e apagar a guardada.
+  if (msg.kind === 'alarme' || msg.kind === 'resposta') responder(rota.chave, { kind: 'chegou', ref: msg.id });
+
+  if (msg.kind === 'alarme') {
+    if (repetida) return;
+    // No PAINEL, o nome vem da lista dele, não do que a mensagem diz.
+    showAlarm(msg, quem);
+    alarmeAberto = { ref: msg.id, chave: rota.chave };
+    registrar({ id: msg.id, dir: 'entrou', quem, tone: msg.tone, note: clean(msg.note, 80), ts: msg.criado || msg.ts, estado: 'recebido' });
   } else if (msg.kind === 'chegou' || msg.kind === 'viu') {
     const p = pendentes.get(msg.ref);
-    if (!p) return;
-    clearInterval(p.timer);
-    // Só avança: um "chegou" atrasado não apaga o "viu" nem a resposta.
-    const ordem = ['enviando', 'falhou', 'chegou', 'viu', 'respondeu'];
-    if (ordem.indexOf(msg.kind) > ordem.indexOf(p.estado)) p.estado = msg.kind;
-    mostrarEnvio(p);
+    if (!p) { apagarGuardada(rota.chave); return; }
+    avancar(p, msg.kind);
   } else if (msg.kind === 'resposta') {
     if (repetida) return;
     const texto = clean(msg.texto, 80);
-    const quem = ROLE === 'painel' ? rota.nome : (clean(msg.who, 24) || 'PAINEL');
     const p = pendentes.get(msg.ref);
-    if (p) { clearInterval(p.timer); p.estado = 'respondeu'; p.resposta = texto; mostrarEnvio(p); }
+    if (p) { p.resposta = texto; avancar(p, 'respondeu'); }
+    else historicoAtualizar(msg.ref, { estado: 'respondeu', resposta: texto });
     mostrarResposta(quem, texto);
   }
 }
 
+/* ——— mandar, com confirmação e mensagem guardada ——— */
+
+const ORDEM = ['enviando', 'guardada', 'falhou', 'chegou', 'viu', 'respondeu'];
+/** Só avança: um "chegou" atrasado não apaga o "viu" nem a resposta. */
+function avancar(p, estado) {
+  if (ORDEM.indexOf(estado) <= ORDEM.indexOf(p.estado)) return;
+  const esperava = p.estado === 'enviando' || p.estado === 'guardada';
+  p.estado = estado;
+  if (esperava && ORDEM.indexOf(estado) >= ORDEM.indexOf('chegou')) {
+    clearTimeout(p.timer);
+    apagarGuardada(p.chave);
+  }
+  atualizarEnvio(p);
+}
+/** Chegou: apaga a cópia guardada no servidor — se não houver outra esperando no mesmo caminho. */
+async function apagarGuardada(chave) {
+  if (!bus) return;
+  const topico = await destinoDe(chave);
+  const outra = [...pendentes.values()].some(p => p.topico === topico && (p.estado === 'enviando' || p.estado === 'guardada'));
+  if (!outra) bus.limpar(topico);
+}
+
+/**
+ * Manda e não desiste: guarda no servidor (quem abrir o app depois recebe),
+ * repete a cada 4 s nas primeiras vezes e depois a cada 30 s, até chegar ou
+ * até passar 1 hora.
+ */
+async function enviarImportante(chave, nome, msg, grupo) {
+  const topico = await destinoDe(chave);
+  const p = { id: msg.id, chave, nome, topico, msg, estado: 'enviando', tentativas: 1, grupo, desde: Date.now() };
+  pendentes.set(msg.id, p);
+  await bus.mandar(chave, topico, msg, true);
+  repetir(p);
+  return p;
+}
+function repetir(p) {
+  clearTimeout(p.timer);
+  p.timer = setTimeout(async () => {
+    if (p.estado !== 'enviando' && p.estado !== 'guardada') return;
+    if (Date.now() - p.desde > T.validade) { p.estado = 'falhou'; atualizarEnvio(p); return; }
+    p.tentativas++;
+    if (bus) await bus.mandar(p.chave, p.topico, Object.assign({}, p.msg, { ts: Date.now() }), true);
+    if (p.estado === 'enviando') {
+      // Depois da última tentativa rápida: avisa que ficou guardada no servidor.
+      if (p.tentativas >= T.tentativas) p.estado = 'guardada';
+      atualizarEnvio(p);
+    }
+    repetir(p);
+  }, p.tentativas < T.tentativas ? T.repetir : T.repetirLongo);
+}
+
+async function responder(chave, extra) {
+  if (!bus) return;
+  bus.mandar(chave, await destinoDe(chave), Object.assign({ id: crypto.randomUUID(), ts: Date.now() }, extra));
+}
+
+/** `destinos`: [{ chave, nome }] — uma pessoa, ou todas (PAINEL). */
+async function mandarAlarme(destinos, tone) {
+  const note = clean($('#recado') ? $('#recado').value : '', 80);
+  const who = myName();
+  if (!who) { setEnvio('Escreva o seu nome.'); return; }
+  if (!bus || !bus.pronto()) { setEnvio('Ainda sem ligação com os servidores. Espere "Escuta ligada".'); return; }
+  const grupo = destinos.length > 1 ? crypto.randomUUID() : null;
+  for (const d of destinos) {
+    const agora = Date.now();
+    const msg = { id: crypto.randomUUID(), kind: 'alarme', tone, note, who, ts: agora, criado: agora };
+    registrar({ id: msg.id, dir: 'saiu', quem: d.nome, tone, note, ts: agora, estado: 'enviando', grupo });
+    const p = await enviarImportante(d.chave, d.nome, msg, grupo);
+    if (!grupo) envioNaTela = p.id;
+  }
+  if (grupo) envioNaTela = grupo;
+  [...pendentes.values()].filter(p => p.id === envioNaTela || p.grupo === envioNaTela).forEach(atualizarEnvio);
+}
+
+const ESTADO_CURTO = {
+  enviando: 'enviando…', guardada: '⏳ guardada — toca quando abrir o app', falhou: '✕ não chegou em 1 hora',
+  chegou: '✓ chegou', viu: '✓✓ viu'
+};
+function atualizarEnvio(p) {
+  if (p.msg.kind !== 'alarme') return;
+  historicoAtualizar(p.id, { estado: p.estado, resposta: p.resposta });
+  if (envioNaTela !== p.id && envioNaTela !== p.grupo) return;
+  if (p.grupo) {
+    const todos = [...pendentes.values()].filter(x => x.grupo === p.grupo);
+    const prontos = todos.filter(x => ORDEM.indexOf(x.estado) >= ORDEM.indexOf('chegou')).length;
+    setEnvioLista('Para todos — chegou em ' + prontos + ' de ' + todos.length, todos.map(x =>
+      [x.nome, x.estado === 'respondeu' ? '💬 “' + x.resposta + '”' : ESTADO_CURTO[x.estado], x.estado]));
+    return;
+  }
+  const texto = {
+    enviando: 'Enviando para ' + p.nome + '… (' + p.tentativas + 'ª tentativa)',
+    guardada: p.nome + ' ainda não abriu o app. A mensagem fica guardada e toca quando abrir (até 1 hora).',
+    chegou: 'Chegou ✓ — tocando no aparelho de ' + p.nome + '.',
+    viu: p.nome + ' viu ✓✓',
+    respondeu: p.nome + ' respondeu: “' + (p.resposta || '') + '”',
+    falhou: 'Não chegou em 1 hora. ' + p.nome + ' não abriu o app.'
+  }[p.estado];
+  setEnvio(texto, p.estado);
+}
+function setEnvio(texto, estado) {
+  const el = $('#envio');
+  if (!el) return;
+  el.textContent = texto;
+  el.dataset.estado = estado || '';
+}
+function setEnvioLista(titulo, linhas) {
+  const el = $('#envio');
+  if (!el) return;
+  el.dataset.estado = '';
+  el.innerHTML = '<span>' + esc(titulo) + '</span><ul class="por-pessoa">' + linhas.map(([n, t, e]) =>
+    '<li data-estado="' + e + '"><b>' + esc(n) + '</b> ' + esc(t) + '</li>').join('') + '</ul>';
+}
+/** Ao redesenhar a tela, a linha de envio volta a mostrar o último envio. */
+function redesenharEnvio() {
+  const p = [...pendentes.values()].find(x => x.id === envioNaTela || x.grupo === envioNaTela);
+  if (p) atualizarEnvio(p);
+}
+function setLigacao(texto, ok) {
+  const el = $('#status');
+  if (!el) return;
+  el.textContent = texto;
+  el.classList.toggle('ok', !!ok);
+}
+
+/* ——— histórico (só no aparelho) ——— */
+
+const historico = () => read('historico', []);
+let histAberto = false;
+function registrar(e) {
+  const h = historico().filter(x => x.id !== e.id);
+  h.unshift(e);
+  write('historico', h.slice(0, 200));
+  desenharHistorico();
+}
+function historicoAtualizar(id, mudanca) {
+  const h = historico();
+  const e = h.find(x => x.id === id);
+  if (!e) return;
+  Object.keys(mudanca).forEach(k => { if (mudanca[k] !== undefined) e[k] = mudanca[k]; });
+  write('historico', h);
+  desenharHistorico();
+}
+function blocoHistorico() {
+  return '<details class="historico" id="historico"' + (histAberto ? ' open' : '') + '><summary>Histórico</summary>' +
+    '<ul id="hist-lista"></ul><button class="btn ghost" id="hist-limpar">Limpar histórico</button></details>';
+}
+function desenharHistorico() {
+  const ul = $('#hist-lista');
+  if (!ul) return;
+  const h = historico();
+  const sum = $('#historico summary');
+  if (sum) sum.textContent = 'Histórico (' + h.length + ')';
+  const nomeTom = t => (TONES.find(x => x[0] === t) || TONES[0])[1];
+  const fim = {
+    enviando: 'enviando…', guardada: '⏳ guardada', falhou: '✕ não chegou', chegou: '✓ chegou',
+    viu: '✓✓ viu', respondeu: '💬', recebido: '', visto: '✓ você viu'
+  };
+  ul.innerHTML = h.length ? h.slice(0, 60).map(e => {
+    const dia = new Date(e.ts).toDateString() === new Date().toDateString() ? '' :
+      new Date(e.ts).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ';
+    const seta = e.dir === 'saiu' ? '➡ para ' : '⬅ de ';
+    const resp = e.resposta
+      ? (e.dir === 'saiu' ? ' 💬 “' + esc(e.resposta) + '”' : ' · você: “' + esc(e.resposta) + '”')
+      : (e.dir === 'saiu' ? ' ' + (fim[e.estado] || '') : (e.estado === 'visto' ? ' ' + fim.visto : ''));
+    return '<li class="' + e.dir + '"><small>' + dia + hora(e.ts) + '</small> ' + seta + '<b>' + esc(e.quem) + '</b> · ' +
+      nomeTom(e.tone) + (e.note ? ' · “' + esc(e.note) + '”' : '') + '<span class="fim">' + resp + '</span></li>';
+  }).join('') : '<li class="muted">Nada ainda.</li>';
+}
 /** A resposta que chegou: um cartão embaixo, com um toque curto (não é alarme). */
 function mostrarResposta(quem, texto) {
   let el = $('#resposta-recebida');
@@ -360,58 +611,33 @@ function mostrarResposta(quem, texto) {
   if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
   notificar('Resposta de ' + quem, texto);
 }
-async function responder(chave, extra) {
-  if (!bus) return;
-  bus.mandar(chave, await destinoDe(chave), Object.assign({ id: crypto.randomUUID(), ts: Date.now() }, extra));
+
+function ligarHistorico() {
+  const d = $('#historico');
+  if (!d) return;
+  d.addEventListener('toggle', () => { histAberto = d.open; });
+  $('#hist-limpar').onclick = () => {
+    if (!confirm('Apagar o histórico deste aparelho?')) return;
+    write('historico', []);
+    desenharHistorico();
+  };
+  desenharHistorico();
 }
 
-async function mandarAlarme(chave, nomeDestino, tone) {
-  const note = clean($('#recado') ? $('#recado').value : '', 80);
-  const who = myName();
-  if (!who) { setEnvio('Escreva o seu nome.'); return; }
-  if (!bus || !bus.pronto()) { setEnvio('Ainda sem ligação com os servidores. Espere "Escuta ligada".'); return; }
-  const msg = { id: crypto.randomUUID(), kind: 'alarme', tone, note, who, ts: Date.now() };
-  const topico = await destinoDe(chave);
-  const p = { id: msg.id, nome: nomeDestino, tentativas: 1, estado: 'enviando' };
-  pendentes.set(msg.id, p);
-  await bus.mandar(chave, topico, msg);
-  mostrarEnvio(p);
-  // QoS 0 não garante nada: repete até o outro lado dizer "chegou".
-  p.timer = setInterval(async () => {
-    if (p.estado !== 'enviando') { clearInterval(p.timer); return; }
-    if (p.tentativas >= TENTATIVAS) {
-      clearInterval(p.timer);
-      p.estado = 'falhou';
-      mostrarEnvio(p);
-      return;
-    }
-    p.tentativas++;
-    if (bus) await bus.mandar(chave, topico, Object.assign({}, msg, { ts: Date.now() }));
-    mostrarEnvio(p);
-  }, REPETIR_MS);
+/*
+ * O navegador só deixa tocar som, vibrar e pedir notificação depois que a
+ * pessoa toca na tela. A escuta liga sozinha ao abrir; o primeiro toque em
+ * qualquer lugar libera o resto.
+ */
+const somLiberado = () => !!audioCtx && audioCtx.state === 'running';
+function aoPrimeiroToque() {
+  unlock().then(mostrarAvisoSom);
+  if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
 }
-
-function mostrarEnvio(p) {
-  const texto = {
-    enviando: 'Enviando para ' + p.nome + '… (' + p.tentativas + 'ª tentativa)',
-    chegou: 'Chegou ✓ — tocando no aparelho de ' + p.nome + '.',
-    viu: p.nome + ' viu ✓✓',
-    respondeu: p.nome + ' respondeu: “' + (p.resposta || '') + '”',
-    falhou: 'Não chegou. ' + p.nome + ' está com o app aberto e a tela acesa?'
-  }[p.estado];
-  setEnvio(texto, p.estado);
-}
-function setEnvio(texto, estado) {
-  const el = $('#envio');
-  if (!el) return;
-  el.textContent = texto;
-  el.dataset.estado = estado || '';
-}
-function setLigacao(texto, ok) {
-  const el = $('#status');
-  if (!el) return;
-  el.textContent = texto;
-  el.classList.toggle('ok', !!ok);
+document.addEventListener('pointerdown', aoPrimeiroToque, { capture: true });
+function mostrarAvisoSom() {
+  const el = $('#aviso-som');
+  if (el) el.hidden = !bus || somLiberado();
 }
 
 /* ————————————————— tela acesa, som, alarme ————————————————— */
@@ -466,7 +692,10 @@ function showAlarm(data, who) {
   if (livre) livre.value = '';
   alarmEl.querySelector('h1').textContent = note || tone[2].join(' ');
   alarmEl.querySelector('.from').textContent = who ? 'De ' + who : '';
-  alarmEl.querySelector('.hint').textContent = note ? tone[1] : 'Toque em Entendi para parar.';
+  // Mensagem que ficou guardada enquanto o app estava fechado: diz a hora em que foi mandada.
+  const criado = data.criado || data.ts;
+  const antiga = Date.now() - criado > 2 * 60 * 1000 ? ' · mandada ' + quando(criado) : '';
+  alarmEl.querySelector('.hint').textContent = (note ? tone[1] : 'Toque em Entendi para parar.') + antiga;
   if (navigator.vibrate) navigator.vibrate([400, 150, 400, 150, 700]);
   clearInterval(ringing);
   beep(tone[0]);
@@ -493,11 +722,9 @@ function enviarResposta(texto) {
   if (!texto) return;
   const a = fecharAlarme();
   if (!a) return;
-  const msg = { kind: 'resposta', ref: a.ref, texto, who: myName() };
-  // Sem confirmação de volta: manda de novo em 3 s (o outro lado ignora a repetição).
-  const id = crypto.randomUUID();
-  responder(a.chave, Object.assign({ id }, msg));
-  setTimeout(() => responder(a.chave, Object.assign({ id }, msg)), 3000);
+  historicoAtualizar(a.ref, { resposta: texto });
+  // A resposta também fica guardada e repete até chegar.
+  if (bus) enviarImportante(a.chave, '', { id: crypto.randomUUID(), kind: 'resposta', ref: a.ref, texto, who: myName(), ts: Date.now() });
 }
 {
   const r = document.createElement('div');
@@ -516,7 +743,9 @@ function enviarResposta(texto) {
 }
 alarmEl.querySelector('.btn').onclick = () => {
   const a = fecharAlarme();
-  if (a) responder(a.chave, { kind: 'viu', ref: a.ref });
+  if (!a) return;
+  responder(a.chave, { kind: 'viu', ref: a.ref });
+  historicoAtualizar(a.ref, { estado: 'visto' });
 };
 
 /* ————————————————— telas ————————————————— */
@@ -570,17 +799,24 @@ async function compartilharConvite(p) {
 
 function telaPainel() {
   const list = people();
-  if (selected && !list.some(p => p.code === selected)) selected = '';
+  if (selected === '*' && list.length < 2) selected = '';
+  if (selected && selected !== '*' && !list.some(p => p.code === selected)) selected = '';
   if (!selected && list.length === 1) selected = list[0].code;
-  const escolhido = list.find(p => p.code === selected);
+  const todos = selected === '*';
+  const escolhido = todos ? { name: 'todos' } : list.find(p => p.code === selected);
+  const destinos = todos ? list.map(p => ({ chave: p.chave, nome: p.name }))
+    : escolhido ? [{ chave: escolhido.chave, nome: escolhido.name }] : [];
   app.innerHTML = '<div class="app">' + cabeca('DOIS CELULARES', 'PAINEL') +
-    '<p>Você recebe de qualquer pessoa da lista. Na hora de mandar, escolhe uma só.</p>' +
+    '<p>Você recebe de qualquer pessoa da lista. Na hora de mandar, escolhe uma pessoa — ou todas.</p>' +
     field('nome', 'Seu nome no alerta', { max: 24, ph: 'PAINEL' }) +
     blocoEscuta() +
     '<h2>Pessoas</h2>' +
-    '<div id="lista">' + (list.map(p =>
+    '<div id="lista">' + (list.length > 1
+      ? '<div class="row"><button class="pick todos' + (todos ? ' on' : '') + '" data-pick="*">' +
+          '<span>Todos<small>chama as ' + list.length + ' pessoas de uma vez</small></span><b>★</b></button></div>' : '') +
+      (list.map(p =>
       '<div class="row"><button class="pick' + (p.code === selected ? ' on' : '') + '" data-pick="' + esc(p.code) + '">' +
-        '<span>' + esc(p.name) + '</span><b>' + esc(p.code) + '</b></button>' +
+        '<span>' + esc(p.name) + '<small class="pres" data-pres="' + esc(p.code) + '"></small></span><b>' + esc(p.code) + '</b></button>' +
         '<button class="mini" data-convite="' + esc(p.code) + '">Convite</button>' +
         '<button class="erase" data-del="' + esc(p.code) + '">Apagar</button></div>').join('') ||
       '<p class="muted">Ninguém ainda. Adicione abaixo e mande o convite.</p>') + '</div>' +
@@ -588,9 +824,10 @@ function telaPainel() {
     '<button class="btn surface" id="novo">Adicionar e mandar convite</button>' +
     (escolhido
       ? '<h2>Mandar para ' + esc(escolhido.name) + '</h2>' +
-        field('recado', 'Cartão que a pessoa vê', { max: 80, ph: 'Escreva a mensagem (opcional)', area: true }) +
-        toneButtons() + '<p id="envio" class="envio" aria-live="polite"></p>'
+        field('recado', todos ? 'Cartão que todos veem' : 'Cartão que a pessoa vê', { max: 80, ph: 'Escreva a mensagem (opcional)', area: true }) +
+        toneButtons() + '<div id="envio" class="envio" aria-live="polite"></div>'
       : (list.length ? '<p class="muted" style="margin-top:1rem">Toque numa pessoa para mandar.</p>' : '')) +
+    blocoHistorico() +
     '</div>';
   preencherVersao();
   $('#nome').value = read('name', '');
@@ -619,8 +856,11 @@ function telaPainel() {
   });
   app.querySelectorAll('[data-tone]').forEach(b => b.onclick = () => {
     unlock();
-    if (escolhido) mandarAlarme(escolhido.chave, escolhido.name, b.dataset.tone);
+    if (destinos.length) mandarAlarme(destinos, b.dataset.tone);
   });
+  atualizarPresenca();
+  redesenharEnvio();
+  ligarHistorico();
 }
 
 function telaSinal() {
@@ -660,15 +900,20 @@ function telaSinal() {
     '<p class="muted">Você é <b>' + esc(read('name', '')) + '</b> · código</p><p class="big">' + esc(read('code', '')) + '</p>' +
     blocoEscuta() +
     '<h2>Chamar o PAINEL</h2>' +
+    '<p class="pres pres-painel" data-pres="painel" data-prefixo="PAINEL: "></p>' +
     field('recado', 'Cartão que o PAINEL vê', { max: 80, ph: 'Escreva a mensagem (opcional)', area: true }) +
-    toneButtons() + '<p id="envio" class="envio" aria-live="polite"></p>' +
+    toneButtons() + '<div id="envio" class="envio" aria-live="polite"></div>' +
+    blocoHistorico() +
     '<button class="btn ghost" id="sair">Trocar de convite</button></div>';
   preencherVersao();
   ligarBotoesEscuta(telaSinal);
   app.querySelectorAll('[data-tone]').forEach(b => b.onclick = () => {
     unlock();
-    mandarAlarme(read('chave', ''), 'o PAINEL', b.dataset.tone);
+    mandarAlarme([{ chave: read('chave', ''), nome: 'o PAINEL' }], b.dataset.tone);
   });
+  atualizarPresenca();
+  redesenharEnvio();
+  ligarHistorico();
   $('#sair').onclick = () => {
     if (!confirm('Sair deste convite? Para voltar, vai precisar do convite de novo.')) return;
     pararEscuta();

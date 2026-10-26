@@ -23,6 +23,15 @@ As pastas são separadas (e não uma dentro da outra) para o Android instalar os
    curto, e na linha de envio: *Cida respondeu: "Estou indo"*.
    Embaixo aparece **Enviando… → Chegou ✓ → viu ✓✓** — ou **Não chegou**.
 
+### Recursos
+
+| Recurso | Como funciona |
+|---|---|
+| **Quem está online** | Bolinha verde ao lado de cada pessoa (e do PAINEL, no SINAL). Cada app anuncia "estou aqui" a cada 30 s; sem notícia há 75 s, aparece *visto há X min*. |
+| **Não perder mensagem** | O alarme fica **guardado no servidor** (mensagem retida do MQTT) e repete até chegar: 4 vezes rápido, depois a cada 30 s, por até 1 hora. Quem abre o app depois recebe na hora, com *mandada às HHhMM*. Ao chegar, a cópia guardada é apagada. A resposta também segue assim. |
+| **Histórico** | Lista no fim da tela: enviados e recebidos, hora, *chegou / viu / resposta*. Fica só no aparelho (até 200). |
+| **Todos** | No PAINEL, com 2 pessoas ou mais: chama todas de uma vez e mostra pessoa por pessoa quem já recebeu, viu ou respondeu. |
+
 **A escuta liga sozinha** ao abrir o app (a menos que você tenha tocado em *Parar de escutar*:
 aí ele lembra e espera você ligar). O navegador só libera **som e vibração depois do primeiro toque**
 na tela — enquanto isso, aparece o aviso *"Toque em qualquer lugar da tela para liberar o som"*.
@@ -44,7 +53,9 @@ PAINEL ──cifrada──► broker.hivemq.com ─┐
   e repetição do mesmo pacote também.
 - **Dois servidores ao mesmo tempo**: publica e escuta nos dois; basta um funcionar.
 - **Confirmação**: quem recebe responde "chegou" na hora e "viu" ao tocar em Entendi.
-  Sem "chegou", repete a cada 4 s, até 4 vezes, e então avisa que não chegou.
+  Sem "chegou", a mensagem fica guardada no servidor e repete até chegar (até 1 hora).
+- **Presença**: o "estou aqui" também vai cifrado, num tópico próprio, e fica guardado no
+  servidor — quem abre o app já sabe quando o outro foi visto por último.
 
 O convite pelo link usa `#c=…`: o que vem depois do `#` não vai ao servidor do site, e o app
 limpa da barra de endereço assim que lê.
