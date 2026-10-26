@@ -16,7 +16,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.3.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.4.0';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // sem 0, 1, O e I
@@ -328,10 +328,37 @@ async function recebeu(msg, rota, repetida) {
     const p = pendentes.get(msg.ref);
     if (!p) return;
     clearInterval(p.timer);
-    if (msg.kind === 'viu') p.estado = 'viu';
-    else if (p.estado !== 'viu') p.estado = 'chegou';
+    // Só avança: um "chegou" atrasado não apaga o "viu" nem a resposta.
+    const ordem = ['enviando', 'falhou', 'chegou', 'viu', 'respondeu'];
+    if (ordem.indexOf(msg.kind) > ordem.indexOf(p.estado)) p.estado = msg.kind;
     mostrarEnvio(p);
+  } else if (msg.kind === 'resposta') {
+    if (repetida) return;
+    const texto = clean(msg.texto, 80);
+    const quem = ROLE === 'painel' ? rota.nome : (clean(msg.who, 24) || 'PAINEL');
+    const p = pendentes.get(msg.ref);
+    if (p) { clearInterval(p.timer); p.estado = 'respondeu'; p.resposta = texto; mostrarEnvio(p); }
+    mostrarResposta(quem, texto);
   }
+}
+
+/** A resposta que chegou: um cartão embaixo, com um toque curto (não é alarme). */
+function mostrarResposta(quem, texto) {
+  let el = $('#resposta-recebida');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'resposta-recebida';
+    el.innerHTML = '<p class="eye">RESPOSTA</p><p class="quem"></p><p class="texto"></p><button class="btn">OK</button>';
+    document.body.appendChild(el);
+    el.querySelector('button').onclick = () => { el.hidden = true; };
+  }
+  el.querySelector('.quem').textContent = quem;
+  el.querySelector('.texto').textContent = texto;
+  el.hidden = false;
+  beep('olha');
+  setTimeout(() => beep('olha'), 300);
+  if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+  notificar('Resposta de ' + quem, texto);
 }
 async function responder(chave, extra) {
   if (!bus) return;
@@ -369,6 +396,7 @@ function mostrarEnvio(p) {
     enviando: 'Enviando para ' + p.nome + '… (' + p.tentativas + 'ª tentativa)',
     chegou: 'Chegou ✓ — tocando no aparelho de ' + p.nome + '.',
     viu: p.nome + ' viu ✓✓',
+    respondeu: p.nome + ' respondeu: “' + (p.resposta || '') + '”',
     falhou: 'Não chegou. ' + p.nome + ' está com o app aberto e a tela acesa?'
   }[p.estado];
   setEnvio(texto, p.estado);
@@ -434,6 +462,8 @@ function showAlarm(data, who) {
   const tone = TONES.find(t => t[0] === data.tone) || TONES[0];
   const note = clean(data.note, 80);
   alarmEl.hidden = false;
+  const livre = $('#resposta-livre');
+  if (livre) livre.value = '';
   alarmEl.querySelector('h1').textContent = note || tone[2].join(' ');
   alarmEl.querySelector('.from').textContent = who ? 'De ' + who : '';
   alarmEl.querySelector('.hint').textContent = note ? tone[1] : 'Toque em Entendi para parar.';
@@ -446,13 +476,47 @@ function showAlarm(data, who) {
   }, tone[0] === 'olha' ? 700 : 800);
   notificar(who ? 'De ' + who : 'SINAL', note || tone[1]);
 }
-alarmEl.querySelector('button').onclick = () => {
+/* Respostas rápidas na tela do alarme: tocar numa delas já fecha o alarme. */
+const RESPOSTAS = ['Estou indo', 'Já ligo', 'Agora não posso', 'OK, entendi'];
+
+function fecharAlarme() {
   alarmEl.hidden = true;
   clearInterval(ringing);
   ringing = null;
   if (navigator.vibrate) navigator.vibrate(0);
-  if (alarmeAberto) responder(alarmeAberto.chave, { kind: 'viu', ref: alarmeAberto.ref });
+  const a = alarmeAberto;
   alarmeAberto = null;
+  return a;
+}
+function enviarResposta(texto) {
+  texto = clean(texto, 80);
+  if (!texto) return;
+  const a = fecharAlarme();
+  if (!a) return;
+  const msg = { kind: 'resposta', ref: a.ref, texto, who: myName() };
+  // Sem confirmação de volta: manda de novo em 3 s (o outro lado ignora a repetição).
+  const id = crypto.randomUUID();
+  responder(a.chave, Object.assign({ id }, msg));
+  setTimeout(() => responder(a.chave, Object.assign({ id }, msg)), 3000);
+}
+{
+  const r = document.createElement('div');
+  r.className = 'respostas';
+  r.innerHTML = '<p class="eye">RESPONDER</p><div class="rapidas">' +
+    RESPOSTAS.map(t => '<button type="button" data-resposta="' + esc(t) + '">' + esc(t) + '</button>').join('') +
+    '</div><div class="livre"><input id="resposta-livre" maxlength="80" placeholder="Ou escreva…" autocomplete="off" enterkeyhint="send">' +
+    '<button type="button" id="resposta-enviar">Enviar</button></div>';
+  alarmEl.querySelector('button').before(r);
+  r.querySelectorAll('[data-resposta]').forEach(b => b.onclick = () => enviarResposta(b.dataset.resposta));
+  const livre = r.querySelector('#resposta-livre');
+  r.querySelector('#resposta-enviar').onclick = () => enviarResposta(livre.value);
+  livre.addEventListener('keydown', ev => { if (ev.key === 'Enter') enviarResposta(livre.value); });
+  // Começar a escrever cala o alarme, para dar para pensar.
+  livre.addEventListener('focus', () => { clearInterval(ringing); ringing = null; if (navigator.vibrate) navigator.vibrate(0); });
+}
+alarmEl.querySelector('.btn').onclick = () => {
+  const a = fecharAlarme();
+  if (a) responder(a.chave, { kind: 'viu', ref: a.ref });
 };
 
 /* ————————————————— telas ————————————————— */

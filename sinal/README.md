@@ -18,6 +18,9 @@ As pastas são separadas (e não uma dentro da outra) para o Android instalar os
    convite junto) e depois o código para colar, se precisar. A pessoa instala, escreve o nome e toca em **Entrar**
    e **Ligar e escutar**.
 3. Escolha a pessoa, escreva o cartão (opcional) e toque num dos quatro toques.
+   Quem recebe pode **responder na própria tela do alarme**: *Estou indo*, *Já ligo*, *Agora não posso*,
+   *OK, entendi* ou um texto escrito. A resposta aparece num cartão verde para quem chamou, com um toque
+   curto, e na linha de envio: *Cida respondeu: "Estou indo"*.
    Embaixo aparece **Enviando… → Chegou ✓ → viu ✓✓** — ou **Não chegou**.
 
 **A escuta liga sozinha** ao abrir o app (a menos que você tenha tocado em *Parar de escutar*:

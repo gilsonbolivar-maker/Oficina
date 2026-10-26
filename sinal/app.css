@@ -50,3 +50,15 @@ textarea::placeholder { color: rgba(243, 237, 228, .7); }
 .fechar-faixa { position: absolute; top: .4rem; right: .4rem; width: 2rem; height: 2rem; border: 0; background: transparent; color: var(--muted); }
 #instalar { padding: 0 1.25rem; }
 .aviso-som { margin: .5rem 0 0; padding: .7rem 1rem; border-radius: 1rem; background: #3a2a10; color: #ffd27a; font-size: .92rem; }
+.respostas { width: 100%; max-width: 28rem; margin-top: 1.4rem; }
+.respostas .eye { color: rgba(243, 237, 228, .8); }
+.rapidas { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-top: .5rem; }
+.rapidas button { min-height: 3.2rem; border: 2px solid rgba(243, 237, 228, .85); border-radius: 1rem; background: rgba(0, 0, 0, .18); color: var(--fg); font-weight: 650; }
+.livre { display: flex; gap: .5rem; margin-top: .5rem; }
+.livre input { margin: 0; flex: 1; min-width: 0; background: rgba(0, 0, 0, .25); border-color: rgba(243, 237, 228, .5); }
+.livre button { padding: 0 1rem; border: 0; border-radius: 1rem; background: var(--fg); color: var(--alert); font-weight: 700; }
+#alarm .btn { margin-top: 1rem; }
+#resposta-recebida { position: fixed; left: 1rem; right: 1rem; bottom: calc(1rem + env(safe-area-inset-bottom)); max-width: 28rem; margin: 0 auto; padding: 1rem 1.2rem; border-radius: 1.2rem; background: var(--surface); border: 2px solid var(--ok); box-shadow: 0 10px 40px rgba(0, 0, 0, .5); z-index: 6; }
+#resposta-recebida[hidden] { display: none; }
+#resposta-recebida .quem { font-family: "Arial Narrow", Impact, sans-serif; font-size: 1.4rem; margin: .2rem 0 0; }
+#resposta-recebida .texto { font-family: "Arial Narrow", Impact, sans-serif; font-size: 2rem; line-height: 1.05; margin: .2rem 0 .4rem; color: var(--ok); }
