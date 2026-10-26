@@ -16,7 +16,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.7.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.8.0';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // sem 0, 1, O e I
@@ -41,6 +41,14 @@ const TONES = [
   ['preciso', 'Compareça', ['COMPAREÇA'], 'Apito', false],
   ['olha', 'Olha aqui', ['OLHA', 'AQUI'], 'Toque curto', false]
 ];
+
+// Dentro do APK Android, a página ganha window.SinalNativo: escuta com a tela
+// apagada, alarme do aparelho, salvar em Downloads e compartilhar.
+const nativo = window.SinalNativo || null;
+const APK = {
+  sinal: 'https://github.com/gilsonbolivar-maker/Oficina/releases/download/sinal-apk/sinal.apk',
+  painel: 'https://github.com/gilsonbolivar-maker/Oficina/releases/download/sinal-apk/painel.apk'
+};
 
 const $ = s => document.querySelector(s);
 const app = $('#app');
@@ -329,6 +337,15 @@ async function escutar() {
   bus = ligar(await montarRotas(), recebeu, () => { anunciar(true); publicarLista(); });
   clearInterval(anuncio);
   anuncio = setInterval(() => anunciar(true), T.presenca);
+  configurarNativo(true);
+}
+/** No APK: diz ao serviço com quem conversar, para escutar com a tela apagada. */
+function configurarNativo(escutar) {
+  if (!nativo) return;
+  const contatos = ROLE === 'painel'
+    ? people().map(p => ({ chave: p.chave, nome: p.name }))
+    : (read('chave', '') ? [{ chave: read('chave', ''), nome: 'PAINEL' }] : []);
+  try { nativo.configurar(JSON.stringify({ escutar: escutar && contatos.length > 0, papel: ROLE, contatos })); } catch {}
 }
 /** `lembrar`: a pessoa tocou em "Parar" — o app não liga sozinho na próxima vez. */
 function pararEscuta(lembrar) {
@@ -338,7 +355,7 @@ function pararEscuta(lembrar) {
   bus = null;
   // Dá tempo do "saí" partir antes de fechar a ligação.
   if (b) setTimeout(() => b.parar(), 300);
-  if (lembrar) write('escutar', false);
+  if (lembrar) { write('escutar', false); configurarNativo(false); }
   if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
 }
 
@@ -703,7 +720,7 @@ function aoPrimeiroToque() {
 document.addEventListener('pointerdown', aoPrimeiroToque, { capture: true });
 function mostrarAvisoSom() {
   const el = $('#aviso-som');
-  if (el) el.hidden = !bus || somLiberado();
+  if (el) el.hidden = !bus || somLiberado() || !!nativo;
 }
 
 /* ————————————————— anexos (arquivo até 2 MB) ————————————————— */
@@ -844,7 +861,17 @@ function prepararTelaAnexo(msg) {
 }
 
 /* Abrir/salvar: "Salvar" baixa o arquivo; "Abrir com…" usa o compartilhar do sistema (Android). */
+/** No APK: o arquivo vai em base64 para o Android gravar em Downloads. */
+function salvarNoAparelho(blob, nome, tipo, abrir) {
+  const r = new FileReader();
+  r.onload = () => {
+    const ok = nativo.salvar(nome, tipo || blob.type || '', String(r.result).split(',')[1] || '', abrir);
+    if (!ok) alert('Não consegui salvar o arquivo.');
+  };
+  r.readAsDataURL(blob);
+}
 function salvarBlob(blob, nome) {
+  if (nativo) { salvarNoAparelho(blob, nome, blob.type, false); return; }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = nome;
@@ -852,6 +879,7 @@ function salvarBlob(blob, nome) {
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 async function abrirCom(blob, nome, tipo) {
+  if (nativo) { salvarNoAparelho(blob, nome, tipo, true); return; }
   try {
     const f = new File([blob], nome, { type: tipo || blob.type });
     if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], title: nome }); return; }
@@ -995,6 +1023,7 @@ function ligarAparelhos() {
       '1. Abra o link (no Chrome ou Safari) e instale o PAINEL:\n' + link +
       '\n\n2. No PAINEL instalado, em "Outros aparelhos", cole este código e toque em Conectar:\nPAINEL-' + mestra +
       '\n\n⚠️ Quem tiver este código controla o PAINEL. Não repasse.';
+    if (nativo) { nativo.compartilhar(texto); telaPainel(); return; }
     if (navigator.share) {
       try { await navigator.share({ title: 'PAINEL', text: texto }); telaPainel(); return; } catch (e) { if (e.name === 'AbortError') { telaPainel(); return; } }
     }
@@ -1056,6 +1085,7 @@ function beep(tone) {
 }
 
 function notificar(titulo, corpo) {
+  if (nativo) return;   // no APK, o serviço avisa
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   // No Chrome do Android, só o service worker pode mostrar notificação.
   const op = { body: corpo, icon: 'icon-192.png', tag: 'sinal', renotify: true };
@@ -1078,8 +1108,13 @@ function showAlarm(data, who) {
   const criado = data.criado || data.ts;
   const antiga = Date.now() - criado > 2 * 60 * 1000 ? ' · mandada ' + quando(criado) : '';
   alarmEl.querySelector('.hint').textContent = (note ? tone[1] : 'Toque em Entendi para parar.') + antiga;
-  if (navigator.vibrate) navigator.vibrate([400, 150, 400, 150, 700]);
   clearInterval(ringing);
+  if (nativo) {
+    // No APK, quem toca é o alarme do aparelho (se o serviço ainda não tocou).
+    try { nativo.tocarAlarme(String(data.id || ''), who ? 'De ' + who : 'SINAL', note || tone[1]); } catch {}
+    return;
+  }
+  if (navigator.vibrate) navigator.vibrate([400, 150, 400, 150, 700]);
   beep(tone[0]);
   ringing = setInterval(() => {
     beep(tone[0]);
@@ -1093,6 +1128,7 @@ const RESPOSTAS = ['Estou indo', 'Já ligo', 'Agora não posso', 'OK, entendi'];
 function fecharAlarme(daqui = true) {
   if (daqui && alarmeAberto && ROLE === 'painel') avisarAtendido(alarmeAberto.ref);
   alarmEl.hidden = true;
+  if (nativo) try { nativo.pararAlarme(); } catch {}
   setTimeout(recarregarSePuder, 1500);
   clearInterval(ringing);
   ringing = null;
@@ -1162,7 +1198,7 @@ function toneButtons() {
     '</b><small>' + t[3] + '</small></button>').join('') + '</div>';
 }
 function cabeca(eye, titulo) {
-  return '<p class="eye">' + eye + '</p><h1>' + titulo + ' <small class="versao" data-versao></small></h1>';
+  return '<p class="eye">' + eye + (nativo ? ' · APP ANDROID' : '') + '</p><h1>' + titulo + ' <small class="versao" data-versao></small></h1>';
 }
 function blocoEscuta() {
   return bus
@@ -1189,7 +1225,9 @@ async function compartilharConvite(p) {
     '📲 1. Instale o SINAL: abra o link no Chrome (ou Safari) e toque em "Instalar o SINAL":\n' + link +
     '\n\n🔑 2. Abra o SINAL instalado. Se o convite não vier preenchido, cole este código:\n' +
     p.code + '-' + p.chave +
-    '\n\n3. Escreva seu nome, toque em Entrar e em Ligar e escutar.';
+    '\n\n3. Escreva seu nome, toque em Entrar e em Ligar e escutar.' +
+    '\n\n(Android: também dá para instalar o app que toca com a tela apagada: ' + APK.sinal + ' )';
+  if (nativo) { nativo.compartilhar(texto); return; }
   if (navigator.share) {
     try { await navigator.share({ title: 'SINAL', text: texto }); return; } catch (e) { if (e.name === 'AbortError') return; }
   }
@@ -1324,6 +1362,7 @@ function telaSinal() {
     if (!confirm('Sair deste convite? Para voltar, vai precisar do convite de novo.')) return;
     pararEscuta();
     write('chave', ''); write('code', '');
+    configurarNativo(false);
     telaSinal();
   };
 }
@@ -1345,7 +1384,7 @@ const instaladoJa = () => matchMedia('(display-mode: standalone)').matches || na
 function faixaInstalar() {
   const el = $('#instalar');
   if (!el) return;
-  if (instaladoJa()) { el.hidden = true; return; }
+  if (instaladoJa() || nativo) { el.hidden = true; return; }
   const ua = navigator.userAgent;
   const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const dentroDeApp = /; wv\)|WhatsApp|FBAN|FBAV|Instagram|Line\//.test(ua);
@@ -1361,6 +1400,10 @@ function faixaInstalar() {
   } else {
     html = '<p><b>Para instalar:</b> toque em ⋮ (canto de cima) e em <b>Instalar app</b> ou ' +
       '<b>Adicionar à tela inicial</b>. Se não aparecer, saia da aba anônima.</p>';
+  }
+  // Android: o APK toca com a tela apagada, o que o app do navegador não faz.
+  if (!ios && /Android/.test(ua)) {
+    html += '<p class="apk-link">📲 Melhor ainda: <a href="' + APK[ROLE] + '">baixe o app Android (APK)</a> — toca com a tela apagada.</p>';
   }
   el.innerHTML = '<div class="faixa-instalar">' + html + '<button class="fechar-faixa" aria-label="Fechar">✕</button></div>';
   el.hidden = false;

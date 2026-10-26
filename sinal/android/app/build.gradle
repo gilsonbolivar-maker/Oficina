@@ -1,0 +1,67 @@
+plugins {
+    id 'com.android.application'
+}
+
+/*
+ * Um projeto, dois apps: o SINAL (de cada pessoa) e o PAINEL (o seu).
+ * Os dois abrem a página do site numa WebView e ganham o que o navegador não
+ * tem: escutar com a tela apagada e tocar o alarme do aparelho.
+ */
+android {
+    namespace 'io.github.gilsonbolivar.sinal'
+    compileSdk 34
+
+    defaultConfig {
+        minSdk 24
+        targetSdk 34
+        // versionCode sobe a cada APK novo; versionName acompanha o app do site.
+        versionCode 1
+        versionName '1.8.0'
+    }
+
+    flavorDimensions 'papel'
+    productFlavors {
+        sinal {
+            dimension 'papel'
+            applicationId 'io.github.gilsonbolivar.sinal'
+            buildConfigField 'String', 'ENDERECO', '"https://gilsonbolivar-maker.github.io/Oficina/sinal/"'
+            buildConfigField 'String', 'CAMINHO', '"/Oficina/sinal"'
+            resValue 'string', 'app_name', 'SINAL'
+        }
+        painel {
+            dimension 'papel'
+            applicationId 'io.github.gilsonbolivar.painel'
+            buildConfigField 'String', 'ENDERECO', '"https://gilsonbolivar-maker.github.io/Oficina/sinal-painel/"'
+            buildConfigField 'String', 'CAMINHO', '"/Oficina/sinal-painel"'
+            resValue 'string', 'app_name', 'PAINEL'
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    signingConfigs {
+        // Chave fixa: o APK novo instala por cima do antigo sem desinstalar.
+        // Ela NÃO fica no repositório (que é público): o workflow monta o arquivo
+        // a partir dos segredos SINAL_ASSINATURA e SINAL_SENHA do GitHub.
+        oficina {
+            storeFile file(System.getenv('SINAL_ASSINATURA_ARQUIVO') ?: '../assinatura.jks')
+            storePassword System.getenv('SINAL_SENHA') ?: ''
+            keyAlias 'sinal'
+            keyPassword System.getenv('SINAL_SENHA') ?: ''
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.oficina
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

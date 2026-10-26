@@ -95,3 +95,4 @@ textarea::placeholder { color: rgba(243, 237, 228, .7); }
 .botoes-anexo { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-top: .6rem; }
 .botoes-anexo button { min-height: 2.8rem; border: 0; border-radius: .8rem; background: var(--fg); color: var(--alert); font-weight: 700; }
 .historico .link { color: inherit; }
+.apk-link { margin: .5rem 0 0 !important; font-size: .88rem; } .apk-link a { color: #ffd27a; }

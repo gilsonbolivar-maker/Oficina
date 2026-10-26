@@ -1,0 +1,71 @@
+# Compila os APKs do SINAL e do PAINEL e publica em
+# https://github.com/gilsonbolivar-maker/Oficina/releases/download/sinal-apk/sinal.apk
+# https://github.com/gilsonbolivar-maker/Oficina/releases/download/sinal-apk/painel.apk
+# Os APKs abrem a página do site; só precisa recompilar quando o código Android muda.
+name: APKs do SINAL e do PAINEL
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'sinal/android/**'
+      - '.github/workflows/apk-sinal.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk-sinal
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      # A chave de assinatura vem dos segredos do repositório (Settings → Secrets and
+      # variables → Actions), nunca do código: o repositório é público.
+      - name: Montar a chave de assinatura
+        env:
+          SINAL_ASSINATURA: ${{ secrets.SINAL_ASSINATURA }}
+          SINAL_SENHA: ${{ secrets.SINAL_SENHA }}
+        run: |
+          if [ -z "$SINAL_ASSINATURA" ] || [ -z "$SINAL_SENHA" ]; then
+            echo "::error::Faltam os segredos SINAL_ASSINATURA e SINAL_SENHA (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+          echo "$SINAL_ASSINATURA" | base64 -d > "$RUNNER_TEMP/assinatura.jks"
+
+      - name: Compilar
+        working-directory: sinal/android
+        env:
+          SINAL_ASSINATURA_ARQUIVO: ${{ runner.temp }}/assinatura.jks
+          SINAL_SENHA: ${{ secrets.SINAL_SENHA }}
+        run: gradle --no-daemon assembleSinalRelease assemblePainelRelease
+
+      - name: Apagar a chave
+        if: always()
+        run: rm -f "$RUNNER_TEMP/assinatura.jks"
+
+      - name: Publicar os APKs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cp sinal/android/app/build/outputs/apk/sinal/release/app-sinal-release.apk sinal.apk
+          cp sinal/android/app/build/outputs/apk/painel/release/app-painel-release.apk painel.apk
+          gh release delete sinal-apk --yes --cleanup-tag || true
+          gh release create sinal-apk sinal.apk painel.apk \
+            --title "SINAL e PAINEL para Android" \
+            --notes "APKs do SINAL e do PAINEL: escutam com a tela apagada e tocam o alarme do aparelho. Compilado de ${GITHUB_SHA::7}." \
+            --target "$GITHUB_SHA"
