@@ -1,29 +1,23 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#E10600">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="PAINEL">
-  <title>PAINEL</title>
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="icon-192.png">
-  <link rel="apple-touch-icon" href="apple-touch-icon.png">
-  <link rel="stylesheet" href="../app.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PAINEL mudou de endereço</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#141210;color:#F3EDE4;font:16px system-ui,sans-serif;text-align:center;padding:1.5rem}a{color:#ff6b5e}</style>
 </head>
-<body data-role="painel">
-  <div class="bar"></div>
-  <div id="app"></div>
-  <div id="alarm" hidden>
-    <p class="eye">SINAL</p>
-    <h1></h1>
-    <p class="from"></p>
-    <p class="hint"></p>
-    <button class="btn" style="max-width:28rem">Entendi</button>
-  </div>
-  <script src="../app.js"></script>
+<body>
+<p>O PAINEL mudou para <a href="../../sinal-painel/">/Oficina/sinal-painel/</a>.<br>Levando você para lá…</p>
+<script>
+  // O endereço antigo ficava dentro do SINAL e atrapalhava instalar no Android.
+  // Solta o service worker antigo daqui e segue para o endereço novo.
+  (async () => {
+    try {
+      const regs = navigator.serviceWorker ? await navigator.serviceWorker.getRegistrations() : [];
+      await Promise.all(regs.filter(r => r.scope.endsWith('/sinal/painel/')).map(r => r.unregister()));
+    } catch (e) {}
+    location.replace('../../sinal-painel/');
+  })();
+</script>
 </body>
 </html>

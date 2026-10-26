@@ -4,10 +4,11 @@ Dois apps que se chamam com **alarme em tela cheia** (som, vibração e o recado
 
 | App | Endereço | Quem usa |
 |---|---|---|
-| **PAINEL** | `/Oficina/sinal/painel/` | Você: chama uma pessoa por vez e recebe de todas |
+| **PAINEL** | `/Oficina/sinal-painel/` | Você: chama uma pessoa por vez e recebe de todas |
 | **SINAL** | `/Oficina/sinal/` | Cada pessoa: recebe do PAINEL e responde só para ele |
 
-O código é um só (`app.js`); o `data-role` do `<body>` diz qual papel.
+O código é um só (`sinal/app.js`, que o PAINEL carrega de `../sinal/`); o `data-role` do `<body>` diz qual papel.
+As pastas são separadas (e não uma dentro da outra) para o Android instalar os dois sem confundir.
 
 ## Como usar
 

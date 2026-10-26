@@ -44,3 +44,8 @@ textarea::placeholder { color: rgba(243, 237, 228, .7); }
 #alarm[hidden] { display: none; }
 #alarm h1 { font-size: 3.2rem; }
 #alarm .from { font-family: "Arial Narrow", Impact, sans-serif; font-size: 2rem; margin-top: .6rem; }
+.faixa-instalar { position: relative; max-width: 28rem; margin: .8rem auto 0; padding: .8rem 2.6rem .8rem 1rem; border: 1px solid var(--line); border-radius: 1rem; background: var(--surface); font-size: .92rem; }
+.faixa-instalar p { margin: 0; }
+.faixa-instalar .btn { margin: 0; }
+.fechar-faixa { position: absolute; top: .4rem; right: .4rem; width: 2rem; height: 2rem; border: 0; background: transparent; color: var(--muted); }
+#instalar { padding: 0 1.25rem; }

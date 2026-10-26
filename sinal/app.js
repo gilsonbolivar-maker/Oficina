@@ -16,7 +16,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.0.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.1.0';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // sem 0, 1, O e I
@@ -83,7 +83,7 @@ function lerConvite(texto) {
   return { code: m[1], chave: m[2] };
 }
 function linkConvite(p) {
-  return new URL('../#c=' + p.code + '-' + p.chave, location.href).href;
+  return new URL('../sinal/#c=' + p.code + '-' + p.chave, location.href).href;
 }
 
 /* ————————————————— cifra ————————————————— */
@@ -591,6 +591,57 @@ function preencherVersao() {
   document.querySelectorAll('[data-versao]').forEach(el => { el.textContent = 'v' + VERSAO; });
 }
 
+/* ————————————————— instalar ————————————————— */
+
+/*
+ * Faixa no topo que ajuda a instalar: com o botão do próprio Chrome quando ele
+ * oferece, e explicando o que fazer quando não oferece (navegador de dentro do
+ * WhatsApp, aba anônima, iPhone…). Some quando o app já está instalado.
+ */
+let pedidoInstalar = null;
+const instaladoJa = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+
+function faixaInstalar() {
+  const el = $('#instalar');
+  if (!el) return;
+  if (instaladoJa()) { el.hidden = true; return; }
+  const ua = navigator.userAgent;
+  const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const dentroDeApp = /; wv\)|WhatsApp|FBAN|FBAV|Instagram|Line\//.test(ua);
+  const nome = ROLE === 'painel' ? 'PAINEL' : 'SINAL';
+  let html;
+  if (pedidoInstalar) {
+    html = '<button class="btn alert" id="instalar-agora">Instalar o ' + nome + '</button>';
+  } else if (dentroDeApp) {
+    html = '<p><b>Abra no Chrome para instalar.</b> Este é o navegador de dentro de outro app. ' +
+      'Toque em ⋮ e em <b>Abrir no Chrome</b> (ou <b>Abrir no navegador</b>).</p>';
+  } else if (ios) {
+    html = '<p><b>Para instalar:</b> no Safari, toque em Compartilhar ⬆️ e em <b>Adicionar à Tela de Início</b>.</p>';
+  } else {
+    html = '<p><b>Para instalar:</b> toque em ⋮ (canto de cima) e em <b>Instalar app</b> ou ' +
+      '<b>Adicionar à tela inicial</b>. Se não aparecer, saia da aba anônima.</p>';
+  }
+  el.innerHTML = '<div class="faixa-instalar">' + html + '<button class="fechar-faixa" aria-label="Fechar">✕</button></div>';
+  el.hidden = false;
+  el.querySelector('.fechar-faixa').onclick = () => { el.hidden = true; };
+  const b = $('#instalar-agora');
+  if (b) b.onclick = async () => {
+    const p = pedidoInstalar;
+    pedidoInstalar = null;
+    p.prompt();
+    const escolha = await p.userChoice.catch(() => null);
+    if (escolha && escolha.outcome === 'accepted') el.hidden = true;
+    else faixaInstalar();
+  };
+}
+// O Chrome avisa quando dá para instalar: guarda e mostra o botão.
+window.addEventListener('beforeinstallprompt', ev => {
+  ev.preventDefault();
+  pedidoInstalar = ev;
+  faixaInstalar();
+});
+window.addEventListener('appinstalled', () => { const el = $('#instalar'); if (el) el.hidden = true; });
+
 /* ————————————————— início ————————————————— */
 
 // Convite pelo link (#c=…): guarda e limpa o endereço, para não ficar na barra nem no histórico.
@@ -611,4 +662,5 @@ if ('serviceWorker' in navigator) {
   });
 }
 preencherVersao();
+faixaInstalar();
 if (ROLE === 'painel') telaPainel(); else telaSinal();
