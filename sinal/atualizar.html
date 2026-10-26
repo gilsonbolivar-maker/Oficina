@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atualizando…</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#141210;color:#F3EDE4;font:17px/1.5 system-ui,sans-serif;text-align:center;padding:1.5rem}b{color:#3fbf6f}</style>
+</head>
+<body>
+<p id="msg">Atualizando o app…</p>
+<script>
+  // Força a versão nova: solta o service worker e apaga só os arquivos guardados do app.
+  // Pessoas, convites, histórico e anexos (localStorage/IndexedDB) ficam intactos.
+  (async () => {
+    const pasta = location.pathname.replace(/atualizar\.html$/, '');
+    try {
+      const regs = navigator.serviceWorker ? await navigator.serviceWorker.getRegistrations() : [];
+      await Promise.all(regs.filter(r => new URL(r.scope).pathname === pasta).map(r => r.unregister()));
+      const nomes = await caches.keys();
+      const prefixo = pasta.includes('sinal-painel') ? 'sinal-painel-v' : 'sinal-v';
+      await Promise.all(nomes.filter(n => n.startsWith(prefixo)).map(n => caches.delete(n)));
+    } catch (e) {}
+    document.getElementById('msg').innerHTML = '<b>Pronto.</b> Abrindo a versão nova…';
+    setTimeout(() => location.replace(pasta + '?v=' + Date.now()), 800);
+  })();
+</script>
+</body>
+</html>
