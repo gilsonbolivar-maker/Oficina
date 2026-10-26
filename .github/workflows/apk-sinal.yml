@@ -37,17 +37,29 @@ jobs:
       # A chave de assinatura vem dos segredos do repositório (Settings → Secrets and
       # variables → Actions), nunca do código: o repositório é público.
       - name: Montar a chave de assinatura
+        id: chave
         env:
           SINAL_ASSINATURA: ${{ secrets.SINAL_ASSINATURA }}
           SINAL_SENHA: ${{ secrets.SINAL_SENHA }}
         run: |
           if [ -z "$SINAL_ASSINATURA" ] || [ -z "$SINAL_SENHA" ]; then
-            echo "::error::Faltam os segredos SINAL_ASSINATURA e SINAL_SENHA (Settings → Secrets and variables → Actions)."
-            exit 1
+            echo "tem=nao" >> "$GITHUB_OUTPUT"
+          else
+            echo "$SINAL_ASSINATURA" | base64 -d > "$RUNNER_TEMP/assinatura.jks"
+            echo "tem=sim" >> "$GITHUB_OUTPUT"
           fi
-          echo "$SINAL_ASSINATURA" | base64 -d > "$RUNNER_TEMP/assinatura.jks"
+
+      # Sem os segredos, ainda compila (versão de teste) para conferir o código — mas não publica.
+      - name: Compilar só para conferir (sem a chave)
+        if: steps.chave.outputs.tem == 'nao'
+        working-directory: sinal/android
+        run: |
+          gradle --no-daemon assembleSinalDebug assemblePainelDebug
+          echo "::error::Compilou, mas faltam os segredos SINAL_ASSINATURA e SINAL_SENHA (Settings → Secrets and variables → Actions) para assinar e publicar."
+          exit 1
 
       - name: Compilar
+        if: steps.chave.outputs.tem == 'sim'
         working-directory: sinal/android
         env:
           SINAL_ASSINATURA_ARQUIVO: ${{ runner.temp }}/assinatura.jks
