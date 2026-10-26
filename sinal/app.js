@@ -16,7 +16,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.5.1';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.6.0';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // sem 0, 1, O e I
@@ -120,7 +120,12 @@ async function derivar(chave) {
   chaves.set(chave, d);
   return d;
 }
-const b64 = u => btoa(String.fromCharCode(...u));
+const b64 = u => {
+  // Em pedaços: espalhar 100 mil bytes de uma vez estoura a pilha.
+  let s = '';
+  for (let i = 0; i < u.length; i += 8192) s += String.fromCharCode.apply(null, u.subarray(i, i + 8192));
+  return btoa(s);
+};
 const deB64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 
 async function cifrar(chave, obj) {
@@ -264,6 +269,8 @@ function ligar(rotas, aoMensagem, aoPronto) {
     if (!msg || !msg.id) return;
     if (msg.kind === 'presenca') { aoMensagem(msg, rota, false); return; }
     if (Math.abs(Date.now() - msg.ts) > T.validade) return;
+    // Pedaços de anexo não passam pela lista de vistos (seriam muitos).
+    if (msg.kind === 'parte' || msg.kind === 'pedir') { aoMensagem(msg, rota, false); return; }
     // Repetição da mesma mensagem: não toca de novo, mas confirma de novo.
     const repetida = vistos.has(msg.id);
     if (!repetida) {
@@ -405,12 +412,28 @@ async function recebeu(msg, rota, repetida) {
   // porque é o "chegou" que faz o outro lado parar de mandar e apagar a guardada.
   if (msg.kind === 'alarme' || msg.kind === 'resposta') responder(rota.chave, { kind: 'chegou', ref: msg.id });
 
+  if (msg.kind === 'parte') { receberParte(msg, rota); return; }
+  if (msg.kind === 'pedir') {
+    const a = anexosEnviados.get(msg.anexo);
+    if (a && a.chave === rota.chave && Array.isArray(msg.faltam)) enviarPartes(msg.anexo, msg.faltam.map(Number));
+    return;
+  }
+  if (msg.kind === 'anexo-ok') {
+    const p = [...pendentes.values()].find(x => x.anexo && x.anexo.id === msg.anexo);
+    if (p) { p.anexo.ok = true; atualizarEnvio(p); }
+    anexosEnviados.delete(msg.anexo);
+    return;
+  }
+
   if (msg.kind === 'alarme') {
     if (repetida) return;
+    if (msg.anexo) receberFicha(msg, rota);
     // No PAINEL, o nome vem da lista dele, não do que a mensagem diz.
     showAlarm(msg, quem);
+    prepararTelaAnexo(msg);
     alarmeAberto = { ref: msg.id, chave: rota.chave };
-    registrar({ id: msg.id, dir: 'entrou', quem, tone: msg.tone, note: clean(msg.note, 80), ts: msg.criado || msg.ts, estado: 'recebido' });
+    registrar({ id: msg.id, dir: 'entrou', quem, tone: msg.tone, note: clean(msg.note, 80), ts: msg.criado || msg.ts, estado: 'recebido',
+      anexo: msg.anexo ? { id: msg.anexo.id, nome: clean(msg.anexo.nome, 120), tamanho: +msg.anexo.tamanho || 0 } : undefined });
   } else if (msg.kind === 'chegou' || msg.kind === 'viu') {
     const p = pendentes.get(msg.ref);
     if (!p) { apagarGuardada(rota.chave); return; }
@@ -488,11 +511,32 @@ async function mandarAlarme(destinos, tone) {
   if (!who) { setEnvio('Escreva o seu nome.'); return; }
   if (!bus || !bus.pronto()) { setEnvio('Ainda sem ligação com os servidores. Espere "Escuta ligada".'); return; }
   const grupo = destinos.length > 1 ? crypto.randomUUID() : null;
+  let preparado = null;
+  if (anexoEscolhido) {
+    setEnvio('Preparando o anexo…');
+    try { preparado = await prepararAnexo(anexoEscolhido); }
+    catch { setEnvio('Não consegui ler o arquivo. Escolha de novo.'); return; }
+    anexoEscolhido = null;
+    const s = $('#anexo-escolhido'); if (s) s.textContent = '';
+  }
   for (const d of destinos) {
     const agora = Date.now();
     const msg = { id: crypto.randomUUID(), kind: 'alarme', tone, note, who, ts: agora, criado: agora };
-    registrar({ id: msg.id, dir: 'saiu', quem: d.nome, tone, note, ts: agora, estado: 'enviando', grupo });
+    let anexo = null;
+    if (preparado) {
+      // Cada pessoa recebe o arquivo com um id próprio (o caminho é dela).
+      anexo = Object.assign({ id: crypto.randomUUID() }, preparado.ficha);
+      msg.anexo = anexo;
+      anexosEnviados.set(anexo.id, { partes: preparado.partes, chave: d.chave, topico: await destinoDe(d.chave) });
+      setTimeout(() => anexosEnviados.delete(anexo.id), T.validade);
+    }
+    registrar({ id: msg.id, dir: 'saiu', quem: d.nome, tone, note, ts: agora, estado: 'enviando', grupo,
+      anexo: anexo ? { id: anexo.id, nome: anexo.nome, tamanho: anexo.tamanho } : undefined });
     const p = await enviarImportante(d.chave, d.nome, msg, grupo);
+    if (anexo) {
+      p.anexo = { id: anexo.id, nome: anexo.nome, prog: 0, ok: false };
+      enviarPartes(anexo.id, null, pct => { p.anexo.prog = pct; atualizarEnvio(p); });
+    }
     if (!grupo) envioNaTela = p.id;
   }
   if (grupo) envioNaTela = grupo;
@@ -507,11 +551,13 @@ function atualizarEnvio(p) {
   if (p.msg.kind !== 'alarme') return;
   historicoAtualizar(p.id, { estado: p.estado, resposta: p.resposta });
   if (envioNaTela !== p.id && envioNaTela !== p.grupo) return;
+  const anexoTxt = x => !x.anexo ? '' : x.anexo.ok ? ' · 📎 arquivo entregue ✓'
+    : ' · 📎 ' + (x.anexo.prog < 100 ? 'enviando arquivo ' + x.anexo.prog + '%' : 'arquivo enviado, esperando confirmação');
   if (p.grupo) {
     const todos = [...pendentes.values()].filter(x => x.grupo === p.grupo);
     const prontos = todos.filter(x => ORDEM.indexOf(x.estado) >= ORDEM.indexOf('chegou')).length;
     setEnvioLista('Para todos — chegou em ' + prontos + ' de ' + todos.length, todos.map(x =>
-      [x.nome, x.estado === 'respondeu' ? '💬 “' + x.resposta + '”' : ESTADO_CURTO[x.estado], x.estado]));
+      [x.nome, (x.estado === 'respondeu' ? '💬 “' + x.resposta + '”' : ESTADO_CURTO[x.estado]) + anexoTxt(x), x.estado]));
     return;
   }
   const texto = {
@@ -522,7 +568,7 @@ function atualizarEnvio(p) {
     respondeu: p.nome + ' respondeu: “' + (p.resposta || '') + '”',
     falhou: 'Não chegou em 1 hora. ' + p.nome + ' não abriu o app.'
   }[p.estado];
-  setEnvio(texto, p.estado);
+  setEnvio(texto + anexoTxt(p), p.estado);
 }
 function setEnvio(texto, estado) {
   const el = $('#envio');
@@ -590,9 +636,18 @@ function desenharHistorico() {
     const resp = e.resposta
       ? (e.dir === 'saiu' ? ' 💬 “' + esc(e.resposta) + '”' : ' · você: “' + esc(e.resposta) + '”')
       : (e.dir === 'saiu' ? ' ' + (fim[e.estado] || '') : (e.estado === 'visto' ? ' ' + fim.visto : ''));
+    const anexo = !e.anexo ? '' : e.dir === 'entrou'
+      ? ' · <button class="link" data-hist-anexo="' + esc(e.anexo.id) + '">📎 ' + esc(e.anexo.nome) + '</button>'
+      : ' · 📎 ' + esc(e.anexo.nome);
     return '<li class="' + e.dir + '"><small>' + dia + hora(e.ts) + '</small> ' + seta + '<b>' + esc(e.quem) + '</b> · ' +
-      nomeTom(e.tone) + (e.note ? ' · “' + esc(e.note) + '”' : '') + '<span class="fim">' + resp + '</span></li>';
+      nomeTom(e.tone) + (e.note ? ' · “' + esc(e.note) + '”' : '') + anexo + '<span class="fim">' + resp + '</span></li>';
   }).join('') : '<li class="muted">Nada ainda.</li>';
+  ul.querySelectorAll('[data-hist-anexo]').forEach(b => b.onclick = async () => {
+    const r = recebendo.get(b.dataset.histAnexo);
+    const a = r && r.blob ? { blob: r.blob, nome: r.meta.nome, tipo: r.meta.tipo } : await lerArquivo(b.dataset.histAnexo);
+    if (!a) { alert('Este arquivo não está mais no aparelho (ficam os 20 últimos) ou não chegou inteiro.'); return; }
+    abrirCom(a.blob, a.nome, a.tipo);
+  });
 }
 /** A resposta que chegou: um cartão embaixo, com um toque curto (não é alarme). */
 function mostrarResposta(quem, texto) {
@@ -646,6 +701,219 @@ document.addEventListener('pointerdown', aoPrimeiroToque, { capture: true });
 function mostrarAvisoSom() {
   const el = $('#aviso-som');
   if (el) el.hidden = !bus || somLiberado();
+}
+
+/* ————————————————— anexos (arquivo até 2 MB) ————————————————— */
+
+/*
+ * O arquivo vai junto do alarme, em pedaços de 32 KB, cada um cifrado com a
+ * mesma chave. O alarme leva a "ficha" (nome, tamanho, quantos pedaços e o
+ * SHA-256); os pedaços vão logo depois. Quem recebe remonta, confere o
+ * SHA-256 e responde "anexo-ok". Faltou pedaço (estava sem sinal, abriu o app
+ * depois)? Pede só os que faltam — enquanto o app de quem mandou estiver aberto.
+ */
+const ANEXO_MAX = 2 * 1024 * 1024;
+const PEDACO = 32 * 1024;
+let anexoEscolhido = null;           // File escolhido para o próximo envio
+const anexosEnviados = new Map();    // id → { partes: [b64], chave, topico, ate }
+const recebendo = new Map();         // id → { meta, partes: Map, chave, ultimo, pedidos, pronto, timer }
+
+const tamanhoBonito = n => n < 1024 ? n + ' B' : n < 1048576 ? Math.round(n / 1024) + ' KB' : (n / 1048576).toFixed(1).replace('.', ',') + ' MB';
+const dormir = ms => new Promise(r => setTimeout(r, ms));
+
+async function sha256Hex(bytes) {
+  const h = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+  return [...h].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Lê o arquivo escolhido e devolve os pedaços (base64) e a ficha. */
+async function prepararAnexo(arquivo) {
+  const bytes = new Uint8Array(await arquivo.arrayBuffer());
+  const partes = [];
+  for (let i = 0; i < bytes.length; i += PEDACO) partes.push(b64(bytes.subarray(i, i + PEDACO)));
+  const ficha = {
+    nome: clean(arquivo.name, 120) || 'arquivo', tipo: clean(arquivo.type, 100) || 'application/octet-stream',
+    tamanho: bytes.length, partes: Math.max(partes.length, 1), sha: await sha256Hex(bytes)
+  };
+  if (!partes.length) partes.push('');
+  return { ficha, partes };
+}
+
+/** Manda os pedaços (só os pedidos, se `quais`), devagar para não afogar o servidor. */
+async function enviarPartes(id, quais, aoAndar) {
+  const a = anexosEnviados.get(id);
+  if (!a || !bus) return;
+  const lista = quais || a.partes.map((_, n) => n);
+  for (let i = 0; i < lista.length; i++) {
+    const n = lista[i];
+    if (!bus || a.partes[n] === undefined) return;
+    await bus.mandar(a.chave, a.topico, { id: id + ':' + n, kind: 'parte', anexo: id, n, dados: a.partes[n], ts: Date.now() });
+    if (aoAndar) aoAndar(Math.round(100 * (i + 1) / lista.length));
+    await dormir(25);
+  }
+}
+
+/* ——— quem recebe ——— */
+
+function entradaRecebendo(id, chave) {
+  let r = recebendo.get(id);
+  if (!r) { r = { partes: new Map(), chave, ultimo: Date.now(), pedidos: 0, pronto: false }; recebendo.set(id, r); }
+  return r;
+}
+function receberFicha(msg, rota) {
+  const f = msg.anexo;
+  if (!f || !f.id) return;
+  const r = entradaRecebendo(f.id, rota.chave);
+  r.meta = { id: f.id, nome: clean(f.nome, 120) || 'arquivo', tipo: clean(f.tipo, 100), tamanho: +f.tamanho || 0, partes: +f.partes || 1, sha: String(f.sha || '') };
+  r.alarme = msg.id;
+  r.ultimo = Date.now();
+  vigiarPartes(f.id);
+  conferirAnexo(f.id);
+}
+function receberParte(msg, rota) {
+  const r = entradaRecebendo(msg.anexo, rota.chave);
+  if (r.pronto) return;
+  r.partes.set(+msg.n, String(msg.dados || ''));
+  r.ultimo = Date.now();
+  conferirAnexo(msg.anexo);
+}
+/** Faltando pedaço e nada chegando há 3 s: pede os que faltam (até 2 min). */
+function vigiarPartes(id) {
+  const r = recebendo.get(id);
+  clearInterval(r.timer);
+  r.timer = setInterval(() => {
+    if (r.pronto || !r.meta) { clearInterval(r.timer); return; }
+    if (Date.now() - r.ultimo < 3000) return;
+    if (++r.pedidos > 40) { clearInterval(r.timer); mostrarAnexo(id); return; }
+    const faltam = [];
+    for (let n = 0; n < r.meta.partes && faltam.length < 200; n++) if (!r.partes.has(n)) faltam.push(n);
+    r.ultimo = Date.now();
+    responder(r.chave, { kind: 'pedir', anexo: id, faltam });
+  }, 1500);
+}
+async function conferirAnexo(id) {
+  const r = recebendo.get(id);
+  if (!r || !r.meta || r.pronto) { if (r && r.meta) mostrarAnexo(id); return; }
+  if (r.partes.size < r.meta.partes) { mostrarAnexo(id); return; }
+  r.pronto = true;
+  clearInterval(r.timer);
+  const pedacos = [];
+  for (let n = 0; n < r.meta.partes; n++) pedacos.push(deB64(r.partes.get(n) || ''));
+  const bytes = concat(...pedacos);
+  if (await sha256Hex(bytes) !== r.meta.sha) {
+    // Veio estragado: descarta e pede tudo de novo.
+    r.pronto = false; r.partes.clear(); r.ultimo = 0; vigiarPartes(id); return;
+  }
+  r.blob = new Blob([bytes], { type: r.meta.tipo || 'application/octet-stream' });
+  r.partes.clear();
+  guardarArquivo(r.meta, r.blob);
+  responder(r.chave, { kind: 'anexo-ok', anexo: id });
+  mostrarAnexo(id);
+}
+
+/** Na tela do alarme: o arquivo, o andamento e os botões. */
+function mostrarAnexo(id) {
+  const r = recebendo.get(id);
+  const el = $('#anexo-recebido');
+  if (!r || !r.meta || !el || el.dataset.anexo !== id) return;
+  const pct = Math.floor(100 * r.partes.size / r.meta.partes);
+  el.querySelector('.nome-anexo').textContent = '📎 ' + r.meta.nome + ' · ' + tamanhoBonito(r.meta.tamanho);
+  const estado = el.querySelector('.estado-anexo');
+  const botoes = el.querySelector('.botoes-anexo');
+  const previa = el.querySelector('img');
+  if (r.blob) {
+    estado.textContent = '';
+    botoes.hidden = false;
+    if (/^image\//.test(r.meta.tipo)) { previa.src = URL.createObjectURL(r.blob); previa.hidden = false; }
+  } else {
+    estado.textContent = r.pedidos > 40 ? 'O arquivo não chegou inteiro. Peça para mandar de novo.' : 'Recebendo… ' + pct + '%';
+    botoes.hidden = true;
+    previa.hidden = true;
+  }
+}
+function prepararTelaAnexo(msg) {
+  const el = $('#anexo-recebido');
+  if (!el) return;
+  if (!msg.anexo || !msg.anexo.id) { el.hidden = true; el.dataset.anexo = ''; return; }
+  el.hidden = false;
+  el.dataset.anexo = msg.anexo.id;
+  mostrarAnexo(msg.anexo.id);
+}
+
+/* Abrir/salvar: "Salvar" baixa o arquivo; "Abrir com…" usa o compartilhar do sistema (Android). */
+function salvarBlob(blob, nome) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = nome;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+async function abrirCom(blob, nome, tipo) {
+  try {
+    const f = new File([blob], nome, { type: tipo || blob.type });
+    if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], title: nome }); return; }
+  } catch (e) { if (e.name === 'AbortError') return; }
+  window.open(URL.createObjectURL(blob), '_blank');
+}
+
+/* ——— arquivos recebidos ficam no aparelho (IndexedDB), para abrir pelo histórico ——— */
+
+function bancoArquivos() {
+  return new Promise((ok, falha) => {
+    const req = indexedDB.open('sinal-anexos-' + ROLE, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('arquivos', { keyPath: 'id' });
+    req.onsuccess = () => ok(req.result);
+    req.onerror = () => falha(req.error);
+  });
+}
+async function guardarArquivo(meta, blob) {
+  try {
+    const db = await bancoArquivos();
+    const tx = db.transaction('arquivos', 'readwrite');
+    const loja = tx.objectStore('arquivos');
+    loja.put({ id: meta.id, nome: meta.nome, tipo: meta.tipo, blob, ts: Date.now() });
+    // Guarda os 20 mais novos.
+    const todos = await new Promise(ok => { const q = loja.getAll(); q.onsuccess = () => ok(q.result); q.onerror = () => ok([]); });
+    todos.sort((a, b) => b.ts - a.ts).slice(20).forEach(x => loja.delete(x.id));
+  } catch {}
+}
+async function lerArquivo(id) {
+  try {
+    const db = await bancoArquivos();
+    return await new Promise(ok => {
+      const q = db.transaction('arquivos').objectStore('arquivos').get(id);
+      q.onsuccess = () => ok(q.result || null); q.onerror = () => ok(null);
+    });
+  } catch { return null; }
+}
+
+/* ——— escolher o arquivo para mandar (sem `accept`: quem decide é o tamanho) ——— */
+
+function blocoAnexar() {
+  return '<div class="anexar"><button class="mini" type="button" id="anexar">📎 Anexar arquivo</button>' +
+    '<span id="anexo-escolhido" class="muted"></span><input type="file" id="arquivo-anexo" hidden></div>';
+}
+function ligarAnexar() {
+  const bt = $('#anexar');
+  if (!bt) return;
+  const input = $('#arquivo-anexo');
+  const mostrar = () => {
+    const s = $('#anexo-escolhido');
+    s.innerHTML = anexoEscolhido
+      ? esc(anexoEscolhido.name) + ' · ' + tamanhoBonito(anexoEscolhido.size) + ' <button class="link" id="tirar-anexo">tirar</button>' : '';
+    const t = $('#tirar-anexo');
+    if (t) t.onclick = () => { anexoEscolhido = null; mostrar(); };
+  };
+  bt.onclick = () => input.click();
+  input.onchange = () => {
+    const f = input.files[0];
+    input.value = '';
+    if (!f) return;
+    if (f.size > ANEXO_MAX) { alert('O arquivo tem ' + tamanhoBonito(f.size) + '. O limite é 2 MB.'); return; }
+    anexoEscolhido = f;
+    mostrar();
+  };
+  mostrar();
 }
 
 /* ————————————————— tela acesa, som, alarme ————————————————— */
@@ -736,13 +1004,29 @@ function enviarResposta(texto) {
   if (bus) enviarImportante(a.chave, '', { id: crypto.randomUUID(), kind: 'resposta', ref: a.ref, texto, who: myName(), ts: Date.now() });
 }
 {
+  const ax = document.createElement('div');
+  ax.id = 'anexo-recebido';
+  ax.className = 'anexo-recebido';
+  ax.hidden = true;
+  ax.innerHTML = '<p class="nome-anexo"></p><img alt="" hidden><p class="estado-anexo"></p>' +
+    '<div class="botoes-anexo" hidden><button type="button" data-anexo-acao="abrir">Abrir com…</button>' +
+    '<button type="button" data-anexo-acao="salvar">Salvar</button></div>';
+  alarmEl.querySelector('.hint').after(ax);
+  ax.querySelectorAll('[data-anexo-acao]').forEach(b => b.onclick = () => {
+    const r = recebendo.get(ax.dataset.anexo);
+    if (!r || !r.blob) return;
+    // Mexer no arquivo cala o alarme.
+    clearInterval(ringing); ringing = null; if (navigator.vibrate) navigator.vibrate(0);
+    if (b.dataset.anexoAcao === 'salvar') salvarBlob(r.blob, r.meta.nome); else abrirCom(r.blob, r.meta.nome, r.meta.tipo);
+  });
+
   const r = document.createElement('div');
   r.className = 'respostas';
   r.innerHTML = '<p class="eye">RESPONDER</p><div class="rapidas">' +
     RESPOSTAS.map(t => '<button type="button" data-resposta="' + esc(t) + '">' + esc(t) + '</button>').join('') +
     '</div><div class="livre"><input id="resposta-livre" maxlength="80" placeholder="Ou escreva…" autocomplete="off" enterkeyhint="send">' +
     '<button type="button" id="resposta-enviar">Enviar</button></div>';
-  alarmEl.querySelector('button').before(r);
+  alarmEl.querySelector(':scope > .btn').before(r);
   r.querySelectorAll('[data-resposta]').forEach(b => b.onclick = () => enviarResposta(b.dataset.resposta));
   const livre = r.querySelector('#resposta-livre');
   r.querySelector('#resposta-enviar').onclick = () => enviarResposta(livre.value);
@@ -834,7 +1118,7 @@ function telaPainel() {
     (escolhido
       ? '<h2>Mandar para ' + esc(escolhido.name) + '</h2>' +
         field('recado', todos ? 'Cartão que todos veem' : 'Cartão que a pessoa vê', { max: 80, ph: 'Escreva a mensagem (opcional)', area: true }) +
-        toneButtons() + '<div id="envio" class="envio" aria-live="polite"></div>'
+        blocoAnexar() + toneButtons() + '<div id="envio" class="envio" aria-live="polite"></div>'
       : (list.length ? '<p class="muted" style="margin-top:1rem">Toque numa pessoa para mandar.</p>' : '')) +
     blocoHistorico() +
     '</div>';
@@ -870,6 +1154,7 @@ function telaPainel() {
   atualizarPresenca();
   redesenharEnvio();
   ligarHistorico();
+  ligarAnexar();
 }
 
 function telaSinal() {
@@ -911,7 +1196,7 @@ function telaSinal() {
     '<h2>Chamar o PAINEL</h2>' +
     '<p class="pres pres-painel" data-pres="painel" data-prefixo="PAINEL: "></p>' +
     field('recado', 'Cartão que o PAINEL vê', { max: 80, ph: 'Escreva a mensagem (opcional)', area: true }) +
-    toneButtons() + '<div id="envio" class="envio" aria-live="polite"></div>' +
+    blocoAnexar() + toneButtons() + '<div id="envio" class="envio" aria-live="polite"></div>' +
     blocoHistorico() +
     '<button class="btn ghost" id="sair">Trocar de convite</button></div>';
   preencherVersao();
@@ -923,6 +1208,7 @@ function telaSinal() {
   atualizarPresenca();
   redesenharEnvio();
   ligarHistorico();
+  ligarAnexar();
   $('#sair').onclick = () => {
     if (!confirm('Sair deste convite? Para voltar, vai precisar do convite de novo.')) return;
     pararEscuta();

@@ -30,6 +30,7 @@ As pastas são separadas (e não uma dentro da outra) para o Android instalar os
 | **Quem está online** | Bolinha verde ao lado de cada pessoa (e do PAINEL, no SINAL). Cada app anuncia "estou aqui" a cada 30 s; sem notícia há 75 s, aparece *visto há X min*. |
 | **Não perder mensagem** | O alarme fica **guardado no servidor** (mensagem retida do MQTT) e repete até chegar: 4 vezes rápido, depois a cada 30 s, por até 1 hora. Quem abre o app depois recebe na hora, com *mandada às HHhMM*. Ao chegar, a cópia guardada é apagada. A resposta também segue assim. |
 | **Histórico** | Lista no fim da tela: enviados e recebidos, hora, *chegou / viu / resposta*. Fica só no aparelho (até 200). |
+| **Anexo (até 2 MB)** | *📎 Anexar arquivo* junto do alarme, nos dois sentidos. Vai em pedaços de 32 KB, cada um cifrado; quem recebe remonta, confere o SHA-256 e responde *arquivo entregue ✓*. Faltou pedaço (sem sinal, abriu o app depois)? Pede só os que faltam — enquanto o app de quem mandou estiver aberto. Na tela do alarme: prévia de foto, **Abrir com…** e **Salvar**; os 20 últimos ficam no aparelho e abrem pelo histórico. |
 | **Todos** | No PAINEL, com 2 pessoas ou mais: chama todas de uma vez e mostra pessoa por pessoa quem já recebeu, viu ou respondeu. |
 
 **A escuta liga sozinha** ao abrir o app (a menos que você tenha tocado em *Parar de escutar*:

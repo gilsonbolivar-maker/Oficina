@@ -84,3 +84,14 @@ textarea::placeholder { color: rgba(243, 237, 228, .7); }
 .historico .fim { color: var(--ok); }
 .rodape-versao { margin-top: 1.2rem; text-align: center; color: var(--muted); font-size: .85rem; }
 .link { border: 0; background: none; padding: 0; color: var(--fg); text-decoration: underline; font-size: .85rem; }
+.anexar { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin-top: .6rem; }
+.anexar .mini { min-height: 2.6rem; }
+.anexar .muted { font-size: .85rem; overflow-wrap: anywhere; }
+.anexo-recebido { width: 100%; max-width: 28rem; margin-top: 1rem; padding: .8rem 1rem; border-radius: 1rem; background: rgba(0, 0, 0, .22); }
+.anexo-recebido p { margin: 0; overflow-wrap: anywhere; }
+.anexo-recebido .nome-anexo { font-weight: 650; }
+.anexo-recebido .estado-anexo { font-size: .9rem; margin-top: .2rem; }
+.anexo-recebido img { display: block; max-width: 100%; max-height: 30vh; margin: .6rem auto 0; border-radius: .6rem; }
+.botoes-anexo { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-top: .6rem; }
+.botoes-anexo button { min-height: 2.8rem; border: 0; border-radius: .8rem; background: var(--fg); color: var(--alert); font-weight: 700; }
+.historico .link { color: inherit; }
