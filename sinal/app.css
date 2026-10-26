@@ -49,3 +49,4 @@ textarea::placeholder { color: rgba(243, 237, 228, .7); }
 .faixa-instalar .btn { margin: 0; }
 .fechar-faixa { position: absolute; top: .4rem; right: .4rem; width: 2rem; height: 2rem; border: 0; background: transparent; color: var(--muted); }
 #instalar { padding: 0 1.25rem; }
+.aviso-som { margin: .5rem 0 0; padding: .7rem 1rem; border-radius: 1rem; background: #3a2a10; color: #ffd27a; font-size: .92rem; }

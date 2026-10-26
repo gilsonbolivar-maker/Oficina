@@ -16,7 +16,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.2.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.3.0';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // sem 0, 1, O e I
@@ -288,14 +288,32 @@ async function destinoDe(chave) {
 async function escutar() {
   unlock();
   pedirTelaAcesa();
-  if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
+  write('escutar', true);
   if (bus) bus.parar();
   bus = ligar(await montarRotas(), recebeu);
 }
-function pararEscuta() {
+/** `lembrar`: a pessoa tocou em "Parar" — o app não liga sozinho na próxima vez. */
+function pararEscuta(lembrar) {
   if (bus) bus.parar();
   bus = null;
+  if (lembrar) write('escutar', false);
   if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+}
+
+/*
+ * O navegador só deixa tocar som, vibrar e pedir notificação depois que a
+ * pessoa toca na tela. A escuta liga sozinha ao abrir; o primeiro toque em
+ * qualquer lugar libera o resto.
+ */
+const somLiberado = () => !!audioCtx && audioCtx.state === 'running';
+function aoPrimeiroToque() {
+  unlock().then(mostrarAvisoSom);
+  if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
+}
+document.addEventListener('pointerdown', aoPrimeiroToque, { capture: true });
+function mostrarAvisoSom() {
+  const el = $('#aviso-som');
+  if (el) el.hidden = !bus || somLiberado();
 }
 
 async function recebeu(msg, rota, repetida) {
@@ -455,7 +473,9 @@ function cabeca(eye, titulo) {
 }
 function blocoEscuta() {
   return bus
-    ? '<p id="status" class="muted">Conectando…</p><button class="btn ghost" id="desligar">Parar de escutar</button>'
+    ? '<p id="status" class="muted">Conectando…</p>' +
+      '<p id="aviso-som" class="aviso-som" hidden>🔈 Toque em qualquer lugar da tela para liberar o som.</p>' +
+      '<button class="btn ghost" id="desligar">Parar de escutar</button>'
     : '<button class="btn alert" id="ligar">Ligar e escutar</button>' +
       '<p class="muted">Sem ligar, o app não recebe nem manda. Deixe a tela aberta: com o celular bloqueado, o navegador não toca.</p>';
 }
@@ -463,7 +483,8 @@ function ligarBotoesEscuta(redesenhar) {
   const l = $('#ligar');
   if (l) l.onclick = async () => { await escutar(); redesenhar(); };
   const d = $('#desligar');
-  if (d) d.onclick = () => { pararEscuta(); redesenhar(); };
+  if (d) d.onclick = () => { pararEscuta(true); redesenhar(); };
+  mostrarAvisoSom();
   if (bus) bus.pronto() ? setLigacao('Escuta ligada. Deixe esta tela aberta.', true) : setLigacao('Conectando…', false);
 }
 
@@ -567,7 +588,7 @@ function telaSinal() {
       if (!name) { $('#hint').textContent = 'Escreva o seu nome. Assim o PAINEL sabe quem chamou.'; return; }
       if (!c) { $('#hint').textContent = 'Convite não reconhecido. Ele tem um código de 5 letras, um traço e mais 26 letras.'; return; }
       write('name', name); write('code', c.code); write('chave', c.chave); write('convite', '');
-      telaSinal();
+      escutar().then(telaSinal);
     };
     return;
   }
@@ -668,4 +689,7 @@ if ('serviceWorker' in navigator) {
 }
 preencherVersao();
 faixaInstalar();
-if (ROLE === 'painel') telaPainel(); else telaSinal();
+const desenharTela = () => (ROLE === 'painel' ? telaPainel() : telaSinal());
+desenharTela();
+// Liga a escuta sozinho ao abrir — a menos que a pessoa tenha tocado em "Parar de escutar".
+if (read('escutar', true) && (ROLE === 'painel' || read('chave', ''))) escutar().then(desenharTela);
