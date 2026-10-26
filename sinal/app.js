@@ -16,7 +16,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.5.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.5.1';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // sem 0, 1, O e I
@@ -569,7 +569,8 @@ function historicoAtualizar(id, mudanca) {
 }
 function blocoHistorico() {
   return '<details class="historico" id="historico"' + (histAberto ? ' open' : '') + '><summary>Histórico</summary>' +
-    '<ul id="hist-lista"></ul><button class="btn ghost" id="hist-limpar">Limpar histórico</button></details>';
+    '<ul id="hist-lista"></ul><button class="btn ghost" id="hist-limpar">Limpar histórico</button></details>' +
+    '<p class="rodape-versao"><span data-versao></span> · <button class="link" id="atualizar">Procurar atualização</button></p>';
 }
 function desenharHistorico() {
   const ul = $('#hist-lista');
@@ -616,6 +617,13 @@ function ligarHistorico() {
   const d = $('#historico');
   if (!d) return;
   d.addEventListener('toggle', () => { histAberto = d.open; });
+  const at = $('#atualizar');
+  if (at) at.onclick = async () => {
+    at.textContent = 'Procurando…';
+    await procurarVersao();
+    // Se veio versão nova, o controllerchange recarrega; se não, recarrega igual.
+    setTimeout(() => location.reload(), 2500);
+  };
   $('#hist-limpar').onclick = () => {
     if (!confirm('Apagar o histórico deste aparelho?')) return;
     write('historico', []);
@@ -710,6 +718,7 @@ const RESPOSTAS = ['Estou indo', 'Já ligo', 'Agora não posso', 'OK, entendi'];
 
 function fecharAlarme() {
   alarmEl.hidden = true;
+  setTimeout(recarregarSePuder, 1500);
   clearInterval(ringing);
   ringing = null;
   if (navigator.vibrate) navigator.vibrate(0);
@@ -986,15 +995,27 @@ if (ROLE === 'sinal' && location.hash.startsWith('#c=')) {
   history.replaceState(null, '', location.pathname + location.search);
 }
 
+/*
+ * Atualizar: o Android deixa o app vivo em segundo plano por dias, então ele
+ * procura versão nova ao voltar para a frente e a cada 30 min. Quando a nova
+ * assume, recarrega sozinho (a escuta liga de novo ao abrir) — só espera se
+ * houver um alarme na tela.
+ */
+let recarregar = false;
+function recarregarSePuder() {
+  if (!recarregar || !alarmEl.hidden) return;
+  recarregar = false;
+  location.reload();
+}
+function procurarVersao() {
+  if (!navigator.serviceWorker) return Promise.resolve();
+  return navigator.serviceWorker.getRegistration().then(r => r && r.update()).catch(() => {});
+}
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
-  let recarregou = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    // Versão nova assumiu: recarrega uma vez, se não estiver escutando.
-    if (recarregou || bus) return;
-    recarregou = true;
-    location.reload();
-  });
+  navigator.serviceWorker.addEventListener('controllerchange', () => { recarregar = true; recarregarSePuder(); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') procurarVersao(); });
+  setInterval(procurarVersao, 30 * 60 * 1000);
 }
 preencherVersao();
 faixaInstalar();

@@ -82,3 +82,5 @@ textarea::placeholder { color: rgba(243, 237, 228, .7); }
 .historico li small { color: var(--muted); }
 .historico li.entrou { color: #ffd9d6; }
 .historico .fim { color: var(--ok); }
+.rodape-versao { margin-top: 1.2rem; text-align: center; color: var(--muted); font-size: .85rem; }
+.link { border: 0; background: none; padding: 0; color: var(--fg); text-decoration: underline; font-size: .85rem; }
