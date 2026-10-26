@@ -2,7 +2,7 @@
    receber, precisa de internet). Página vem da rede quando dá; o resto, do cache. */
 'use strict';
 
-const VERSAO = '1.6.1';   // precisa casar com a VERSAO do app.js
+const VERSAO = '1.7.0';   // precisa casar com a VERSAO do app.js
 const CACHE_APP = 'sinal-painel-v' + VERSAO;
 const ARQUIVOS = ['.', 'index.html', '../sinal/app.js', '../sinal/app.css', 'manifest.webmanifest',
   'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];

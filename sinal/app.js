@@ -16,7 +16,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.6.1';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.7.0';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // sem 0, 1, O e I
@@ -267,7 +267,7 @@ function ligar(rotas, aoMensagem, aoPronto) {
     if (!rota || !texto) return;   // vazio = mensagem guardada que foi apagada
     const msg = await decifrar(rota.chave, texto);
     if (!msg || !msg.id) return;
-    if (msg.kind === 'presenca') { aoMensagem(msg, rota, false); return; }
+    if (msg.kind === 'presenca' || msg.kind === 'lista') { aoMensagem(msg, rota, false); return; }
     if (Math.abs(Date.now() - msg.ts) > T.validade) return;
     // Pedaços de anexo não passam pela lista de vistos (seriam muitos).
     if (msg.kind === 'parte' || msg.kind === 'pedir') { aoMensagem(msg, rota, false); return; }
@@ -306,6 +306,8 @@ async function montarRotas() {
   };
   if (ROLE === 'painel') {
     for (const p of people()) await por(p.chave, { chave: p.chave, nome: p.name, code: p.code });
+    const mestra = read('mestra', '');
+    if (mestra) rotas[await topicoSync(mestra)] = { chave: mestra, nome: 'PAINEL', sync: true };
   } else {
     const chave = read('chave', '');
     if (chave) await por(chave, { chave, nome: 'PAINEL' });
@@ -324,7 +326,7 @@ async function escutar() {
   pedirTelaAcesa();
   write('escutar', true);
   if (bus) bus.parar();
-  bus = ligar(await montarRotas(), recebeu, () => anunciar(true));
+  bus = ligar(await montarRotas(), recebeu, () => { anunciar(true); publicarLista(); });
   clearInterval(anuncio);
   anuncio = setInterval(() => anunciar(true), T.presenca);
 }
@@ -398,6 +400,7 @@ Object.entries(read('presenca', {})).forEach(([k, v]) => presenca.set(k, Object.
 /* ——— receber ——— */
 
 async function recebeu(msg, rota, repetida) {
+  if (rota.sync) { recebeuSync(msg, repetida); return; }
   const quem = ROLE === 'painel' ? rota.nome : (clean(msg.who, 24) || 'PAINEL');
   if (msg.kind === 'presenca') {
     const atual = presenca.get(rota.chave);
@@ -916,6 +919,109 @@ function ligarAnexar() {
   mostrar();
 }
 
+/* ————————————————— o mesmo PAINEL em vários aparelhos ————————————————— */
+
+/*
+ * Os aparelhos do mesmo PAINEL dividem uma chave "mestra" (vai no link
+ * #p=…). Com ela, todos escutam um tópico de sincronia, cifrado: a lista de
+ * pessoas (com as chaves) fica guardada lá e quem muda a lista manda a nova,
+ * com a hora — vale a mais nova. Quando um aparelho atende um alarme, avisa
+ * os outros, que param de tocar.
+ */
+const topicoSync = async mestra => PREFIXO + (await hashHex('painel-sync|' + mestra)).slice(0, 32);
+function lerCodigoPainel(texto) {
+  const m = String(texto || '').toUpperCase().match(/PAINEL-([A-Z2-9]{26})/) || String(texto || '').toUpperCase().match(/^\s*([A-Z2-9]{26})\s*$/);
+  return m && [...m[1]].every(c => ABC.includes(c)) ? m[1] : null;
+}
+function listaMudou() {
+  write('lista-ts', Date.now());
+  publicarLista();
+}
+async function publicarLista() {
+  const mestra = read('mestra', '');
+  const ts = read('lista-ts', 0);
+  if (ROLE !== 'painel' || !mestra || !bus || !ts) return;
+  bus.mandar(mestra, await topicoSync(mestra), { kind: 'lista', id: crypto.randomUUID(), ts, people: people() }, true);
+}
+async function avisarAtendido(ref) {
+  const mestra = read('mestra', '');
+  if (!mestra || !bus) return;
+  bus.mandar(mestra, await topicoSync(mestra), { kind: 'atendido', id: crypto.randomUUID(), ts: Date.now(), ref });
+}
+async function recebeuSync(msg, repetida) {
+  if (msg.kind === 'lista' && Array.isArray(msg.people) && msg.ts > read('lista-ts', 0)) {
+    const lista = msg.people.filter(p => p && p.code && p.chave && p.name)
+      .map(p => ({ name: clean(p.name, 24), code: String(p.code).slice(0, 5), chave: String(p.chave).slice(0, 26) }));
+    savePeople(lista);
+    write('lista-ts', msg.ts);
+    await escutar();      // escuta as pessoas novas
+    telaPainel();
+  } else if (msg.kind === 'atendido' && !repetida && alarmeAberto && alarmeAberto.ref === msg.ref) {
+    fecharAlarme(false);
+    setEnvio('Atendido em outro aparelho do PAINEL.');
+  }
+}
+
+function blocoAparelhos() {
+  const mestra = read('mestra', '');
+  return '<details class="historico aparelhos" id="aparelhos"' + (read('mestra-pendente', '') ? ' open' : '') + '>' +
+    '<summary>Outros aparelhos</summary>' +
+    (mestra
+      ? '<p class="muted">Este PAINEL está ligado a outros aparelhos: a lista de pessoas é a mesma em todos, ' +
+        'todos recebem os chamados e, quando um atende, os outros param de tocar.</p>' +
+        '<button class="btn surface" id="mandar-mestra">Ligar mais um aparelho</button>' +
+        '<button class="btn ghost" id="sair-mestra">Desligar este aparelho do grupo</button>'
+      : '<p class="muted">Use o mesmo PAINEL no celular, no iPad e no computador.</p>' +
+        '<button class="btn surface" id="mandar-mestra">Usar este PAINEL em outro aparelho</button>' +
+        field('codigo-painel', 'Ou, neste aparelho, cole o código do PAINEL que já existe', { max: 200, ph: 'PAINEL-…' }) +
+        '<button class="btn surface" id="conectar-mestra">Conectar a esse PAINEL</button>') +
+    '</details>';
+}
+function ligarAparelhos() {
+  const pend = read('mestra-pendente', '');
+  if (pend && $('#codigo-painel')) $('#codigo-painel').value = 'PAINEL-' + pend;
+  const mandar = $('#mandar-mestra');
+  if (mandar) mandar.onclick = async () => {
+    let mestra = read('mestra', '');
+    if (!mestra) {
+      mestra = aleatorio(26);
+      write('mestra', mestra);
+      write('lista-ts', Date.now());
+      if (bus) await escutar();
+      publicarLista();
+    }
+    const link = new URL('#p=' + mestra, location.href).href;
+    const texto = 'PAINEL — para usar o mesmo PAINEL neste aparelho:\n\n' +
+      '1. Abra o link (no Chrome ou Safari) e instale o PAINEL:\n' + link +
+      '\n\n2. No PAINEL instalado, em "Outros aparelhos", cole este código e toque em Conectar:\nPAINEL-' + mestra +
+      '\n\n⚠️ Quem tiver este código controla o PAINEL. Não repasse.';
+    if (navigator.share) {
+      try { await navigator.share({ title: 'PAINEL', text: texto }); telaPainel(); return; } catch (e) { if (e.name === 'AbortError') { telaPainel(); return; } }
+    }
+    try { await navigator.clipboard.writeText(texto); alert('Copiado. Mande para você mesmo e abra no outro aparelho.'); }
+    catch { prompt('Copie e abra no outro aparelho:', texto); }
+    telaPainel();
+  };
+  const conectar = $('#conectar-mestra');
+  if (conectar) conectar.onclick = async () => {
+    const m = lerCodigoPainel($('#codigo-painel').value);
+    if (!m) { alert('Código não reconhecido. Ele começa com PAINEL- e tem mais 26 letras.'); return; }
+    const n = people().length;
+    if (n && !confirm('A lista deste aparelho (' + n + ' pessoa' + (n > 1 ? 's' : '') + ') será trocada pela do outro aparelho. Continuar?')) return;
+    write('mestra', m); write('mestra-pendente', ''); write('lista-ts', 0);
+    await escutar();
+    telaPainel();
+    setLigacao('Conectado. Buscando a lista do outro aparelho…', true);
+  };
+  const sair = $('#sair-mestra');
+  if (sair) sair.onclick = async () => {
+    if (!confirm('Desligar este aparelho do grupo? A lista fica aqui, mas para de sincronizar.')) return;
+    write('mestra', '');
+    if (bus) await escutar();
+    telaPainel();
+  };
+}
+
 /* ————————————————— tela acesa, som, alarme ————————————————— */
 
 function pedirTelaAcesa() {
@@ -984,7 +1090,8 @@ function showAlarm(data, who) {
 /* Respostas rápidas na tela do alarme: tocar numa delas já fecha o alarme. */
 const RESPOSTAS = ['Estou indo', 'Já ligo', 'Agora não posso', 'OK, entendi'];
 
-function fecharAlarme() {
+function fecharAlarme(daqui = true) {
+  if (daqui && alarmeAberto && ROLE === 'painel') avisarAtendido(alarmeAberto.ref);
   alarmEl.hidden = true;
   setTimeout(recarregarSePuder, 1500);
   clearInterval(ringing);
@@ -1120,6 +1227,7 @@ function telaPainel() {
         field('recado', todos ? 'Cartão que todos veem' : 'Cartão que a pessoa vê', { max: 80, ph: 'Escreva a mensagem (opcional)', area: true }) +
         blocoAnexar() + toneButtons() + '<div id="envio" class="envio" aria-live="polite"></div>'
       : (list.length ? '<p class="muted" style="margin-top:1rem">Toque numa pessoa para mandar.</p>' : '')) +
+    blocoAparelhos() +
     blocoHistorico() +
     '</div>';
   preencherVersao();
@@ -1132,6 +1240,7 @@ function telaPainel() {
     if (!name) { alert('Escreva o nome da pessoa.'); return; }
     const p = { name, code: aleatorio(5), chave: aleatorio(26) };
     savePeople([p].concat(people()));
+    listaMudou();
     selected = p.code;
     if (bus) await escutar();   // passa a escutar a pessoa nova também
     telaPainel();
@@ -1144,6 +1253,7 @@ function telaPainel() {
     const person = people().find(p => p.code === b.dataset.del);
     if (!confirm('Apagar ' + (person ? person.name : 'esta pessoa') + '? O convite dela deixa de valer.')) return;
     savePeople(people().filter(p => p.code !== b.dataset.del));
+    listaMudou();
     if (bus) await escutar();
     telaPainel();
   });
@@ -1155,6 +1265,7 @@ function telaPainel() {
   redesenharEnvio();
   ligarHistorico();
   ligarAnexar();
+  ligarAparelhos();
 }
 
 function telaSinal() {
@@ -1273,6 +1384,13 @@ window.addEventListener('beforeinstallprompt', ev => {
 window.addEventListener('appinstalled', () => { const el = $('#instalar'); if (el) el.hidden = true; });
 
 /* ————————————————— início ————————————————— */
+
+// PAINEL aberto pelo link de outro aparelho (#p=…): guarda o código para conectar.
+if (ROLE === 'painel' && location.hash.startsWith('#p=')) {
+  const m = lerCodigoPainel(decodeURIComponent(location.hash.slice(3)));
+  if (m) write('mestra-pendente', m);
+  history.replaceState(null, '', location.pathname + location.search);
+}
 
 // Convite pelo link (#c=…): guarda e limpa o endereço, para não ficar na barra nem no histórico.
 if (ROLE === 'sinal' && location.hash.startsWith('#c=')) {
