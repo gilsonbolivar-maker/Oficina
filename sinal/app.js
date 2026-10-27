@@ -16,7 +16,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.8.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.8.1';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // sem 0, 1, O e I
@@ -1224,9 +1224,7 @@ async function compartilharConvite(p) {
   const texto = 'SINAL — convite de ' + myName() + ' para ' + p.name + '\n\n' +
     '📲 1. Instale o SINAL: abra o link no Chrome (ou Safari) e toque em "Instalar o SINAL":\n' + link +
     '\n\n🔑 2. Abra o SINAL instalado. Se o convite não vier preenchido, cole este código:\n' +
-    p.code + '-' + p.chave +
-    '\n\n3. Escreva seu nome, toque em Entrar e em Ligar e escutar.' +
-    '\n\n(Android: também dá para instalar o app que toca com a tela apagada: ' + APK.sinal + ' )';
+    p.code + '-' + p.chave;
   if (nativo) { nativo.compartilhar(texto); return; }
   if (navigator.share) {
     try { await navigator.share({ title: 'SINAL', text: texto }); return; } catch (e) { if (e.name === 'AbortError') return; }
