@@ -19,7 +19,7 @@ Todo app da Oficina mostra o número da versão na tela, sempre.
 | Alô | ao lado da marca "Alô" (barra lateral e cartões de entrada) |
 | Britagem, Agenda Telefônica, IOs da URA | canto direito da barra de abas; na tela de boas-vindas |
 | Alarme GPS | ao lado do título |
-| Início | embaixo do relógio e da data, no topo |
+| Início | no topo, à direita do relógio (chip dourado) |
 | Caderno Pencil | no meio do topo, embaixo do estado |
 | Câmera Negativo | embaixo do estado, no topo (`#versao-topo`) |
 | Câmera Medida | ao lado do nome, no topo; e no fim dos Ajustes |

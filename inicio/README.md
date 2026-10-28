@@ -1,30 +1,49 @@
 # Início
 
-Tela inicial (launcher) calma para Android, feita para o Redmi Note 10.
-Desde a 1.1.0 ela traz junto o **Foco Dev** (o launcher esboçado no Lovable):
-o jeito de trabalhar e o visual dele, sem React e sem build.
+Tela inicial (launcher) para Android, feita para o Redmi Note 10. A 2.0 tem a
+cara do **Pixel Nexo** (roxo noturno e dourado, ícones com degradê, abas de
+fichário, barra de comando), mas com os **apps de verdade** do celular e sem o
+celular falso desenhado na tela. Do **Foco Dev** ficou o foco: uma tarefa por
+vez e o bloco de foco que avisa no fim.
 
-- **Relógio e data** no topo; **Modo foco** esconde tudo que distrai e deixa
-  só a tarefa, o bloco e os favoritos.
-- **Agora estou fazendo**: uma única tarefa, quebrada em passos pequenos que
-  você vai riscando.
-- **Bloco de foco** de 15, 25 ou 45 minutos. No fim, o APK vibra, toca e
+```
+ 14:32                    [v2.0.0]   relógio e versão
+ ▸ AGORA  Publicar o app   29:59     tarefa + bloco (toque abre a folha)
+ [★ Início][>_][▣][♥][▦]             abas: Início · Dev · Trabalho · Social · Oficina
+ ┌────────────────────────────┐
+ │  apps da aba               │      deslize para o lado: troca de aba
+ └────────────────────────────┘
+ foco 25 · foco 45 · tarefa …        atalhos de comando
+ nexo:~$ buscar ou comando  →        busca e comandos
+            ⌃                        gaveta com todos os apps (ou deslize para cima)
+ [ barra fixa: até 5 apps ]
+```
+
+- **Abas de fichário.** *Início* tem os apps que você fixou. *Dev*,
+  *Trabalho* e *Social* se enchem sozinhas pelo tipo de app (GitHub, Termux,
+  Claude… / Gmail, Agenda, Drive… / WhatsApp, Instagram, YouTube…). *Oficina*
+  tem os apps da Oficina (Alarme GPS, Britagem, SINAL e PAINEL abrem o APK, se
+  estiver instalado). Toque e segure qualquer app para mudá-lo de aba.
+- **Barra de comando** `nexo:~$`: digite e o app aparece; *Enter* abre.
+  Comandos: `foco 30` (começa um bloco de 30 min), `tarefa revisar o PR`,
+  `pausar`, `gaveta`, e o nome de uma aba (`dev`, `oficina`…).
+- **Gaveta** com todos os apps de A a Z, com busca: toque em ⌃ ou deslize para
+  cima; deslize para baixo (ou o voltar) fecha.
+- **Barra fixa** embaixo, com até 5 apps. Na primeira vez ela já vem com
+  Telefone, WhatsApp, Câmera, Chrome e Claude, se existirem.
+- **Agora**: toque no cartão para escrever a tarefa, quebrar em passos
+  pequenos e escolher o bloco de 15, 25 ou 45 min. No fim, o APK vibra, toca e
   notifica, mesmo que você esteja em outro app.
-- **Atalhos** do Foco Dev: IA (Lovable, ChatGPT, Claude, Gemini), Código
-  (GitHub, VS Code Web, Stack Overflow) e Organizar (Notas, Agenda). Se o app
-  do serviço estiver instalado, abre o app; senão, o site.
-- **Busca**: digite e o app aparece; *Enter* abre o primeiro.
-- **Favoritos**: toque e segure qualquer app → *Fixar nos favoritos*. No mesmo
-  menu dá para mover para a esquerda/direita ou abrir as informações do app.
-- **Oficina**: atalhos para os apps da Oficina. Alarme GPS, Britagem, SINAL e
-  PAINEL abrem o APK se estiver instalado; os outros abrem o site.
-- **Todos os apps** do celular, em ordem alfabética, com os ícones de verdade.
+- **Toque longo** num app: *Fixar no Início*, *Pôr na barra*, escolher a aba e
+  *Informações do app*.
 
-Os favoritos, a tarefa, os passos e o bloco ficam guardados só no aparelho.
+Tudo (Início, barra, abas, tarefa, passos e bloco) fica guardado só no
+aparelho. Os favoritos da 1.x viram a aba Início.
 
-**Visual:** azul-ardósia, verde-água e areia, com a letra
-[Atkinson Hyperlegible](https://www.brailleinstitute.org/freefont/) (licença
-OFL), feita para ler sem esforço. A fonte vem em `fontes/`, para abrir offline.
+**Visual:** roxo `#23083b` e dourado `#f5b942`, letras
+[Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans) e
+[JetBrains Mono](https://www.jetbrains.com/lp/mono/) (as duas com licença OFL),
+que vêm em `fontes/` para abrir offline.
 
 ## Instalar no Redmi Note 10
 

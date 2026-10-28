@@ -1,7 +1,7 @@
 {
   "name": "Início",
   "short_name": "Início",
-  "description": "Tela inicial calma para Android: uma tarefa por vez, bloco de foco, favoritos, atalhos e todos os apps.",
+  "description": "Tela inicial para Android com cara de Pixel Nexo: abas de fichário, barra de comando, gaveta, foco e seus apps de verdade.",
   "lang": "pt-BR",
   "dir": "ltr",
   "start_url": ".",
@@ -9,8 +9,8 @@
   "id": "inicio",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0f171c",
-  "theme_color": "#0f171c",
+  "background_color": "#14042a",
+  "theme_color": "#14042a",
   "categories": ["utilities", "personalization"],
   "icons": [
     { "src": "icones/icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },

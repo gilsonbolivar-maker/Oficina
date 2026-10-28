@@ -58,11 +58,11 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle salvo) {
         super.onCreate(salvo);
-        getWindow().setStatusBarColor(Color.parseColor("#0f171c"));
-        getWindow().setNavigationBarColor(Color.parseColor("#0f171c"));
+        getWindow().setStatusBarColor(Color.parseColor("#14042a"));
+        getWindow().setNavigationBarColor(Color.parseColor("#14042a"));
 
         web = new WebView(this);
-        web.setBackgroundColor(Color.parseColor("#0f171c"));
+        web.setBackgroundColor(Color.parseColor("#14042a"));
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);

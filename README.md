@@ -13,7 +13,7 @@ Oficina de desenvolvimento — Projetos e soluções
 | [`caderno-pencil/`](caderno-pencil/) | PWA para escrever à mão com a Apple Pencil no iPad e copiar o texto digitado. |
 | [`camera-negativo/`](camera-negativo/) | Câmera fotográfica que mostra e fotografa com as cores invertidas. |
 | [`ura-ios/`](ura-ios/) | PWA para consultar e treinar as Instruções Operacionais da URA, offline. |
-| [`inicio/`](inicio/) | Tela inicial (launcher) calma para Android, unida ao Foco Dev: tarefa, bloco de foco, favoritos, atalhos e busca. |
+| [`inicio/`](inicio/) | Tela inicial (launcher) para Android com cara de Pixel Nexo: abas de fichário, comando, gaveta, foco e os apps de verdade. |
 | [`treino/`](treino/) | Ficha de academia Puxa & Empurra: esteira, máquinas, cargas e descanso. |
 | [`mensagem-efemera/`](mensagem-efemera/) | Texto vira imagem preta e branca para enviar como visualização única. |
 | [`descubra-seu-app/`](descubra-seu-app/) | Questionário que indica ao cliente o app ideal. |
