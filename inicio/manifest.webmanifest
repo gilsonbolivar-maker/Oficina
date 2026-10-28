@@ -1,0 +1,20 @@
+{
+  "name": "Início",
+  "short_name": "Início",
+  "description": "Tela inicial para Android: relógio, favoritos, apps da Oficina e busca.",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "start_url": ".",
+  "scope": ".",
+  "id": "inicio",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b1220",
+  "theme_color": "#0b1220",
+  "categories": ["utilities", "personalization"],
+  "icons": [
+    { "src": "icones/icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icones/icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icones/icone-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

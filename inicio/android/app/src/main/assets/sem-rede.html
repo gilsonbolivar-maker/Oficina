@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Início</title>
+<!-- Reserva do APK: só aparece se o Início do site nunca foi aberto com rede. -->
+<style>
+  html, body { margin: 0; background: #0b1220; color: #e8edf7; font: 16px/1.4 system-ui, Roboto, sans-serif; -webkit-user-select: none; user-select: none; }
+  body { padding: 16px; }
+  .hora { margin: 28px 0 0; text-align: center; font-size: 72px; font-weight: 300; line-height: 1; }
+  .nota { text-align: center; color: #93a1bd; font-size: 14px; }
+  .nota a { color: #ffb020; }
+  ul { list-style: none; margin: 16px 0 0; padding: 0; }
+  button { width: 100%; padding: 14px 10px; border: 0; border-bottom: 1px solid #2b3a56; background: none; color: inherit; font: inherit; text-align: left; }
+</style>
+</head>
+<body>
+  <p id="hora" class="hora">--:--</p>
+  <p class="nota">Sem rede: esta é a lista simples.<br><a href="https://gilsonbolivar-maker.github.io/Oficina/inicio/">Tentar o Início completo</a></p>
+  <ul id="apps"></ul>
+<script>
+  'use strict';
+  function relogio() {
+    document.getElementById('hora').textContent =
+      new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  }
+  function listar() {
+    var apps = [];
+    try { apps = JSON.parse(InicioNativo.apps()); } catch (e) {}
+    apps.sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }); });
+    var ul = document.getElementById('apps');
+    ul.textContent = '';
+    apps.forEach(function (app) {
+      var li = document.createElement('li');
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = app.nome;
+      b.onclick = function () { InicioNativo.abrir(app.id); };
+      li.appendChild(b);
+      ul.appendChild(li);
+    });
+  }
+  // Voltou com rede: tenta o Início completo.
+  window.aoVoltar = function () {
+    if (navigator.onLine) location.href = 'https://gilsonbolivar-maker.github.io/Oficina/inicio/';
+    else { relogio(); listar(); }
+  };
+  window.aoApertarInicio = function () { window.scrollTo(0, 0); };
+  window.aoVoltarBotao = window.aoApertarInicio;
+  relogio();
+  setInterval(relogio, 15000);
+  listar();
+</script>
+</body>
+</html>
