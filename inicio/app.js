@@ -2,13 +2,15 @@
    Início 2: tela inicial com a cara do Pixel Nexo (roxo noturno e
    dourado, abas de fichário, barra de comando, gaveta e barra fixa),
    mas com os apps de verdade do celular. Guarda o foco do Foco Dev:
-   tarefa com passos pequenos e bloco de foco que avisa no fim.
+   tarefa com passos pequenos e bloco de foco que avisa no fim. No
+   topo, um mostrador no estilo de relógio: hora com segundos, sol,
+   foco do dia, bateria, clima e bolhas (notificações, CI, rede).
    A lista de apps vem do APK, pela ponte "InicioNativo". No
    navegador, mostra uma lista de exemplo.
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '2.0.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '2.1.0';   // precisa casar com a VERSAO do sw.js
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
 
 const nativo = window.InicioNativo || null;
@@ -25,8 +27,14 @@ const CHAVE = {
   aba: 'inicio:aba-ativa',
   tarefa: 'inicio:tarefa',
   passos: 'inicio:passos',
-  bloco: 'inicio:bloco'
+  bloco: 'inicio:bloco',
+  focoDias: 'inicio:foco-dias',    // { 'AAAA-MM-DD': minutos de foco }
+  lugar: 'inicio:lugar',           // { lat, lon, nome, fonte: 'gps' | 'cidade' }
+  clima: 'inicio:clima',           // última resposta da Open-Meteo, com a hora
+  ci: 'inicio:ci'                  // último build da Oficina no GitHub
 };
+const META_FOCO = 120;             // minutos de foco que enchem o anel
+const ACTIONS = 'https://github.com/gilsonbolivar-maker/Oficina/actions';
 
 /* ——— Ícones (traço, no estilo do Pixel Nexo) ——— */
 
@@ -159,19 +167,28 @@ function guardar(chave, valor) {
 
 if (!abaDe || typeof abaDe !== 'object') abaDe = {};
 
-/* ——— Relógio ——— */
+/* ——— Relógio (com segundos, como o mostrador de um relógio) ——— */
 
+let ultimoDia = '';
 function atualizarRelogio() {
   const agora = new Date();
   $('hora').textContent = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  $('data').textContent = agora.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+  $('segundos').textContent = String(agora.getSeconds()).padStart(2, '0');
+  const dia = agora.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '').toUpperCase();
+  if (dia + agora.getDate() !== ultimoDia) {
+    ultimoDia = dia + agora.getDate();
+    const b = document.createElement('b');
+    b.textContent = dia;
+    $('dia').replaceChildren(b, ' ' + agora.getDate());
+    desenharFoco();   // virou o dia: o foco de hoje recomeça
+  }
 }
 
 let relogio = null;
 function agendarRelogio() {
   clearTimeout(relogio);
   atualizarRelogio();
-  relogio = setTimeout(agendarRelogio, 60000 - (Date.now() % 60000) + 50);
+  relogio = setTimeout(agendarRelogio, 1000 - (Date.now() % 1000) + 20);
 }
 
 /* ——— Apps ——— */
@@ -345,12 +362,25 @@ function criarIcone(item) {
   return el;
 }
 
+// Número de notificações em cima do ícone, como no launcher do celular.
+function criarContador(item) {
+  const pacote = item.tipo === 'app' ? item.pacote : item.pacote && instalado(item.pacote) && item.pacote;
+  const n = pacote && notificacoes.apps[pacote];
+  if (!n) return null;
+  const c = document.createElement('span');
+  c.className = 'contador';
+  c.textContent = n > 99 ? '99+' : String(n);
+  return c;
+}
+
 function criarBotao(item, comTipo) {
   const b = document.createElement('button');
   b.type = 'button';
   b.className = 'app';
   b.setAttribute('aria-label', item.nome);
   b.append(criarIcone(item));
+  const contador = criarContador(item);
+  if (contador) b.append(contador);
   const nome = document.createElement('span');
   nome.className = 'nome';
   nome.textContent = item.nome;
@@ -506,7 +536,7 @@ document.addEventListener('touchend', e => {
     if (dy > 90 && Math.abs(dx) < 70 && $('lista-gaveta').scrollTop <= 0) fecharGaveta();
     return;
   }
-  if (alvo.closest('input, .abas, .comandos, .sugestoes')) return;
+  if (alvo.closest('input, .abas, .sugestoes')) return;
   const noPainel = alvo.closest('.painel');
   if (noPainel && Math.abs(dx) > 70 && Math.abs(dy) < 50) {
     const i = ABAS.findIndex(a => a.id === abaAtiva);
@@ -520,21 +550,37 @@ document.addEventListener('touchend', e => {
 
 const campo = $('campo');
 
+// Aparecem quando a barra de comando está vazia e com o cursor.
 const COMANDOS = [
-  { texto: 'foco 25', faz: () => comecarBloco(25) },
-  { texto: 'foco 45', faz: () => comecarBloco(45) },
-  { texto: 'tarefa …', faz: () => { campo.value = 'tarefa '; campo.focus(); sugerir(); } },
-  { texto: 'gaveta', faz: abrirGaveta },
-  { texto: 'oficina', faz: () => trocarAba('oficina') }
+  { texto: 'foco 25', ajuda: 'bloco de 25 min', faz: () => comecarBloco(25) },
+  { texto: 'foco 45', ajuda: 'bloco de 45 min', faz: () => comecarBloco(45) },
+  { texto: 'tarefa …', ajuda: 'define a tarefa de agora', faz: () => { campo.value = 'tarefa '; campo.focus(); sugerir(); } },
+  { texto: 'clima', ajuda: 'atualiza o clima', faz: () => atualizarClima(true) },
+  { texto: 'cidade …', ajuda: 'clima de uma cidade', faz: () => { campo.value = 'cidade '; campo.focus(); sugerir(); } },
+  { texto: 'ci', ajuda: 'builds da Oficina', faz: () => abrirEndereco(ACTIONS) },
+  { texto: 'gaveta', ajuda: 'todos os apps', faz: abrirGaveta }
 ];
 
-$('comandos').replaceChildren(...COMANDOS.map(c => {
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.textContent = c.texto;
-  b.addEventListener('click', c.faz);
-  return b;
-}));
+function mostrarComandos() {
+  $('sugestoes').replaceChildren(...COMANDOS.map(c => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'linha-comando';
+    const t = document.createElement('b');
+    t.textContent = c.texto;
+    const a = document.createElement('span');
+    a.textContent = c.ajuda;
+    b.append(t, a);
+    b.addEventListener('pointerdown', e => e.preventDefault());   // não perde o foco do campo
+    b.addEventListener('click', () => {
+      const continua = c.texto.endsWith('…');
+      c.faz();
+      if (!continua) limparComando();
+    });
+    return b;
+  }));
+  $('sugestoes').hidden = false;
+}
 
 function resultados(texto) {
   const termo = normalizar(texto);
@@ -559,6 +605,11 @@ function executarComando(texto) {
   if (m) { definirTarefa(m[1]); return true; }
   if (/^(gaveta|apps|todos)$/i.test(t)) { abrirGaveta(); return true; }
   if (/^pausar$/i.test(t)) { if (bloco.fim) alternarBloco(); return true; }
+  m = /^cidade\s+(.+)$/i.exec(t);
+  if (m) { buscarCidade(m[1]); return true; }
+  if (/^(clima|tempo)$/i.test(t)) { atualizarClima(true); return true; }
+  if (/^ci$/i.test(t)) { abrirEndereco(ACTIONS); return true; }
+  if (/^notifica/i.test(t) && nativo && typeof nativo.pedirNotificacoes === 'function') { nativo.pedirNotificacoes(); return true; }
   const aba = ABAS.find(a => normalizar(a.nome) === normalizar(t));
   if (aba) { trocarAba(aba.id); return true; }
   return false;
@@ -566,15 +617,17 @@ function executarComando(texto) {
 
 function sugerir() {
   const texto = campo.value;
-  if (!texto.trim()) return fecharSugestoes();
+  if (!texto.trim()) return document.activeElement === campo ? mostrarComandos() : fecharSugestoes();
   const caixa = $('sugestoes');
-  const achados = /^tarefa\s/i.test(texto) ? [] : resultados(texto);
+  const especial = /^(tarefa|cidade)\s/i.test(texto);
+  const achados = especial ? [] : resultados(texto);
   if (achados.length) {
     caixa.replaceChildren(...achados.map(i => criarBotao(i, true)));
   } else {
     const p = document.createElement('p');
     p.className = 'linha-vazia';
-    p.textContent = /^tarefa\s/i.test(texto) ? 'Enter define a tarefa de agora.' : 'Nenhum app. Enter tenta como comando.';
+    p.textContent = /^tarefa\s/i.test(texto) ? 'Enter define a tarefa de agora.'
+      : /^cidade\s/i.test(texto) ? 'Enter busca o clima dessa cidade.' : 'Nenhum app. Enter tenta como comando.';
     caixa.replaceChildren(p);
   }
   caixa.hidden = false;
@@ -591,6 +644,8 @@ function limparComando() {
 }
 
 campo.addEventListener('input', sugerir);
+campo.addEventListener('focus', sugerir);
+campo.addEventListener('blur', () => setTimeout(() => { if (!campo.value.trim()) fecharSugestoes(); }, 150));
 $('comando').addEventListener('submit', e => {
   e.preventDefault();
   const texto = campo.value;
@@ -707,6 +762,7 @@ function terminarBloco() {
   clearInterval(tique);
   tique = null;
   const avisar = bloco.fim !== null;
+  if (avisar) registrarFoco(bloco.min);
   bloco.fim = null;
   bloco.resto = 0;
   guardar(CHAVE.bloco, bloco);
@@ -900,6 +956,355 @@ function atualizarAviso() {
   aviso.hidden = false;
 }
 
+/* ——— Mostrador: foco do dia, bateria, clima, sol e bolhas ——— */
+
+function abrirEndereco(url) {
+  if (nativo) nativo.abrirLink(url); else window.open(url, '_blank', 'noopener');
+}
+
+const hojeISO = () => {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+};
+
+// Arco de 270°, aberto embaixo, como no mostrador do relógio.
+const ARCO = 2 * Math.PI * 42 * 0.75;
+const VOLTA = 2 * Math.PI * 42;
+for (const c of document.querySelectorAll('.anel circle')) {
+  c.setAttribute('transform', 'rotate(135 50 50)');
+  c.setAttribute('stroke-dasharray', ARCO.toFixed(1) + ' ' + VOLTA.toFixed(1));
+}
+
+function registrarFoco(min) {
+  const dias = ler(CHAVE.focoDias, {});
+  dias[hojeISO()] = (dias[hojeISO()] || 0) + min;
+  // Só os últimos 60 dias.
+  const chaves = Object.keys(dias).sort();
+  for (const k of chaves.slice(0, Math.max(0, chaves.length - 60))) delete dias[k];
+  guardar(CHAVE.focoDias, dias);
+  desenharFoco();
+}
+
+function desenharFoco() {
+  const dias = ler(CHAVE.focoDias, {});
+  const min = dias[hojeISO()] || 0;
+  $('arco-foco').setAttribute('stroke-dasharray', (ARCO * Math.min(1, min / META_FOCO)).toFixed(1) + ' ' + VOLTA.toFixed(1));
+  $('arco-foco').classList.toggle('vazio', min === 0);
+  const v = $('foco-min');
+  v.replaceChildren(String(min));
+  const unidade = document.createElement('small');
+  unidade.textContent = 'min';
+  v.append(unidade);
+  // Sequência: dias seguidos com foco, contando hoje (ou ontem, se hoje ainda não teve).
+  let seq = 0;
+  const d = new Date();
+  if (!dias[hojeISO()]) d.setDate(d.getDate() - 1);
+  for (;;) {
+    const k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    if (!dias[k]) break;
+    seq++;
+    d.setDate(d.getDate() - 1);
+  }
+  $('foco-k').textContent = seq >= 2 ? '🔥 ' + seq + 'd' : 'foco';
+}
+
+$('anel-foco').addEventListener('click', () => $('agora').click());
+
+// Bateria em 16 traços. No APK vem com a temperatura; no navegador, sem ela.
+const N_TRACOS = 16;
+$('tracos').innerHTML = Array.from({ length: N_TRACOS }, (_, i) => {
+  const ang = (135 + i * (270 / (N_TRACOS - 1))) * Math.PI / 180;
+  const x1 = (50 + 34 * Math.cos(ang)).toFixed(1), y1 = (50 + 34 * Math.sin(ang)).toFixed(1);
+  const x2 = (50 + 44 * Math.cos(ang)).toFixed(1), y2 = (50 + 44 * Math.sin(ang)).toFixed(1);
+  return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '"/>';
+}).join('');
+
+function desenharBateria(b) {
+  const ok = b && Number.isFinite(b.nivel);
+  $('anel-bateria').hidden = false;
+  const v = $('bat-v');
+  v.replaceChildren(ok ? String(b.nivel) : '--');
+  const pct = document.createElement('small');
+  pct.textContent = '%';
+  v.append(pct);
+  const k = [];
+  if (ok && b.carregando) k.push('⚡');
+  if (ok && b.temperatura) k.push(Math.round(b.temperatura) + '°');
+  $('bat-k').textContent = k.join(' ') || 'bateria';
+  const acesos = ok ? Math.round(N_TRACOS * b.nivel / 100) : 0;
+  const baixa = ok && b.nivel <= 20;
+  $('tracos').querySelectorAll('line').forEach((l, i) => {
+    l.setAttribute('class', i < acesos ? (baixa ? 'tr-baixa' : 'tr-on') : 'tr-off');
+  });
+}
+
+function lerBateria() {
+  if (nativo && typeof nativo.bateria === 'function') {
+    try { return desenharBateria(JSON.parse(nativo.bateria())); } catch (e) {}
+  }
+  if (navigator.getBattery) {
+    navigator.getBattery().then(b => desenharBateria({ nivel: Math.round(b.level * 100), carregando: b.charging }))
+      .catch(() => desenharBateria(null));
+  } else {
+    desenharBateria(null);
+  }
+}
+
+/* Clima pela Open-Meteo (grátis, sem chave). O lugar vem do GPS (aproximado)
+   ou do comando "cidade NOME". A resposta fica guardada: sem rede, mostra a
+   última, e só busca de novo depois de 30 minutos. */
+
+const VALIDADE_CLIMA = 30 * 60 * 1000;
+let buscandoClima = false;
+
+function iconeDoTempo(codigo, ehDia) {
+  if (codigo === 0) return ehDia ? '☀️' : '🌙';
+  if (codigo <= 2) return ehDia ? '⛅' : '☁️';
+  if (codigo === 3) return '☁️';
+  if (codigo <= 48) return '🌫️';
+  if (codigo <= 67) return '🌧️';
+  if (codigo <= 77) return '❄️';
+  if (codigo <= 82) return '🌦️';
+  return '⛈️';
+}
+
+function descricaoUV(uv) {
+  return uv >= 11 ? 'extremo' : uv >= 8 ? 'muito alto' : uv >= 6 ? 'alto' : uv >= 3 ? 'moderado' : 'baixo';
+}
+
+function hhmm(iso) {
+  return typeof iso === 'string' && iso.length >= 16 ? iso.slice(11, 16) : '--:--';
+}
+
+function desenharClima() {
+  const guardado = ler(CHAVE.clima, null);
+  const lugar = ler(CHAVE.lugar, null);
+  const d = guardado && guardado.dados;
+  if (!d || !d.current || !d.daily) {
+    $('clima-agora').textContent = buscandoClima ? 'Buscando o clima…' :
+      lugar ? 'Sem clima agora. Toque para tentar de novo.' : 'Toque para ver o clima (usa a localização)';
+    $('clima-colunas').hidden = true;
+    return;
+  }
+  const c = d.current;
+  // Chuva e UV: o valor da hora atual na previsão de hora em hora.
+  let i = d.hourly && d.hourly.time ? d.hourly.time.findIndex(t => t.slice(0, 13) === String(c.time).slice(0, 13)) : -1;
+  if (i < 0) i = 0;
+  const chuva = d.hourly && d.hourly.precipitation_probability ? d.hourly.precipitation_probability[i] : null;
+  const uv = d.hourly && d.hourly.uv_index ? d.hourly.uv_index[i] : null;
+
+  const linha = document.createElement('span');
+  const icone = document.createElement('b');
+  icone.className = 'tempo-icone';
+  icone.textContent = iconeDoTempo(c.weather_code, c.is_day !== 0);
+  const rotulo = document.createElement('span');
+  rotulo.className = 'rotulo-agora';
+  rotulo.textContent = 'Agora';
+  const mm = document.createElement('span');
+  mm.className = 'mm';
+  mm.textContent = Math.round(d.daily.temperature_2m_max[0]) + '° / ' + Math.round(d.daily.temperature_2m_min[0]) + '°';
+  linha.append(icone, ' ', rotulo, ' ' + Math.round(c.temperature_2m) + '° ', mm);
+  if (lugar && lugar.nome) {
+    const onde = document.createElement('span');
+    onde.className = 'onde';
+    onde.textContent = lugar.nome;
+    linha.append(onde);
+  }
+  $('clima-agora').replaceChildren(linha);
+
+  const colunas = [
+    ['sens', '🌡️', Math.round(c.apparent_temperature) + '°', 'sensação'],
+    ['chuva', '💧', chuva == null ? '--' : chuva + '%', 'chuva'],
+    ['uv', '☀️', uv == null ? '--' : String(Math.round(uv)), uv == null ? 'UV' : 'UV ' + descricaoUV(uv)],
+    ['vento', '🌬️', String(Math.round(c.wind_speed_10m)), 'km/h']
+  ];
+  $('clima-colunas').replaceChildren(...colunas.map(([classe, ic, v, k]) => {
+    const col = document.createElement('span');
+    col.className = 'col ' + classe + (classe === 'uv' && uv >= 6 ? ' alerta' : '');
+    const a = document.createElement('i');
+    a.textContent = ic;
+    const b = document.createElement('b');
+    b.textContent = v;
+    const s = document.createElement('small');
+    s.textContent = k;
+    col.append(a, b, s);
+    return col;
+  }));
+  $('clima-colunas').hidden = false;
+
+  const nascer = document.createElement('b');
+  nascer.className = 'sol-n';
+  nascer.textContent = '◓';
+  $('nascer').replaceChildren(nascer, ' ' + hhmm(d.daily.sunrise[0]));
+  const por = document.createElement('b');
+  por.className = 'sol-p';
+  por.textContent = '◒';
+  $('por').replaceChildren(hhmm(d.daily.sunset[0]) + ' ', por);
+}
+
+function urlClima(lugar) {
+  return 'https://api.open-meteo.com/v1/forecast?latitude=' + lugar.lat.toFixed(3) + '&longitude=' + lugar.lon.toFixed(3) +
+    '&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day' +
+    '&hourly=precipitation_probability,uv_index' +
+    '&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset' +
+    '&timezone=auto&forecast_days=1';
+}
+
+async function buscarClima(lugar) {
+  buscandoClima = true;
+  desenharClima();
+  try {
+    const resp = await fetch(urlClima(lugar));
+    if (!resp.ok) throw new Error('clima ' + resp.status);
+    const dados = await resp.json();
+    if (!dados.current || !dados.daily) throw new Error('clima incompleto');
+    guardar(CHAVE.clima, { quando: Date.now(), dados });
+  } catch (e) {
+    // Sem rede: fica o último clima guardado.
+  }
+  buscandoClima = false;
+  desenharClima();
+}
+
+function atualizarClima(forcar) {
+  const guardado = ler(CHAVE.clima, null);
+  const lugar = ler(CHAVE.lugar, null);
+  const velho = !guardado || Date.now() - guardado.quando > VALIDADE_CLIMA;
+  if (!forcar && !velho) return;
+  if (lugar && lugar.fonte === 'cidade') return buscarClima(lugar);
+  if (!navigator.geolocation) { if (lugar) buscarClima(lugar); return; }
+  // Sem pedir de novo à toa: só na primeira vez ou quando a pessoa toca.
+  if (!lugar && !forcar) return desenharClima();
+  navigator.geolocation.getCurrentPosition(pos => {
+    const novo = { lat: pos.coords.latitude, lon: pos.coords.longitude, nome: '', fonte: 'gps' };
+    guardar(CHAVE.lugar, novo);
+    buscarClima(novo);
+  }, () => {
+    if (lugar) buscarClima(lugar);
+    else {
+      $('clima-agora').textContent = 'Sem localização. Digite “cidade” e o nome na barra.';
+      $('clima-colunas').hidden = true;
+    }
+  }, { enableHighAccuracy: false, maximumAge: 3 * 60 * 60 * 1000, timeout: 15000 });
+}
+
+async function buscarCidade(nome) {
+  $('clima-agora').textContent = 'Procurando ' + nome.trim() + '…';
+  try {
+    const resp = await fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&language=pt&name=' + encodeURIComponent(nome.trim()));
+    const dados = await resp.json();
+    const r = dados.results && dados.results[0];
+    if (!r) throw new Error('não achou');
+    const lugar = { lat: r.latitude, lon: r.longitude, nome: r.name, fonte: 'cidade' };
+    guardar(CHAVE.lugar, lugar);
+    buscarClima(lugar);
+  } catch (e) {
+    $('clima-agora').textContent = 'Não achei “' + nome.trim() + '”. Tente outro nome.';
+    $('clima-colunas').hidden = true;
+  }
+}
+
+$('clima').addEventListener('click', () => atualizarClima(true));
+
+/* Bolhas: notificações, CI da Oficina, rede e armazenamento. */
+
+let notificacoes = { permitido: false, total: 0, apps: {} };
+const temNotificacoesNativas = !!(nativo && typeof nativo.notificacoes === 'function');
+
+function lerNotificacoes() {
+  if (!temNotificacoesNativas) return false;
+  let novo = notificacoes;
+  try { novo = JSON.parse(nativo.notificacoes()); } catch (e) {}
+  if (!novo.apps) novo.apps = {};
+  const mudou = JSON.stringify(novo) !== JSON.stringify(notificacoes);
+  notificacoes = novo;
+  return mudou;
+}
+
+const VALIDADE_CI = 15 * 60 * 1000;
+async function atualizarCI() {
+  const guardado = ler(CHAVE.ci, null);
+  if (guardado && Date.now() - guardado.quando < VALIDADE_CI) return;
+  try {
+    const resp = await fetch('https://api.github.com/repos/gilsonbolivar-maker/Oficina/actions/runs?branch=main&per_page=1');
+    if (!resp.ok) throw new Error('ci ' + resp.status);
+    const run = (await resp.json()).workflow_runs[0];
+    guardar(CHAVE.ci, { quando: Date.now(), estado: run.status, resultado: run.conclusion, sha: run.head_sha.slice(0, 7) });
+  } catch (e) {
+    // Sem rede ou limite do GitHub: fica o último.
+  }
+  desenharBolhas();
+}
+
+function bolha(classe, icone, texto, aoTocar, rotulo) {
+  const b = document.createElement(aoTocar ? 'button' : 'span');
+  if (aoTocar) { b.type = 'button'; b.addEventListener('click', aoTocar); }
+  b.className = 'bolha ' + classe;
+  if (rotulo) b.setAttribute('aria-label', rotulo);
+  const i = document.createElement('b');
+  i.textContent = icone;
+  b.append(i, ' ' + texto);
+  return b;
+}
+
+function textoGB(bytes) {
+  const gb = bytes / 1e9;
+  return (gb >= 10 ? Math.round(gb) : gb.toFixed(1).replace('.', ',')) + ' GB';
+}
+
+function desenharBolhas() {
+  const lista = [];
+  if (temNotificacoesNativas) {
+    lista.push(notificacoes.permitido
+      ? bolha('zap', '💬', String(notificacoes.total), null, notificacoes.total + ' notificações')
+      : bolha('zap fraca', '💬', 'ligar', () => nativo.pedirNotificacoes(), 'Ligar a contagem de notificações'));
+  }
+  const ci = ler(CHAVE.ci, null);
+  if (ci) {
+    const [icone, texto, classe] = ci.estado !== 'completed' ? ['◌', 'CI rodando', 'ci-rodando']
+      : ci.resultado === 'success' ? ['✓', 'CI', 'ci-ok'] : ['✗', 'CI', 'ci-falhou'];
+    lista.push(bolha(classe, icone, texto, () => abrirEndereco(ACTIONS), 'Builds da Oficina: ' + (ci.resultado || ci.estado)));
+  }
+  let rede = null;
+  if (nativo && typeof nativo.rede === 'function') { try { rede = JSON.parse(nativo.rede()); } catch (e) {} }
+  if (rede && rede.tipo) {
+    const barras = rede.nivel >= 0 ? '▂▄▆█'.slice(0, Math.max(1, rede.nivel)) : '';
+    lista.push(bolha('rede', barras || '•', rede.tipo === 'wifi' ? 'Wi-Fi' : rede.tipo === 'movel' ? 'Dados' : 'sem rede'));
+  } else {
+    lista.push(bolha('rede', navigator.onLine ? '▂▄▆' : '•', navigator.onLine ? 'online' : 'sem rede'));
+  }
+  if (nativo && typeof nativo.armazenamento === 'function') {
+    try {
+      const a = JSON.parse(nativo.armazenamento());
+      if (a.livre) lista.push(bolha('disco', '💾', textoGB(a.livre), null, textoGB(a.livre) + ' livres de ' + textoGB(a.total)));
+    } catch (e) {}
+  }
+  lista.push(chipVersao);
+  $('bolhas').replaceChildren(...lista);
+}
+
+const chipVersao = $('chip-versao');
+
+window.aoMudarNotificacoes = () => {
+  clearTimeout(window.aoMudarNotificacoes.espera);
+  window.aoMudarNotificacoes.espera = setTimeout(() => {
+    if (lerNotificacoes()) { desenharBolhas(); desenhar(); }
+  }, 400);
+};
+
+function atualizarMostrador() {
+  lerBateria();
+  lerNotificacoes();
+  desenharBolhas();
+  desenharFoco();
+  desenharClima();
+  atualizarClima(false);
+  atualizarCI();
+}
+
+// Enquanto o Início está na tela, renova bateria e bolhas a cada minuto.
+setInterval(() => { if (!document.hidden) { lerBateria(); desenharBolhas(); atualizarClima(false); atualizarCI(); } }, 60000);
+
 /* ——— Chamadas do APK ——— */
 
 function fecharTudo() {
@@ -913,7 +1318,9 @@ window.aoVoltar = () => {
   agendarRelogio();
   atualizarAviso();
   andarBloco();
-  if (carregarApps()) desenhar();
+  const notas = lerNotificacoes();
+  if (carregarApps() || notas) desenhar();
+  atualizarMostrador();
 };
 
 // Botão de início apertado com o Início já na tela.
@@ -931,7 +1338,7 @@ window.aoVoltarBotao = () => {
 };
 
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) { agendarRelogio(); andarBloco(); }
+  if (!document.hidden) { agendarRelogio(); andarBloco(); atualizarMostrador(); }
 });
 
 agendarRelogio();
@@ -939,8 +1346,10 @@ desenharPassos();
 andarBloco();
 carregarApps();
 if (!Array.isArray(barra)) barra = [];
+lerNotificacoes();
 desenhar();
 atualizarAviso();
+atualizarMostrador();
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   navigator.serviceWorker.register('sw.js').catch(() => {});
