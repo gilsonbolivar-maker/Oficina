@@ -10,7 +10,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '2.2.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '2.3.0';   // precisa casar com a VERSAO do sw.js
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
 
 const nativo = window.InicioNativo || null;
@@ -31,7 +31,8 @@ const CHAVE = {
   focoDias: 'inicio:foco-dias',    // { 'AAAA-MM-DD': minutos de foco }
   lugar: 'inicio:lugar',           // { lat, lon, nome, fonte: 'gps' | 'cidade' }
   clima: 'inicio:clima',           // última resposta da Open-Meteo, com a hora
-  ci: 'inicio:ci'                  // último build da Oficina no GitHub
+  ci: 'inicio:ci',                 // último build da Oficina no GitHub
+  tema: 'inicio:tema'              // 'nexo' (roxo e dourado) ou 'grafite' (o do Lovable)
 };
 const META_FOCO = 120;             // minutos de foco que enchem o anel
 const ACTIONS = 'https://github.com/gilsonbolivar-maker/Oficina/actions';
@@ -559,6 +560,7 @@ const COMANDOS = [
   { texto: 'cidade …', ajuda: 'clima de uma cidade', faz: () => { campo.value = 'cidade '; campo.focus(); sugerir(); } },
   { texto: 'ci', ajuda: 'builds da Oficina', faz: () => abrirEndereco(ACTIONS) },
   { texto: 'gaveta', ajuda: 'todos os apps', faz: abrirGaveta },
+  { texto: 'tema', ajuda: 'troca Nexo ↔ Grafite', faz: () => trocarTema() },
   { texto: 'atualizar', ajuda: 'baixa a versão nova do Início', faz: () => atualizarInicio() }
 ];
 
@@ -611,6 +613,8 @@ function executarComando(texto) {
   if (/^(clima|tempo)$/i.test(t)) { atualizarClima(true); return true; }
   if (/^ci$/i.test(t)) { abrirEndereco(ACTIONS); return true; }
   if (/^atualiza/i.test(t)) { atualizarInicio(); return true; }
+  m = /^tema(?:\s+(\S+))?$/i.exec(t);
+  if (m) { trocarTema(m[1] && normalizar(m[1])); return true; }
   if (/^notifica/i.test(t) && nativo && typeof nativo.pedirNotificacoes === 'function') { nativo.pedirNotificacoes(); return true; }
   const aba = ABAS.find(a => normalizar(a.nome) === normalizar(t));
   if (aba) { trocarAba(aba.id); return true; }
@@ -1281,11 +1285,37 @@ function desenharBolhas() {
       if (a.livre) lista.push(bolha('disco', '💾', textoGB(a.livre), null, textoGB(a.livre) + ' livres de ' + textoGB(a.total)));
     } catch (e) {}
   }
+  lista.push(bolha('tema', '🎨', '', () => trocarTema(), 'Tema ' + TEMAS[temaAtual()].nome + ': tocar troca'));
   lista.push(chipVersao);
   $('bolhas').replaceChildren(...lista);
 }
 
 const chipVersao = $('chip-versao');
+
+/* ——— Temas: Nexo (roxo e dourado) e Grafite (o redesign do Lovable) ——— */
+
+const TEMAS = {
+  nexo: { nome: 'Nexo', barras: '#14042a' },
+  grafite: { nome: 'Grafite', barras: '#0e1418' }
+};
+
+const temaAtual = () => document.documentElement.dataset.tema === 'grafite' ? 'grafite' : 'nexo';
+
+function aplicarTema(tema) {
+  document.documentElement.dataset.tema = tema;
+  document.querySelector('meta[name="theme-color"]').setAttribute('content', TEMAS[tema].barras);
+  // No APK, as barras do Android (relógio em cima, navegação embaixo) acompanham.
+  if (nativo && typeof nativo.corDasBarras === 'function') {
+    try { nativo.corDasBarras(TEMAS[tema].barras); } catch (e) {}
+  }
+}
+
+function trocarTema(qual) {
+  const tema = TEMAS[qual] ? qual : temaAtual() === 'nexo' ? 'grafite' : 'nexo';
+  guardar(CHAVE.tema, tema);
+  aplicarTema(tema);
+  desenharBolhas();
+}
 
 /* ——— Atualizar o Início ———
    O Início fica sempre aberto, então só pegaria a página nova ao reiniciar.
@@ -1423,6 +1453,7 @@ andarBloco();
 carregarApps();
 if (!Array.isArray(barra)) barra = [];
 lerNotificacoes();
+aplicarTema(temaAtual());
 desenhar();
 atualizarAviso();
 atualizarMostrador();
