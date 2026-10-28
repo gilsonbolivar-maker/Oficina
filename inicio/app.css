@@ -159,9 +159,16 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
   padding: 3px 8px;
   border: 1px solid var(--borda);
   border-radius: 999px;
+  background: none;
   font: 600 11px var(--mono);
   color: var(--ouro);
 }
+.chip-versao::after { content: " ↻"; opacity: 0.7; }
+.chip-versao.nova { border-color: var(--ouro); background: var(--ouro); color: var(--ouro-texto); }
+.chip-versao.nova::after, .chip-versao.em-dia::after, .chip-versao.girando::after, .chip-versao.falhou::after { content: ""; }
+.chip-versao.em-dia { border-color: #10b981; color: #10b981; }
+.chip-versao.falhou { border-color: #f43f5e; color: #fda4af; }
+.chip-versao.girando { color: var(--texto-fraco); }
 
 .aviso {
   display: flex;

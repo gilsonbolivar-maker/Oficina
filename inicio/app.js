@@ -10,7 +10,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '2.1.1';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '2.2.0';   // precisa casar com a VERSAO do sw.js
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
 
 const nativo = window.InicioNativo || null;
@@ -558,7 +558,8 @@ const COMANDOS = [
   { texto: 'clima', ajuda: 'atualiza o clima', faz: () => atualizarClima(true) },
   { texto: 'cidade …', ajuda: 'clima de uma cidade', faz: () => { campo.value = 'cidade '; campo.focus(); sugerir(); } },
   { texto: 'ci', ajuda: 'builds da Oficina', faz: () => abrirEndereco(ACTIONS) },
-  { texto: 'gaveta', ajuda: 'todos os apps', faz: abrirGaveta }
+  { texto: 'gaveta', ajuda: 'todos os apps', faz: abrirGaveta },
+  { texto: 'atualizar', ajuda: 'baixa a versão nova do Início', faz: () => atualizarInicio() }
 ];
 
 function mostrarComandos() {
@@ -609,6 +610,7 @@ function executarComando(texto) {
   if (m) { buscarCidade(m[1]); return true; }
   if (/^(clima|tempo)$/i.test(t)) { atualizarClima(true); return true; }
   if (/^ci$/i.test(t)) { abrirEndereco(ACTIONS); return true; }
+  if (/^atualiza/i.test(t)) { atualizarInicio(); return true; }
   if (/^notifica/i.test(t) && nativo && typeof nativo.pedirNotificacoes === 'function') { nativo.pedirNotificacoes(); return true; }
   const aba = ABAS.find(a => normalizar(a.nome) === normalizar(t));
   if (aba) { trocarAba(aba.id); return true; }
@@ -1285,6 +1287,79 @@ function desenharBolhas() {
 
 const chipVersao = $('chip-versao');
 
+/* ——— Atualizar o Início ———
+   O Início fica sempre aberto, então só pegaria a página nova ao reiniciar.
+   O chip da versão confere no site; se houver versão nova, apaga a cópia
+   guardada pelo service worker e recarrega. A cada poucas horas ele confere
+   sozinho e acende o chip quando há novidade. */
+
+const CHAVE_VISTA = 'inicio:versao-nova';
+let atualizando = false;
+
+function maior(a, b) {
+  const x = a.split('.').map(Number), y = b.split('.').map(Number);
+  for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0);
+  return false;
+}
+
+async function versaoNoSite() {
+  const resp = await fetch('app.js', { cache: 'no-store' });
+  if (!resp.ok) throw new Error('site ' + resp.status);
+  const m = /const VERSAO = '([\d.]+)'/.exec(await resp.text());
+  if (!m) throw new Error('sem versão');
+  return m[1];
+}
+
+function marcarChip(texto, classe) {
+  chipVersao.querySelector('[data-versao]').textContent = texto;
+  chipVersao.className = 'chip-versao' + (classe ? ' ' + classe : '');
+}
+
+async function atualizarInicio() {
+  if (atualizando) return;
+  atualizando = true;
+  marcarChip('procurando…', 'girando');
+  try {
+    const nova = await versaoNoSite();
+    if (!maior(nova, VERSAO)) {
+      marcarChip('v' + VERSAO + ' ✓ em dia', 'em-dia');
+      setTimeout(() => marcarChip('v' + VERSAO), 2500);
+      atualizando = false;
+      return;
+    }
+    marcarChip('baixando v' + nova + '…', 'girando');
+    // Busca de novo, sem o cache do navegador, e joga fora a cópia antiga.
+    await Promise.all(['./', 'index.html', 'app.css', 'app.js', 'sw.js'].map(u => fetch(u, { cache: 'reload' }).catch(() => {})));
+    if (window.caches) {
+      for (const nome of await caches.keys()) if (nome.startsWith('inicio-app-')) await caches.delete(nome);
+    }
+    if (navigator.serviceWorker) {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) await reg.update().catch(() => {});
+    }
+    location.reload();
+  } catch (e) {
+    marcarChip('sem rede', 'falhou');
+    setTimeout(() => marcarChip('v' + VERSAO), 2500);
+    atualizando = false;
+  }
+}
+
+async function conferirVersao() {
+  const ultima = ler(CHAVE_VISTA, null);
+  if (ultima && Date.now() - ultima.quando < 3 * 60 * 60 * 1000) {
+    if (maior(ultima.versao, VERSAO)) marcarChip('↻ v' + ultima.versao + ' nova', 'nova');
+    return;
+  }
+  try {
+    const nova = await versaoNoSite();
+    guardar(CHAVE_VISTA, { quando: Date.now(), versao: nova });
+    if (maior(nova, VERSAO)) marcarChip('↻ v' + nova + ' nova', 'nova');
+  } catch (e) { /* sem rede: tenta depois */ }
+}
+
+chipVersao.addEventListener('click', atualizarInicio);
+
 window.aoMudarNotificacoes = () => {
   clearTimeout(window.aoMudarNotificacoes.espera);
   window.aoMudarNotificacoes.espera = setTimeout(() => {
@@ -1300,6 +1375,7 @@ function atualizarMostrador() {
   desenharClima();
   atualizarClima(false);
   atualizarCI();
+  if (!atualizando) conferirVersao();
 }
 
 // Enquanto o Início está na tela, renova bateria e bolhas a cada minuto.
