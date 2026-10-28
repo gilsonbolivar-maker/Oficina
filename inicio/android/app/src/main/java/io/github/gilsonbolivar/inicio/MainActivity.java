@@ -359,6 +359,18 @@ public class MainActivity extends Activity {
             return NotificacoesService.resumo();
         }
 
+        /** Pinta as barras do Android com a cor do tema (ex.: "#0e1418"). */
+        @JavascriptInterface
+        public void corDasBarras(String hex) {
+            final int cor;
+            try { cor = Color.parseColor(hex); } catch (Exception e) { return; }
+            runOnUiThread(() -> {
+                getWindow().setStatusBarColor(cor);
+                getWindow().setNavigationBarColor(cor);
+                if (web != null) web.setBackgroundColor(cor);
+            });
+        }
+
         /** Abre o "Acesso a notificações", onde a pessoa liga o Início. */
         @JavascriptInterface
         public void pedirNotificacoes() {

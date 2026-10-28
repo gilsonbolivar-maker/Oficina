@@ -139,9 +139,11 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
 .clima-colunas small { font: 500 10px var(--mono); color: var(--texto-fraco); }
 .clima-colunas .alerta b { color: #fb923c; }
 
-.bolhas { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
+.bolhas { display: flex; justify-content: safe center; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+.bolhas::-webkit-scrollbar { display: none; }
+.bolha, .chip-versao { flex: none; white-space: nowrap; }
 .bolha {
-  padding: 4px 8px;
+  padding: 4px 6px;
   border: 0;
   border-radius: 999px;
   background: rgb(255 255 255 / 0.07);
@@ -156,7 +158,7 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
 .ci-rodando b { color: var(--ouro); }
 .rede b { color: #38bdf8; letter-spacing: -2px; }
 .chip-versao {
-  padding: 3px 8px;
+  padding: 3px 6px;
   border: 1px solid var(--borda);
   border-radius: 999px;
   background: none;
@@ -547,3 +549,191 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
 .menu-abas button[aria-pressed="true"] { border-color: var(--cor, var(--ouro)); background: rgb(255 255 255 / 0.08); color: var(--cor, var(--ouro)); }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* ————————————————————————————————————————————————————————————
+   Tema Grafite: o redesign feito no Lovable. Grafite azulado, âmbar e
+   ciano, vidro fosco, pílulas e folhas animadas, letra Space Grotesk.
+   O tema Nexo (roxo e dourado) é o de cima; este só troca cores e formas.
+   ———————————————————————————————————————————————————————————— */
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("fontes/space-grotesk.woff2") format("woff2");
+  font-weight: 300 700;
+  font-display: swap;
+}
+
+:root[data-tema="grafite"] {
+  --noite: #0e1418;
+  --roxo: #171e23;
+  --roxo-claro: #1a2228;
+  --vidro: rgb(21 28 33 / 0.7);
+  --borda: rgb(255 255 255 / 0.08);
+  --texto: #f1eee7;
+  --texto-fraco: #88949d;
+  --ouro: #f2b33d;
+  --ouro-texto: #1d140a;
+  --ciano: #5cd3dc;
+  --secundaria: #222b31;
+  --raio: 24px;
+}
+:root[data-tema="grafite"] body {
+  font-family: "Space Grotesk", system-ui, Roboto, sans-serif;
+  background:
+    radial-gradient(120% 60% at 80% -10%, rgb(242 179 61 / 0.1), transparent 60%),
+    radial-gradient(90% 50% at 0% 110%, rgb(92 211 220 / 0.1), transparent 60%),
+    var(--noite);
+}
+
+/* Vidro fosco nos blocos de cima e de baixo. */
+:root[data-tema="grafite"] :is(.mostrador, .agora, .comando, .barra) {
+  border: 1px solid var(--borda);
+  background: var(--vidro);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  box-shadow: none;
+}
+
+/* Mostrador */
+:root[data-tema="grafite"] .dia { letter-spacing: 0.2em; font-size: 13px; font-weight: 600; }
+:root[data-tema="grafite"] .dia b { color: var(--texto); }
+:root[data-tema="grafite"] .sol-n, :root[data-tema="grafite"] .sol-p { color: var(--texto-fraco); }
+:root[data-tema="grafite"] .relogio { font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 50px; color: var(--texto); letter-spacing: -0.03em; }
+:root[data-tema="grafite"] .relogio .seg { font-family: var(--mono); font-weight: 600; font-size: 18px; margin-top: 4px; }
+:root[data-tema="grafite"] .anel .trilho { stroke: var(--secundaria); }
+:root[data-tema="grafite"] .anel-v { font-family: var(--mono); font-size: 15px; }
+:root[data-tema="grafite"] .anel-k { color: var(--ouro); }
+:root[data-tema="grafite"] .tr-on { stroke: var(--ciano); }
+:root[data-tema="grafite"] .tr-off { stroke: var(--secundaria); }
+:root[data-tema="grafite"] #bat-k { color: var(--ciano); }
+:root[data-tema="grafite"] .rotulo-agora { color: var(--texto); }
+:root[data-tema="grafite"] .clima-agora { font-size: 14px; }
+/* Clima em pílulas, sem os ícones; o UV alto ganha destaque âmbar. */
+:root[data-tema="grafite"] .clima-colunas { gap: 6px; }
+:root[data-tema="grafite"] .clima-colunas .col,
+:root[data-tema="grafite"] .clima-colunas .col:last-child {
+  padding: 6px 0;
+  border: 0;
+  border-radius: 12px;
+  background: rgb(34 43 49 / 0.6);
+}
+:root[data-tema="grafite"] .clima-colunas i { display: none; }
+:root[data-tema="grafite"] .clima-colunas b { font-family: var(--mono); font-size: 16px; }
+:root[data-tema="grafite"] .clima-colunas small { font-family: "Space Grotesk", sans-serif; }
+:root[data-tema="grafite"] .clima-colunas .alerta { background: rgb(242 179 61 / 0.15); box-shadow: inset 0 0 0 1px rgb(242 179 61 / 0.4); }
+:root[data-tema="grafite"] .clima-colunas .alerta b { color: var(--ouro); }
+:root[data-tema="grafite"] .bolha { background: var(--secundaria); }
+:root[data-tema="grafite"] .rede b { color: var(--ciano); }
+:root[data-tema="grafite"] .ci-ok b { color: #5bd58a; }
+:root[data-tema="grafite"] .chip-versao { border-color: rgb(242 179 61 / 0.4); background: rgb(242 179 61 / 0.15); }
+
+/* Agora */
+:root[data-tema="grafite"] .agora-rotulo { font-size: 10px; letter-spacing: 0.15em; }
+:root[data-tema="grafite"] .agora-tarefa { font-weight: 500; }
+:root[data-tema="grafite"] .agora-tempo { background: rgb(242 179 61 / 0.15); color: var(--ouro); }
+:root[data-tema="grafite"] .agora.correndo .agora-tempo { background: var(--ouro); color: var(--ouro-texto); }
+
+/* Abas: discretas, com um risquinho colorido em cima. */
+:root[data-tema="grafite"] .abas { margin-bottom: 0; gap: 4px; }
+:root[data-tema="grafite"] .aba {
+  position: relative;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 16px 16px 0 0;
+  background: rgb(34 43 49 / 0.4);
+  font-weight: 500;
+}
+:root[data-tema="grafite"] .aba::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--cor);
+  opacity: 0.5;
+}
+:root[data-tema="grafite"] .aba svg { color: currentColor; width: 15px; height: 15px; }
+:root[data-tema="grafite"] .aba[aria-selected="true"] { background: var(--roxo); font-weight: 600; }
+:root[data-tema="grafite"] .aba[aria-selected="true"]::before { opacity: 1; }
+:root[data-tema="grafite"] .painel {
+  border: 0;
+  border-radius: 24px;
+  border-top-left-radius: 0;
+  background: var(--roxo);
+}
+:root[data-tema="grafite"] .grade { animation: aparecer 0.3s ease-out both; }
+@keyframes aparecer { from { opacity: 0; transform: translateY(6px); } }
+:root[data-tema="grafite"] .app .nome { font-size: 11.5px; }
+:root[data-tema="grafite"] .icone { border-radius: 30%; box-shadow: 0 6px 14px rgb(0 0 0 / 0.35), inset 0 0 0 1px rgb(241 238 231 / 0.15); }
+:root[data-tema="grafite"] .icone.real { box-shadow: none; border-radius: 0; }
+:root[data-tema="grafite"] .contador { background: #ec4d46; border-color: var(--noite); }
+
+/* Barra de comando e lista de comandos */
+:root[data-tema="grafite"] .comando:focus-within { border-color: var(--borda); box-shadow: 0 0 0 2px rgb(242 179 61 / 0.6); }
+:root[data-tema="grafite"] .botao-gaveta { border: 0; background: var(--secundaria); color: var(--texto); }
+:root[data-tema="grafite"] .enviar { box-shadow: 0 0 40px -8px rgb(242 179 61 / 0.45); }
+:root[data-tema="grafite"] .sugestoes { border-radius: 24px; background: #1a2228; }
+:root[data-tema="grafite"] .linha-comando { justify-content: space-between; }
+:root[data-tema="grafite"] .linha-comando b { color: var(--texto); font-weight: 500; }
+:root[data-tema="grafite"] .linha-comando b::before { content: "› "; color: var(--ouro); }
+:root[data-tema="grafite"] .linha-comando:first-child { background: rgb(242 179 61 / 0.1); }
+:root[data-tema="grafite"] .barra .dica { color: var(--texto-fraco); }
+
+/* Gaveta */
+:root[data-tema="grafite"] .gaveta { background: var(--noite); }
+:root[data-tema="grafite"] .marca { font-family: "Space Grotesk", sans-serif; font-size: 20px; color: var(--texto); letter-spacing: 0; }
+:root[data-tema="grafite"] .busca-gaveta { border: 0; background: var(--secundaria); }
+:root[data-tema="grafite"] .fechar { border: 0; border-radius: 999px; width: auto; padding: 0 14px; height: 32px; background: var(--secundaria); }
+:root[data-tema="grafite"] .letra { font-size: 12px; }
+
+/* Folhas: sobem macias, com o fundo desfocado e a alça em cima. */
+:root[data-tema="grafite"] .fundo-folha { background: rgb(14 20 24 / 0.6); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+:root[data-tema="grafite"] .folha {
+  border: 0;
+  border-top: 1px solid var(--borda);
+  border-radius: 32px 32px 0 0;
+  background: #1a2228;
+  padding-top: 12px;
+  animation: folha-sobe 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+:root[data-tema="grafite"] .folha::before {
+  content: "";
+  justify-self: center;
+  width: 40px;
+  height: 4px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  background: rgb(136 148 157 / 0.4);
+}
+@keyframes folha-sobe { from { transform: translateY(100%); } }
+:root[data-tema="grafite"] .rotulo { font-size: 11px; letter-spacing: 0.15em; }
+:root[data-tema="grafite"] .tarefa { font-family: "Space Grotesk", sans-serif; font-weight: 700; }
+:root[data-tema="grafite"] .passos { gap: 6px; }
+:root[data-tema="grafite"] .passos li { padding: 0 6px 0 12px; border-radius: 12px; background: rgb(34 43 49 / 0.6); }
+:root[data-tema="grafite"] .passos input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  display: grid;
+  place-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--texto-fraco);
+  border-radius: 50%;
+}
+:root[data-tema="grafite"] .passos input[type="checkbox"]:checked { border-color: var(--ouro); background: var(--ouro); }
+:root[data-tema="grafite"] .passos input[type="checkbox"]:checked::after { content: "✓"; color: var(--ouro-texto); font-size: 12px; font-weight: 800; }
+:root[data-tema="grafite"] .novo-passo { border: 1px dashed var(--borda); border-radius: 12px; background: none; }
+:root[data-tema="grafite"] .bloco { border: 0; border-radius: 20px; background: rgb(34 43 49 / 0.6); }
+:root[data-tema="grafite"] .botao-ouro { border-radius: 999px; box-shadow: 0 0 40px -8px rgb(242 179 61 / 0.45); }
+:root[data-tema="grafite"] .duracoes button { border: 0; border-radius: 999px; color: var(--texto-fraco); }
+:root[data-tema="grafite"] .duracoes button[aria-pressed="true"] { background: var(--texto); color: var(--noite); }
+:root[data-tema="grafite"] .menu-nome { font-family: "Space Grotesk", sans-serif; }
+:root[data-tema="grafite"] .opcao { border: 0; background: none; font-weight: 500; }
+:root[data-tema="grafite"] .opcao:active { background: var(--secundaria); }
+:root[data-tema="grafite"] .menu-abas button { border: 0; background: var(--secundaria); }
+:root[data-tema="grafite"] .menu-abas button[aria-pressed="true"] { background: var(--ouro); color: var(--ouro-texto); }
+:root[data-tema="grafite"] .aviso { border-color: rgb(242 179 61 / 0.4); }
+
+/* Bolha do tema, nos dois temas. */
+.tema b { letter-spacing: 0; }

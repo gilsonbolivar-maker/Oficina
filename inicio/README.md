@@ -50,7 +50,7 @@ vez e o bloco de foco que avisa no fim.
 - **Barra de comando** `nexo:~$`: digite e o app aparece; *Enter* abre.
   Tocar no campo vazio mostra os comandos: `foco 30` (bloco de 30 min),
   `tarefa revisar o PR`, `pausar`, `clima`, `cidade NOME`, `ci`,
-  `notificações`, `atualizar`, `gaveta`, e o nome de uma aba (`dev`, `oficina`…).
+  `notificações`, `tema`, `atualizar`, `gaveta`, e o nome de uma aba (`dev`, `oficina`…).
 - **Gaveta** com todos os apps de A a Z, com busca: toque em ⌃ (no começo da
   barra de comando) ou deslize para cima; deslize para baixo (ou o voltar) fecha.
 - **Barra fixa** embaixo, com até 5 apps. Na primeira vez ela já vem com
@@ -64,10 +64,20 @@ vez e o bloco de foco que avisa no fim.
 Tudo (Início, barra, abas, tarefa, passos e bloco) fica guardado só no
 aparelho. Os favoritos da 1.x viram a aba Início.
 
-**Visual:** roxo `#23083b` e dourado `#f5b942`, letras
-[Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans) e
-[JetBrains Mono](https://www.jetbrains.com/lp/mono/) (as duas com licença OFL),
-que vêm em `fontes/` para abrir offline.
+**Dois temas** — a bolha 🎨 do mostrador (ou o comando `tema`) troca, e a
+escolha fica guardada no aparelho:
+
+| Tema | Cores | Letra | Formas |
+|---|---|---|---|
+| **Nexo** | roxo `#23083b` e dourado `#f5b942` | Plus Jakarta Sans | contornos coloridos, clima em colunas com ícones |
+| **Grafite** (redesign do Lovable) | grafite `#0e1418`, âmbar `#f2b33d` e ciano `#5cd3dc` | Space Grotesk | vidro fosco, clima em pílulas, abas com risquinho, folhas que sobem macias |
+
+Nos dois, os números e o terminal usam
+[JetBrains Mono](https://www.jetbrains.com/lp/mono/). As letras
+([Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans),
+[Space Grotesk](https://fonts.google.com/specimen/Space+Grotesk); todas OFL)
+vêm em `fontes/` para abrir offline. No APK 2.3.0, as barras do Android
+acompanham a cor do tema.
 
 ## Instalar no Redmi Note 10
 
