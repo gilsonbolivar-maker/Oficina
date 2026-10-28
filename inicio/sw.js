@@ -3,7 +3,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.1.0';   // precisa casar com a VERSAO do app.js
+const VERSAO = '2.0.0';   // precisa casar com a VERSAO do app.js
 const CACHE_APP = 'inicio-app-' + VERSAO;
 
 const ARQUIVOS = [
@@ -12,8 +12,8 @@ const ARQUIVOS = [
   'app.css',
   'app.js',
   'manifest.webmanifest',
-  'fontes/atkinson-400.woff2',
-  'fontes/atkinson-700.woff2',
+  'fontes/plus-jakarta-sans.woff2',
+  'fontes/jetbrains-mono.woff2',
   'icones/icone-180.png',
   'icones/icone-192.png',
   'icones/icone-512.png',
