@@ -1,6 +1,9 @@
 package io.github.gilsonbolivar.inicio;
 
+import android.Manifest;
 import android.app.Activity;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -55,11 +58,11 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle salvo) {
         super.onCreate(salvo);
-        getWindow().setStatusBarColor(Color.parseColor("#0b1220"));
-        getWindow().setNavigationBarColor(Color.parseColor("#0b1220"));
+        getWindow().setStatusBarColor(Color.parseColor("#0f171c"));
+        getWindow().setNavigationBarColor(Color.parseColor("#0f171c"));
 
         web = new WebView(this);
-        web.setBackgroundColor(Color.parseColor("#0b1220"));
+        web.setBackgroundColor(Color.parseColor("#0f171c"));
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
@@ -222,6 +225,28 @@ public class MainActivity extends Activity {
             Intent casa = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME);
             ResolveInfo r = getPackageManager().resolveActivity(casa, PackageManager.MATCH_DEFAULT_ONLY);
             return r != null && getPackageName().equals(r.activityInfo.packageName);
+        }
+
+        /** Bloco de foco: vibra, toca e notifica daqui a tantos segundos. */
+        @JavascriptInterface
+        public void avisarEm(int segundos, String tarefa) {
+            AlarmManager am = getSystemService(AlarmManager.class);
+            PendingIntent aviso = AvisoReceiver.intento(MainActivity.this, tarefa);
+            long quando = System.currentTimeMillis() + Math.max(1, segundos) * 1000L;
+            if (Build.VERSION.SDK_INT >= 31 && !am.canScheduleExactAlarms()) {
+                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, quando, aviso);
+            } else {
+                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, quando, aviso);
+            }
+            if (Build.VERSION.SDK_INT >= 33 &&
+                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                runOnUiThread(() -> requestPermissions(new String[] { Manifest.permission.POST_NOTIFICATIONS }, 1));
+            }
+        }
+
+        @JavascriptInterface
+        public void cancelarAviso() {
+            getSystemService(AlarmManager.class).cancel(AvisoReceiver.intento(MainActivity.this, ""));
         }
 
         /** Ajustes onde se escolhe a tela inicial (no Redmi: Apps padrão › Tela inicial). */

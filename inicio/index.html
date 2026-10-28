@@ -4,46 +4,84 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <title>Início</title>
-<meta name="description" content="Tela inicial para Android: relógio, favoritos, apps da Oficina e busca.">
-<meta name="theme-color" content="#0b1220">
+<meta name="description" content="Tela inicial calma para Android: uma tarefa por vez, bloco de foco, favoritos, atalhos e todos os apps.">
+<meta name="theme-color" content="#0f171c">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icones/icone-192.png" sizes="192x192">
 <link rel="apple-touch-icon" sizes="180x180" href="icones/icone-180.png">
+<script>
+  // Modo foco aplicado antes de pintar, para não piscar.
+  try { if (localStorage.getItem('inicio:foco') === '1') document.documentElement.dataset.foco = ''; } catch (e) {}
+</script>
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
   <header class="topo">
-    <time id="hora" class="hora">--:--</time>
-    <p id="data" class="data"></p>
-    <p class="versao" data-versao></p>
+    <div>
+      <p id="data" class="data"></p>
+      <time id="hora" class="hora">--:--</time>
+      <p class="versao" data-versao></p>
+    </div>
+    <button id="modo-foco" type="button" class="pilula" aria-pressed="false">Modo foco</button>
   </header>
 
-  <div class="busca">
+  <div class="busca" data-some-no-foco>
     <input id="busca" type="search" placeholder="Buscar app…" autocomplete="off" enterkeyhint="go" aria-label="Buscar app">
   </div>
 
   <aside id="aviso" class="aviso" hidden></aside>
 
   <main id="inicio">
+    <section class="cartao">
+      <p class="rotulo primaria">Agora estou fazendo</p>
+      <input id="tarefa" class="tarefa" placeholder="Uma única tarefa…" autocomplete="off" aria-label="Tarefa de agora">
+      <ul id="passos" class="passos"></ul>
+      <form id="form-passo">
+        <input id="novo-passo" class="novo-passo" placeholder="+ próximo passo pequeno" autocomplete="off" enterkeyhint="done" aria-label="Próximo passo">
+      </form>
+    </section>
+
+    <section class="cartao bloco">
+      <div>
+        <p class="rotulo destaque">Bloco de foco</p>
+        <p id="tempo" class="tempo">25:00</p>
+        <p id="bloco-estado" class="bloco-estado" hidden></p>
+      </div>
+      <div class="controles">
+        <button id="bloco-comecar" type="button" class="botao-primario">Começar</button>
+        <div class="duracoes">
+          <button type="button" data-min="15">15m</button>
+          <button type="button" data-min="25">25m</button>
+          <button type="button" data-min="45">45m</button>
+        </div>
+      </div>
+    </section>
+
     <section>
       <h2>Favoritos</h2>
       <div id="favoritos" class="grade"></div>
       <p id="sem-favoritos" class="nota" hidden>Toque e segure um app para fixar aqui.</p>
     </section>
 
-    <section>
-      <h2>Oficina</h2>
-      <div id="oficina" class="grade"></div>
-    </section>
+    <div data-some-no-foco>
+      <div id="atalhos"></div>
 
-    <section>
-      <h2>Todos os apps <span id="contagem" class="contagem"></span></h2>
-      <div id="todos" class="lista"></div>
-    </section>
+      <section>
+        <h2>Oficina</h2>
+        <div id="oficina" class="ladrilhos"></div>
+      </section>
+
+      <section>
+        <h2>Todos os apps <span id="contagem" class="contagem"></span></h2>
+        <div id="todos" class="lista"></div>
+      </section>
+    </div>
   </main>
 
   <main id="resultados" class="lista" hidden></main>
+
+  <footer class="rodape">Respire. Um passo de cada vez.</footer>
 
   <div id="menu" class="menu" hidden>
     <div class="menu-caixa" role="dialog" aria-labelledby="menu-nome">

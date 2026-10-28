@@ -46,5 +46,5 @@ jobs:
           gh release delete inicio-apk --yes --cleanup-tag || true
           gh release create inicio-apk inicio.apk \
             --title "Início para Android" \
-            --notes "APK do Início: tela inicial com relógio, favoritos, apps da Oficina e busca. Compilado de ${GITHUB_SHA::7}." \
+            --notes "APK do Início: tela inicial calma com tarefa, bloco de foco, favoritos, atalhos e busca. Compilado de ${GITHUB_SHA::7}." \
             --target "$GITHUB_SHA"
