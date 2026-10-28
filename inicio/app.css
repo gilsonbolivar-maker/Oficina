@@ -551,7 +551,7 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
 /* ————————————————————————————————————————————————————————————
-   Tema Grafite: o redesign feito no Lovable. Grafite azulado, âmbar e
+   Tema Grafite (e o 3D, que parte dele): o redesign feito no Lovable. Grafite azulado, âmbar e
    ciano, vidro fosco, pílulas e folhas animadas, letra Space Grotesk.
    O tema Nexo (roxo e dourado) é o de cima; este só troca cores e formas.
    ———————————————————————————————————————————————————————————— */
@@ -562,7 +562,7 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
   font-display: swap;
 }
 
-:root[data-tema="grafite"] {
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) {
   --noite: #0e1418;
   --roxo: #171e23;
   --roxo-claro: #1a2228;
@@ -576,7 +576,7 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
   --secundaria: #222b31;
   --raio: 24px;
 }
-:root[data-tema="grafite"] body {
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) body {
   font-family: "Space Grotesk", system-ui, Roboto, sans-serif;
   background:
     radial-gradient(120% 60% at 80% -10%, rgb(242 179 61 / 0.1), transparent 60%),
@@ -585,7 +585,7 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
 }
 
 /* Vidro fosco nos blocos de cima e de baixo. */
-:root[data-tema="grafite"] :is(.mostrador, .agora, .comando, .barra) {
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) :is(.mostrador, .agora, .comando, .barra) {
   border: 1px solid var(--borda);
   background: var(--vidro);
   -webkit-backdrop-filter: blur(16px);
@@ -594,47 +594,47 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
 }
 
 /* Mostrador */
-:root[data-tema="grafite"] .dia { letter-spacing: 0.2em; font-size: 13px; font-weight: 600; }
-:root[data-tema="grafite"] .dia b { color: var(--texto); }
-:root[data-tema="grafite"] .sol-n, :root[data-tema="grafite"] .sol-p { color: var(--texto-fraco); }
-:root[data-tema="grafite"] .relogio { font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 50px; color: var(--texto); letter-spacing: -0.03em; }
-:root[data-tema="grafite"] .relogio .seg { font-family: var(--mono); font-weight: 600; font-size: 18px; margin-top: 4px; }
-:root[data-tema="grafite"] .anel .trilho { stroke: var(--secundaria); }
-:root[data-tema="grafite"] .anel-v { font-family: var(--mono); font-size: 15px; }
-:root[data-tema="grafite"] .anel-k { color: var(--ouro); }
-:root[data-tema="grafite"] .tr-on { stroke: var(--ciano); }
-:root[data-tema="grafite"] .tr-off { stroke: var(--secundaria); }
-:root[data-tema="grafite"] #bat-k { color: var(--ciano); }
-:root[data-tema="grafite"] .rotulo-agora { color: var(--texto); }
-:root[data-tema="grafite"] .clima-agora { font-size: 14px; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .dia { letter-spacing: 0.2em; font-size: 13px; font-weight: 600; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .dia b { color: var(--texto); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .sol-n, :root:is([data-tema="grafite"], [data-tema="grafite3d"]) .sol-p { color: var(--texto-fraco); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .relogio { font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 50px; color: var(--texto); letter-spacing: -0.03em; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .relogio .seg { font-family: var(--mono); font-weight: 600; font-size: 18px; margin-top: 4px; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .anel .trilho { stroke: var(--secundaria); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .anel-v { font-family: var(--mono); font-size: 15px; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .anel-k { color: var(--ouro); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .tr-on { stroke: var(--ciano); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .tr-off { stroke: var(--secundaria); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) #bat-k { color: var(--ciano); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .rotulo-agora { color: var(--texto); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .clima-agora { font-size: 14px; }
 /* Clima em pílulas, sem os ícones; o UV alto ganha destaque âmbar. */
-:root[data-tema="grafite"] .clima-colunas { gap: 6px; }
-:root[data-tema="grafite"] .clima-colunas .col,
-:root[data-tema="grafite"] .clima-colunas .col:last-child {
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .clima-colunas { gap: 6px; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .clima-colunas .col,
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .clima-colunas .col:last-child {
   padding: 6px 0;
   border: 0;
   border-radius: 12px;
   background: rgb(34 43 49 / 0.6);
 }
-:root[data-tema="grafite"] .clima-colunas i { display: none; }
-:root[data-tema="grafite"] .clima-colunas b { font-family: var(--mono); font-size: 16px; }
-:root[data-tema="grafite"] .clima-colunas small { font-family: "Space Grotesk", sans-serif; }
-:root[data-tema="grafite"] .clima-colunas .alerta { background: rgb(242 179 61 / 0.15); box-shadow: inset 0 0 0 1px rgb(242 179 61 / 0.4); }
-:root[data-tema="grafite"] .clima-colunas .alerta b { color: var(--ouro); }
-:root[data-tema="grafite"] .bolha { background: var(--secundaria); }
-:root[data-tema="grafite"] .rede b { color: var(--ciano); }
-:root[data-tema="grafite"] .ci-ok b { color: #5bd58a; }
-:root[data-tema="grafite"] .chip-versao { border-color: rgb(242 179 61 / 0.4); background: rgb(242 179 61 / 0.15); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .clima-colunas i { display: none; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .clima-colunas b { font-family: var(--mono); font-size: 16px; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .clima-colunas small { font-family: "Space Grotesk", sans-serif; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .clima-colunas .alerta { background: rgb(242 179 61 / 0.15); box-shadow: inset 0 0 0 1px rgb(242 179 61 / 0.4); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .clima-colunas .alerta b { color: var(--ouro); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .bolha { background: var(--secundaria); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .rede b { color: var(--ciano); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .ci-ok b { color: #5bd58a; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .chip-versao { border-color: rgb(242 179 61 / 0.4); background: rgb(242 179 61 / 0.15); }
 
 /* Agora */
-:root[data-tema="grafite"] .agora-rotulo { font-size: 10px; letter-spacing: 0.15em; }
-:root[data-tema="grafite"] .agora-tarefa { font-weight: 500; }
-:root[data-tema="grafite"] .agora-tempo { background: rgb(242 179 61 / 0.15); color: var(--ouro); }
-:root[data-tema="grafite"] .agora.correndo .agora-tempo { background: var(--ouro); color: var(--ouro-texto); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .agora-rotulo { font-size: 10px; letter-spacing: 0.15em; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .agora-tarefa { font-weight: 500; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .agora-tempo { background: rgb(242 179 61 / 0.15); color: var(--ouro); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .agora.correndo .agora-tempo { background: var(--ouro); color: var(--ouro-texto); }
 
 /* Abas: discretas, com um risquinho colorido em cima. */
-:root[data-tema="grafite"] .abas { margin-bottom: 0; gap: 4px; }
-:root[data-tema="grafite"] .aba {
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .abas { margin-bottom: 0; gap: 4px; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .aba {
   position: relative;
   padding: 9px 12px;
   border: 0;
@@ -642,7 +642,7 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
   background: rgb(34 43 49 / 0.4);
   font-weight: 500;
 }
-:root[data-tema="grafite"] .aba::before {
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .aba::before {
   content: "";
   position: absolute;
   top: 0;
@@ -653,43 +653,43 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
   background: var(--cor);
   opacity: 0.5;
 }
-:root[data-tema="grafite"] .aba svg { color: currentColor; width: 15px; height: 15px; }
-:root[data-tema="grafite"] .aba[aria-selected="true"] { background: var(--roxo); font-weight: 600; }
-:root[data-tema="grafite"] .aba[aria-selected="true"]::before { opacity: 1; }
-:root[data-tema="grafite"] .painel {
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .aba svg { color: currentColor; width: 15px; height: 15px; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .aba[aria-selected="true"] { background: var(--roxo); font-weight: 600; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .aba[aria-selected="true"]::before { opacity: 1; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .painel {
   border: 0;
   border-radius: 24px;
   border-top-left-radius: 0;
   background: var(--roxo);
 }
-:root[data-tema="grafite"] .grade { animation: aparecer 0.3s ease-out both; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .grade { animation: aparecer 0.3s ease-out both; }
 @keyframes aparecer { from { opacity: 0; transform: translateY(6px); } }
-:root[data-tema="grafite"] .app .nome { font-size: 11.5px; }
-:root[data-tema="grafite"] .icone { border-radius: 30%; box-shadow: 0 6px 14px rgb(0 0 0 / 0.35), inset 0 0 0 1px rgb(241 238 231 / 0.15); }
-:root[data-tema="grafite"] .icone.real { box-shadow: none; border-radius: 0; }
-:root[data-tema="grafite"] .contador { background: #ec4d46; border-color: var(--noite); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .app .nome { font-size: 11.5px; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .icone { border-radius: 30%; box-shadow: 0 6px 14px rgb(0 0 0 / 0.35), inset 0 0 0 1px rgb(241 238 231 / 0.15); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .icone.real { box-shadow: none; border-radius: 0; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .contador { background: #ec4d46; border-color: var(--noite); }
 
 /* Barra de comando e lista de comandos */
-:root[data-tema="grafite"] .comando:focus-within { border-color: var(--borda); box-shadow: 0 0 0 2px rgb(242 179 61 / 0.6); }
-:root[data-tema="grafite"] .botao-gaveta { border: 0; background: var(--secundaria); color: var(--texto); }
-:root[data-tema="grafite"] .enviar { box-shadow: 0 0 40px -8px rgb(242 179 61 / 0.45); }
-:root[data-tema="grafite"] .sugestoes { border-radius: 24px; background: #1a2228; }
-:root[data-tema="grafite"] .linha-comando { justify-content: space-between; }
-:root[data-tema="grafite"] .linha-comando b { color: var(--texto); font-weight: 500; }
-:root[data-tema="grafite"] .linha-comando b::before { content: "› "; color: var(--ouro); }
-:root[data-tema="grafite"] .linha-comando:first-child { background: rgb(242 179 61 / 0.1); }
-:root[data-tema="grafite"] .barra .dica { color: var(--texto-fraco); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .comando:focus-within { border-color: var(--borda); box-shadow: 0 0 0 2px rgb(242 179 61 / 0.6); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .botao-gaveta { border: 0; background: var(--secundaria); color: var(--texto); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .enviar { box-shadow: 0 0 40px -8px rgb(242 179 61 / 0.45); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .sugestoes { border-radius: 24px; background: #1a2228; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .linha-comando { justify-content: space-between; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .linha-comando b { color: var(--texto); font-weight: 500; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .linha-comando b::before { content: "› "; color: var(--ouro); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .linha-comando:first-child { background: rgb(242 179 61 / 0.1); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .barra .dica { color: var(--texto-fraco); }
 
 /* Gaveta */
-:root[data-tema="grafite"] .gaveta { background: var(--noite); }
-:root[data-tema="grafite"] .marca { font-family: "Space Grotesk", sans-serif; font-size: 20px; color: var(--texto); letter-spacing: 0; }
-:root[data-tema="grafite"] .busca-gaveta { border: 0; background: var(--secundaria); }
-:root[data-tema="grafite"] .fechar { border: 0; border-radius: 999px; width: auto; padding: 0 14px; height: 32px; background: var(--secundaria); }
-:root[data-tema="grafite"] .letra { font-size: 12px; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .gaveta { background: var(--noite); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .marca { font-family: "Space Grotesk", sans-serif; font-size: 20px; color: var(--texto); letter-spacing: 0; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .busca-gaveta { border: 0; background: var(--secundaria); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .fechar { border: 0; border-radius: 999px; width: auto; padding: 0 14px; height: 32px; background: var(--secundaria); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .letra { font-size: 12px; }
 
 /* Folhas: sobem macias, com o fundo desfocado e a alça em cima. */
-:root[data-tema="grafite"] .fundo-folha { background: rgb(14 20 24 / 0.6); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
-:root[data-tema="grafite"] .folha {
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .fundo-folha { background: rgb(14 20 24 / 0.6); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .folha {
   border: 0;
   border-top: 1px solid var(--borda);
   border-radius: 32px 32px 0 0;
@@ -697,7 +697,7 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
   padding-top: 12px;
   animation: folha-sobe 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-:root[data-tema="grafite"] .folha::before {
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .folha::before {
   content: "";
   justify-self: center;
   width: 40px;
@@ -707,11 +707,11 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
   background: rgb(136 148 157 / 0.4);
 }
 @keyframes folha-sobe { from { transform: translateY(100%); } }
-:root[data-tema="grafite"] .rotulo { font-size: 11px; letter-spacing: 0.15em; }
-:root[data-tema="grafite"] .tarefa { font-family: "Space Grotesk", sans-serif; font-weight: 700; }
-:root[data-tema="grafite"] .passos { gap: 6px; }
-:root[data-tema="grafite"] .passos li { padding: 0 6px 0 12px; border-radius: 12px; background: rgb(34 43 49 / 0.6); }
-:root[data-tema="grafite"] .passos input[type="checkbox"] {
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .rotulo { font-size: 11px; letter-spacing: 0.15em; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .tarefa { font-family: "Space Grotesk", sans-serif; font-weight: 700; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .passos { gap: 6px; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .passos li { padding: 0 6px 0 12px; border-radius: 12px; background: rgb(34 43 49 / 0.6); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .passos input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
   display: grid;
@@ -721,19 +721,124 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
   border: 1.5px solid var(--texto-fraco);
   border-radius: 50%;
 }
-:root[data-tema="grafite"] .passos input[type="checkbox"]:checked { border-color: var(--ouro); background: var(--ouro); }
-:root[data-tema="grafite"] .passos input[type="checkbox"]:checked::after { content: "✓"; color: var(--ouro-texto); font-size: 12px; font-weight: 800; }
-:root[data-tema="grafite"] .novo-passo { border: 1px dashed var(--borda); border-radius: 12px; background: none; }
-:root[data-tema="grafite"] .bloco { border: 0; border-radius: 20px; background: rgb(34 43 49 / 0.6); }
-:root[data-tema="grafite"] .botao-ouro { border-radius: 999px; box-shadow: 0 0 40px -8px rgb(242 179 61 / 0.45); }
-:root[data-tema="grafite"] .duracoes button { border: 0; border-radius: 999px; color: var(--texto-fraco); }
-:root[data-tema="grafite"] .duracoes button[aria-pressed="true"] { background: var(--texto); color: var(--noite); }
-:root[data-tema="grafite"] .menu-nome { font-family: "Space Grotesk", sans-serif; }
-:root[data-tema="grafite"] .opcao { border: 0; background: none; font-weight: 500; }
-:root[data-tema="grafite"] .opcao:active { background: var(--secundaria); }
-:root[data-tema="grafite"] .menu-abas button { border: 0; background: var(--secundaria); }
-:root[data-tema="grafite"] .menu-abas button[aria-pressed="true"] { background: var(--ouro); color: var(--ouro-texto); }
-:root[data-tema="grafite"] .aviso { border-color: rgb(242 179 61 / 0.4); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .passos input[type="checkbox"]:checked { border-color: var(--ouro); background: var(--ouro); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .passos input[type="checkbox"]:checked::after { content: "✓"; color: var(--ouro-texto); font-size: 12px; font-weight: 800; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .novo-passo { border: 1px dashed var(--borda); border-radius: 12px; background: none; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .bloco { border: 0; border-radius: 20px; background: rgb(34 43 49 / 0.6); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .botao-ouro { border-radius: 999px; box-shadow: 0 0 40px -8px rgb(242 179 61 / 0.45); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .duracoes button { border: 0; border-radius: 999px; color: var(--texto-fraco); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .duracoes button[aria-pressed="true"] { background: var(--texto); color: var(--noite); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .menu-nome { font-family: "Space Grotesk", sans-serif; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .opcao { border: 0; background: none; font-weight: 500; }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .opcao:active { background: var(--secundaria); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .menu-abas button { border: 0; background: var(--secundaria); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .menu-abas button[aria-pressed="true"] { background: var(--ouro); color: var(--ouro-texto); }
+:root:is([data-tema="grafite"], [data-tema="grafite3d"]) .aviso { border-color: rgb(242 179 61 / 0.4); }
 
 /* Bolha do tema, nos dois temas. */
 .tema b { letter-spacing: 0; }
+
+/* ————————————————————————————————————————————————————————————
+   Tema 3D: o Grafite com a profundidade do redesign v3 do Lovable.
+   Sombras em camadas, reflexo de vidro, hora metálica, ícones com
+   brilho, botões que afundam, entrada em cascata e um fundo com luzes
+   e grade em perspectiva. O celular desenhado do v3 não entra.
+   ———————————————————————————————————————————————————————————— */
+:root[data-tema="grafite3d"] {
+  --suave: cubic-bezier(0.22, 1, 0.36, 1);
+  --sombra-3d: inset 0 1px 0 rgb(255 255 255 / 0.07), inset 0 -1px 0 rgb(0 0 0 / 0.35),
+    0 2px 4px -1px rgb(0 0 0 / 0.35), 0 12px 24px -8px rgb(0 0 0 / 0.55), 0 30px 60px -20px rgb(0 0 0 / 0.6);
+  --sombra-icone: inset 0 1px 0 rgb(255 255 255 / 0.55), inset 0 -3px 6px rgb(0 0 0 / 0.3),
+    0 4px 0 rgb(0 0 0 / 0.35), 0 6px 0 rgb(0 0 0 / 0.2), 0 14px 22px -6px rgb(0 0 0 / 0.7);
+  --afundado: inset 0 2px 6px rgb(0 0 0 / 0.45), 0 1px 0 rgb(255 255 255 / 0.05);
+  --brilho: linear-gradient(160deg, rgb(255 255 255 / 0.09) 0%, transparent 38%, transparent 70%, rgb(0 0 0 / 0.18) 100%);
+}
+:root[data-tema="grafite3d"] body {
+  background:
+    radial-gradient(60% 40% at 50% 0%, rgb(242 179 61 / 0.18), transparent 70%),
+    radial-gradient(50% 50% at 100% 60%, rgb(92 211 220 / 0.14), transparent 70%),
+    var(--noite);
+}
+
+/* Fundo: duas luzes que flutuam e uma grade em perspectiva que corre. */
+.fundo-3d { display: none; }
+:root[data-tema="grafite3d"] .fundo-3d { display: block; position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+:root[data-tema="grafite3d"] .tela { z-index: 1; }
+.fundo-3d i {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  animation: luz-flutua 14s ease-in-out infinite;
+}
+.fundo-3d i:nth-child(1) { left: -80px; top: 120px; width: 320px; height: 320px; background: rgb(242 179 61 / 0.3); }
+.fundo-3d i:nth-child(2) { right: -90px; top: 420px; width: 380px; height: 380px; background: rgb(92 211 220 / 0.25); animation-delay: -7s; }
+@keyframes luz-flutua { 50% { transform: translate3d(24px, -30px, 0) scale(1.12); } }
+.fundo-3d b {
+  position: absolute;
+  left: -50%;
+  right: -50%;
+  bottom: -10%;
+  height: 60%;
+  background-image: linear-gradient(rgb(92 211 220 / 0.18) 1px, transparent 1px), linear-gradient(90deg, rgb(92 211 220 / 0.18) 1px, transparent 1px);
+  background-size: 48px 48px;
+  transform: perspective(600px) rotateX(62deg);
+  -webkit-mask-image: linear-gradient(to top, black 10%, transparent 85%);
+  mask-image: linear-gradient(to top, black 10%, transparent 85%);
+  animation: grade-corre 6s linear infinite;
+}
+@keyframes grade-corre { to { background-position: 0 48px, 0 0; } }
+
+/* Vidro com reflexo e sombra em camadas. */
+:root[data-tema="grafite3d"] :is(.mostrador, .agora, .comando, .barra) {
+  border-color: rgb(255 255 255 / 0.07);
+  background: var(--brilho), rgb(21 28 33 / 0.62);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  box-shadow: var(--sombra-3d);
+}
+:root[data-tema="grafite3d"] :is(.painel, .folha, .sugestoes) { background: var(--brilho), #171e23; box-shadow: var(--sombra-3d); }
+:root[data-tema="grafite3d"] .aba[aria-selected="true"] { box-shadow: 0 -6px 14px -6px rgb(0 0 0 / 0.5); }
+:root[data-tema="grafite3d"] .mostrador { transition: transform 0.5s var(--suave); will-change: transform; }
+:root[data-tema="grafite3d"] .centro { perspective: 1100px; }
+
+/* Hora metálica. */
+:root[data-tema="grafite3d"] #hora {
+  background: linear-gradient(180deg, #fffdf6 0%, #d9d3c5 45%, #79838d 55%, #ebe7dc 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 0 rgb(0 0 0 / 0.5)) drop-shadow(0 10px 18px rgb(0 0 0 / 0.6));
+}
+:root[data-tema="grafite3d"] .clima-colunas .col { box-shadow: var(--afundado); }
+:root[data-tema="grafite3d"] .clima-colunas .alerta { box-shadow: var(--afundado), inset 0 0 0 1px rgb(242 179 61 / 0.4); }
+
+/* Ícones e botões redondos com relevo e brilho. */
+:root[data-tema="grafite3d"] :is(.icone, .enviar, .botao-gaveta, .botao-ouro) { position: relative; box-shadow: var(--sombra-icone); }
+:root[data-tema="grafite3d"] :is(.icone, .enviar, .botao-gaveta, .botao-ouro)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(110% 60% at 30% 0%, rgb(255 255 255 / 0.5), transparent 55%);
+}
+/* Ícone de verdade: sem brilho por cima, só a sombra. */
+:root[data-tema="grafite3d"] .icone.real { box-shadow: none; filter: drop-shadow(0 4px 0 rgb(0 0 0 / 0.3)) drop-shadow(0 12px 14px rgb(0 0 0 / 0.55)); }
+:root[data-tema="grafite3d"] .icone.real::after { display: none; }
+
+/* Afunda ao tocar. */
+:root[data-tema="grafite3d"] :is(.icone, .agora, .enviar, .botao-gaveta, .botao-ouro, .bolha, .chip-versao) { transition: transform 0.45s var(--suave), filter 0.45s var(--suave); }
+:root[data-tema="grafite3d"] .app:active .icone { transform: translateY(3px) scale(0.92); transition-duration: 0.12s; }
+:root[data-tema="grafite3d"] :is(.agora, .enviar, .botao-gaveta, .botao-ouro, .bolha, .chip-versao):active { transform: translateY(2px) scale(0.95); transition-duration: 0.12s; }
+
+/* Entrada em cascata, com uma leve rotação para trás. */
+@keyframes sobe-3d { from { opacity: 0; transform: perspective(900px) translateY(18px) rotateX(14deg) scale(0.97); } }
+:root[data-tema="grafite3d"] .tela > :is(.mostrador, .agora, .abas, .painel, .comando, .barra) { animation: sobe-3d 0.8s var(--suave) backwards; }
+:root[data-tema="grafite3d"] .tela > .agora { animation-delay: 0.12s; }
+:root[data-tema="grafite3d"] .tela > :is(.abas, .painel) { animation-delay: 0.2s; }
+:root[data-tema="grafite3d"] .tela > .comando { animation-delay: 0.28s; }
+:root[data-tema="grafite3d"] .tela > .barra { animation-delay: 0.36s; }
+@keyframes folha-sobe-3d { from { transform: translateY(100%) perspective(900px) rotateX(8deg); opacity: 0.6; } }
+:root[data-tema="grafite3d"] .folha { animation: folha-sobe-3d 0.55s var(--suave); }
+
+@media (prefers-reduced-motion: reduce) { .fundo-3d i, .fundo-3d b { animation: none !important; } }

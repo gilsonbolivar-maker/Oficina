@@ -10,7 +10,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '2.3.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '2.4.0';   // precisa casar com a VERSAO do sw.js
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
 
 const nativo = window.InicioNativo || null;
@@ -32,7 +32,7 @@ const CHAVE = {
   lugar: 'inicio:lugar',           // { lat, lon, nome, fonte: 'gps' | 'cidade' }
   clima: 'inicio:clima',           // última resposta da Open-Meteo, com a hora
   ci: 'inicio:ci',                 // último build da Oficina no GitHub
-  tema: 'inicio:tema'              // 'nexo' (roxo e dourado) ou 'grafite' (o do Lovable)
+  tema: 'inicio:tema'              // 'nexo' (roxo e dourado), 'grafite' ou 'grafite3d' (os do Lovable)
 };
 const META_FOCO = 120;             // minutos de foco que enchem o anel
 const ACTIONS = 'https://github.com/gilsonbolivar-maker/Oficina/actions';
@@ -560,7 +560,7 @@ const COMANDOS = [
   { texto: 'cidade …', ajuda: 'clima de uma cidade', faz: () => { campo.value = 'cidade '; campo.focus(); sugerir(); } },
   { texto: 'ci', ajuda: 'builds da Oficina', faz: () => abrirEndereco(ACTIONS) },
   { texto: 'gaveta', ajuda: 'todos os apps', faz: abrirGaveta },
-  { texto: 'tema', ajuda: 'troca Nexo ↔ Grafite', faz: () => trocarTema() },
+  { texto: 'tema', ajuda: 'troca Nexo → Grafite → 3D', faz: () => trocarTema() },
   { texto: 'atualizar', ajuda: 'baixa a versão nova do Início', faz: () => atualizarInicio() }
 ];
 
@@ -613,7 +613,7 @@ function executarComando(texto) {
   if (/^(clima|tempo)$/i.test(t)) { atualizarClima(true); return true; }
   if (/^ci$/i.test(t)) { abrirEndereco(ACTIONS); return true; }
   if (/^atualiza/i.test(t)) { atualizarInicio(); return true; }
-  m = /^tema(?:\s+(\S+))?$/i.exec(t);
+  m = /^tema(?:\s+(.+))?$/i.exec(t);
   if (m) { trocarTema(m[1] && normalizar(m[1])); return true; }
   if (/^notifica/i.test(t) && nativo && typeof nativo.pedirNotificacoes === 'function') { nativo.pedirNotificacoes(); return true; }
   const aba = ABAS.find(a => normalizar(a.nome) === normalizar(t));
@@ -1292,14 +1292,17 @@ function desenharBolhas() {
 
 const chipVersao = $('chip-versao');
 
-/* ——— Temas: Nexo (roxo e dourado) e Grafite (o redesign do Lovable) ——— */
+/* ——— Temas: Nexo (roxo e dourado), Grafite e 3D (os redesigns do Lovable) ——— */
 
 const TEMAS = {
   nexo: { nome: 'Nexo', barras: '#14042a' },
-  grafite: { nome: 'Grafite', barras: '#0e1418' }
+  grafite: { nome: 'Grafite', barras: '#0e1418' },
+  grafite3d: { nome: '3D', barras: '#0e1418' }
 };
+const ORDEM_TEMAS = ['nexo', 'grafite', 'grafite3d'];
+const APELIDOS_TEMA = { '3d': 'grafite3d', 'grafite 3d': 'grafite3d', roxo: 'nexo' };
 
-const temaAtual = () => document.documentElement.dataset.tema === 'grafite' ? 'grafite' : 'nexo';
+const temaAtual = () => TEMAS[document.documentElement.dataset.tema] ? document.documentElement.dataset.tema : 'nexo';
 
 function aplicarTema(tema) {
   document.documentElement.dataset.tema = tema;
@@ -1311,11 +1314,38 @@ function aplicarTema(tema) {
 }
 
 function trocarTema(qual) {
-  const tema = TEMAS[qual] ? qual : temaAtual() === 'nexo' ? 'grafite' : 'nexo';
+  const pedido = APELIDOS_TEMA[qual] || qual;
+  const tema = TEMAS[pedido] ? pedido : ORDEM_TEMAS[(ORDEM_TEMAS.indexOf(temaAtual()) + 1) % ORDEM_TEMAS.length];
   guardar(CHAVE.tema, tema);
   aplicarTema(tema);
   desenharBolhas();
 }
+
+/* No tema 3D, o mostrador inclina com o dedo e com o movimento do celular. */
+const mostrador = document.querySelector('.mostrador');
+const semMovimento = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+let inclinacaoBase = null;
+
+function inclinar(x, y) {
+  if (temaAtual() !== 'grafite3d' || semMovimento) { mostrador.style.transform = ''; return; }
+  mostrador.style.transform = x || y ? 'perspective(1100px) rotateX(' + x.toFixed(1) + 'deg) rotateY(' + y.toFixed(1) + 'deg)' : '';
+}
+
+mostrador.addEventListener('pointermove', e => {
+  const r = mostrador.getBoundingClientRect();
+  inclinar(-((e.clientY - r.top) / r.height - 0.5) * 7, ((e.clientX - r.left) / r.width - 0.5) * 7);
+});
+for (const tipo of ['pointerleave', 'pointerup', 'pointercancel']) mostrador.addEventListener(tipo, () => inclinar(0, 0));
+
+window.addEventListener('deviceorientation', e => {
+  if (temaAtual() !== 'grafite3d' || e.beta == null || document.hidden) return;
+  // O jeito como a pessoa segura vira o "reto"; o mostrador segue a diferença, até 6°.
+  if (!inclinacaoBase) inclinacaoBase = { b: e.beta, g: e.gamma };
+  inclinacaoBase.b += (e.beta - inclinacaoBase.b) * 0.02;
+  inclinacaoBase.g += (e.gamma - inclinacaoBase.g) * 0.02;
+  const lim = v => Math.max(-6, Math.min(6, v));
+  inclinar(lim((e.beta - inclinacaoBase.b) * 0.4), lim((e.gamma - inclinacaoBase.g) * 0.4));
+});
 
 /* ——— Atualizar o Início ———
    O Início fica sempre aberto, então só pegaria a página nova ao reiniciar.
