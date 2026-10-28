@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Início</title>
+<meta name="description" content="Tela inicial para Android: relógio, favoritos, apps da Oficina e busca.">
+<meta name="theme-color" content="#0b1220">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icones/icone-192.png" sizes="192x192">
+<link rel="apple-touch-icon" sizes="180x180" href="icones/icone-180.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <header class="topo">
+    <time id="hora" class="hora">--:--</time>
+    <p id="data" class="data"></p>
+    <p class="versao" data-versao></p>
+  </header>
+
+  <div class="busca">
+    <input id="busca" type="search" placeholder="Buscar app…" autocomplete="off" enterkeyhint="go" aria-label="Buscar app">
+  </div>
+
+  <aside id="aviso" class="aviso" hidden></aside>
+
+  <main id="inicio">
+    <section>
+      <h2>Favoritos</h2>
+      <div id="favoritos" class="grade"></div>
+      <p id="sem-favoritos" class="nota" hidden>Toque e segure um app para fixar aqui.</p>
+    </section>
+
+    <section>
+      <h2>Oficina</h2>
+      <div id="oficina" class="grade"></div>
+    </section>
+
+    <section>
+      <h2>Todos os apps <span id="contagem" class="contagem"></span></h2>
+      <div id="todos" class="lista"></div>
+    </section>
+  </main>
+
+  <main id="resultados" class="lista" hidden></main>
+
+  <div id="menu" class="menu" hidden>
+    <div class="menu-caixa" role="dialog" aria-labelledby="menu-nome">
+      <p id="menu-nome" class="menu-nome"></p>
+      <button id="menu-fixar" type="button"></button>
+      <button id="menu-esquerda" type="button">Mover para a esquerda</button>
+      <button id="menu-direita" type="button">Mover para a direita</button>
+      <button id="menu-info" type="button">Informações do app</button>
+      <button id="menu-fechar" type="button" class="fraco">Fechar</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

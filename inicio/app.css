@@ -1,0 +1,177 @@
+:root {
+  color-scheme: dark;
+  --fundo: #0b1220;
+  --superficie: #141d2e;
+  --borda: #2b3a56;
+  --texto: #e8edf7;
+  --texto-fraco: #93a1bd;
+  --acento: #ffb020;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--fundo);
+  color: var(--texto);
+  font: 16px/1.4 system-ui, -apple-system, Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+body {
+  min-height: 100dvh;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+}
+
+/* ——— Relógio ——— */
+.topo { text-align: center; padding: 28px 0 18px; }
+.hora {
+  display: block;
+  font-size: 72px;
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.data { margin: 10px 0 0; font-size: 17px; color: var(--texto-fraco); }
+.data::first-letter { text-transform: uppercase; }
+.versao { margin: 4px 0 0; font-size: 12px; color: var(--texto-fraco); opacity: 0.7; }
+
+/* ——— Busca ——— */
+.busca { position: sticky; top: 0; z-index: 2; padding: 8px 0 12px; background: var(--fundo); }
+.busca input {
+  width: 100%;
+  padding: 14px 18px;
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  background: var(--superficie);
+  color: inherit;
+  font: inherit;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.busca input:focus { outline: 2px solid var(--acento); outline-offset: 1px; }
+
+.aviso {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--acento);
+  border-radius: 14px;
+  font-size: 14px;
+}
+.aviso p { margin: 0; flex: 1; }
+.aviso button, .aviso a {
+  flex: none;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--acento);
+  color: #1a1200;
+  font: 600 14px/1.2 inherit;
+  text-decoration: none;
+}
+
+h2 {
+  margin: 22px 4px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--texto-fraco);
+}
+.contagem { font-weight: 400; }
+.nota { margin: 0 4px; font-size: 14px; color: var(--texto-fraco); }
+
+/* ——— Grade (favoritos e Oficina) ——— */
+.grade {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px 6px;
+}
+.app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 6px 2px;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+}
+.app:active { background: var(--superficie); }
+.app .nome {
+  width: 100%;
+  font-size: 12.5px;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.icone {
+  display: grid;
+  place-content: center;
+  width: 52px;
+  height: 52px;
+  flex: none;
+  border-radius: 14px;
+  background: var(--superficie) center / cover no-repeat;
+  font-weight: 700;
+  font-size: 17px;
+  color: #0b1220;
+}
+.icone.carregado { background-color: transparent; border-radius: 0; }
+.icone.sigla { color: #0b1220; }
+
+/* ——— Lista (todos os apps e resultados) ——— */
+.lista { display: grid; gap: 2px; }
+.lista .app {
+  flex-direction: row;
+  gap: 14px;
+  padding: 8px 10px;
+  text-align: left;
+}
+.lista .icone { width: 40px; height: 40px; border-radius: 11px; font-size: 14px; }
+.lista .nome { font-size: 16px; }
+.lista .tipo { flex: none; font-size: 12px; color: var(--texto-fraco); }
+.lista .vazio { padding: 24px 10px; color: var(--texto-fraco); text-align: center; }
+
+/* ——— Menu do toque longo ——— */
+.menu {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: flex-end;
+  background: rgb(0 0 0 / 0.55);
+}
+.menu[hidden] { display: none; }
+.menu-caixa {
+  width: 100%;
+  padding: 18px 16px max(18px, env(safe-area-inset-bottom));
+  border-radius: 20px 20px 0 0;
+  background: var(--superficie);
+  display: grid;
+  gap: 8px;
+}
+.menu-nome { margin: 0 4px 6px; font-weight: 600; font-size: 17px; }
+.menu-caixa button {
+  padding: 14px 16px;
+  border: 1px solid var(--borda);
+  border-radius: 14px;
+  background: var(--fundo);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.menu-caixa button[hidden] { display: none; }
+.menu-caixa .fraco { color: var(--texto-fraco); text-align: center; }
