@@ -36,6 +36,10 @@ vez e o bloco de foco que avisa no fim.
   - **bolhas**: 💬 total de notificações (precisa ligar o *Acesso a
     notificações*; o Início só conta, não lê), ✓/✗ dos builds da Oficina no
     GitHub (toque abre o Actions), rede com a força do sinal e o espaço livre.
+- **Atualizar** (chip da versão, no fim das bolhas): um toque confere no site,
+  baixa a versão nova e recarrega, sem precisar forçar a parada do app. A cada
+  3 horas ele confere sozinho e fica dourado (`↻ v2.3.0 nova`) quando há
+  novidade. O comando `atualizar` faz o mesmo.
 - **Notificações nos ícones**: o número aparece em cima de cada app, como no
   launcher do celular.
 - **Abas de fichário.** *Início* tem os apps que você fixou. *Dev*,
@@ -46,7 +50,7 @@ vez e o bloco de foco que avisa no fim.
 - **Barra de comando** `nexo:~$`: digite e o app aparece; *Enter* abre.
   Tocar no campo vazio mostra os comandos: `foco 30` (bloco de 30 min),
   `tarefa revisar o PR`, `pausar`, `clima`, `cidade NOME`, `ci`,
-  `notificações`, `gaveta`, e o nome de uma aba (`dev`, `oficina`…).
+  `notificações`, `atualizar`, `gaveta`, e o nome de uma aba (`dev`, `oficina`…).
 - **Gaveta** com todos os apps de A a Z, com busca: toque em ⌃ (no começo da
   barra de comando) ou deslize para cima; deslize para baixo (ou o voltar) fecha.
 - **Barra fixa** embaixo, com até 5 apps. Na primeira vez ela já vem com
