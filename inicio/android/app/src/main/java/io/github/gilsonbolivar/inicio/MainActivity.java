@@ -15,12 +15,23 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
+import android.net.ConnectivityManager;
+import android.net.NetworkCapabilities;
 import android.net.Uri;
+import android.net.wifi.WifiManager;
+import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.os.StatFs;
+import android.os.SystemClock;
 import android.provider.Settings;
+import android.telephony.SignalStrength;
+import android.telephony.TelephonyManager;
 import android.util.Base64;
+import android.webkit.GeolocationPermissions;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -37,7 +48,8 @@ import java.util.List;
  * Tela inicial do Android. Abre o Início do site numa WebView e oferece à
  * página a ponte "InicioNativo": listar os apps do celular, pegar o ícone de
  * cada um e abri-los. Sem rede e sem cache, mostra a página de reserva que
- * vem dentro do APK, para a tela inicial nunca ficar em branco.
+ * vem dentro do APK, para a tela inicial nunca ficar em branco. A ponte também
+ * dá ao mostrador a bateria, o armazenamento, a rede e as notificações.
  */
 public class MainActivity extends Activity {
 
@@ -45,8 +57,11 @@ public class MainActivity extends Activity {
     static final String HOST = "gilsonbolivar-maker.github.io";
     static final String RESERVA = "file:///android_asset/sem-rede.html";
     private static final int TAMANHO_ICONE = 144;
+    private static final int PEDIDO_LOCALIZACAO = 2;
 
     private WebView web;
+    private String origemPendente;
+    private GeolocationPermissions.Callback retornoPendente;
 
     private final BroadcastReceiver mudouApp = new BroadcastReceiver() {
         @Override
@@ -67,6 +82,7 @@ public class MainActivity extends Activity {
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
         s.setDatabaseEnabled(true);
+        s.setGeolocationEnabled(true);
         s.setUserAgentString(s.getUserAgentString() + " Inicio-Android/" + BuildConfig.VERSION_NAME);
 
         web.addJavascriptInterface(new Ponte(), "InicioNativo");
@@ -88,8 +104,25 @@ public class MainActivity extends Activity {
             }
         });
 
+        // Clima do mostrador: a página pede a localização (aproximada basta).
+        web.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onGeolocationPermissionsShowPrompt(String origem, GeolocationPermissions.Callback retorno) {
+                if (temLocalizacao()) {
+                    retorno.invoke(origem, true, false);
+                } else {
+                    origemPendente = origem;
+                    retornoPendente = retorno;
+                    requestPermissions(new String[] { Manifest.permission.ACCESS_COARSE_LOCATION }, PEDIDO_LOCALIZACAO);
+                }
+            }
+        });
+
         setContentView(web);
         web.loadUrl(ENDERECO);
+
+        NotificacoesService.aoMudar = () ->
+            chamarPagina("window.aoMudarNotificacoes && window.aoMudarNotificacoes()");
 
         IntentFilter filtro = new IntentFilter();
         filtro.addAction(Intent.ACTION_PACKAGE_ADDED);
@@ -100,8 +133,23 @@ public class MainActivity extends Activity {
         else registerReceiver(mudouApp, filtro);
     }
 
+    boolean temLocalizacao() {
+        return checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int codigo, String[] permissoes, int[] resultados) {
+        super.onRequestPermissionsResult(codigo, permissoes, resultados);
+        if (codigo == PEDIDO_LOCALIZACAO && retornoPendente != null) {
+            retornoPendente.invoke(origemPendente, temLocalizacao(), false);
+            retornoPendente = null;
+            origemPendente = null;
+        }
+    }
+
     @Override
     protected void onDestroy() {
+        NotificacoesService.aoMudar = null;
         unregisterReceiver(mudouApp);
         web.destroy();
         super.onDestroy();
@@ -247,6 +295,76 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void cancelarAviso() {
             getSystemService(AlarmManager.class).cancel(AvisoReceiver.intento(MainActivity.this, ""));
+        }
+
+        /** { "nivel": 87, "carregando": true, "temperatura": 31.2 } */
+        @JavascriptInterface
+        public String bateria() {
+            JSONObject saida = new JSONObject();
+            try {
+                Intent b = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+                if (b != null) {
+                    int nivel = b.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+                    int escala = b.getIntExtra(BatteryManager.EXTRA_SCALE, 100);
+                    int estado = b.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+                    saida.put("nivel", Math.round(nivel * 100f / Math.max(1, escala)));
+                    saida.put("carregando", estado == BatteryManager.BATTERY_STATUS_CHARGING || estado == BatteryManager.BATTERY_STATUS_FULL);
+                    saida.put("temperatura", b.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) / 10.0);
+                }
+            } catch (Exception e) { /* sem dado */ }
+            return saida.toString();
+        }
+
+        /** Espaço do aparelho, em bytes, e há quanto tempo está ligado. */
+        @JavascriptInterface
+        public String armazenamento() {
+            JSONObject saida = new JSONObject();
+            try {
+                StatFs fs = new StatFs(Environment.getDataDirectory().getPath());
+                saida.put("livre", fs.getAvailableBytes());
+                saida.put("total", fs.getTotalBytes());
+                saida.put("ligadoMs", SystemClock.elapsedRealtime());
+            } catch (Exception e) { /* sem dado */ }
+            return saida.toString();
+        }
+
+        /** { "tipo": "wifi" | "movel" | "nenhuma", "nivel": 0..4 } */
+        @JavascriptInterface
+        public String rede() {
+            JSONObject saida = new JSONObject();
+            try {
+                ConnectivityManager cm = getSystemService(ConnectivityManager.class);
+                NetworkCapabilities caps = cm.getNetworkCapabilities(cm.getActiveNetwork());
+                String tipo = "nenhuma";
+                int nivel = -1;
+                if (caps != null && caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                    tipo = "wifi";
+                    WifiManager wm = getApplicationContext().getSystemService(WifiManager.class);
+                    nivel = WifiManager.calculateSignalLevel(wm.getConnectionInfo().getRssi(), 5);
+                } else if (caps != null && caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+                    tipo = "movel";
+                    if (Build.VERSION.SDK_INT >= 28) {
+                        SignalStrength sinal = getSystemService(TelephonyManager.class).getSignalStrength();
+                        if (sinal != null) nivel = sinal.getLevel();
+                    }
+                }
+                saida.put("tipo", tipo);
+                saida.put("nivel", nivel);
+            } catch (Exception e) { /* sem dado */ }
+            return saida.toString();
+        }
+
+        @JavascriptInterface
+        public String notificacoes() {
+            return NotificacoesService.resumo();
+        }
+
+        /** Abre o "Acesso a notificações", onde a pessoa liga o Início. */
+        @JavascriptInterface
+        public void pedirNotificacoes() {
+            try {
+                startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            } catch (Exception e) { /* sem a tela */ }
         }
 
         /** Ajustes onde se escolhe a tela inicial (no Redmi: Apps padrão › Tela inicial). */

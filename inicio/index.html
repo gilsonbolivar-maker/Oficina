@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <title>Início</title>
-<meta name="description" content="Tela inicial para Android com cara de Pixel Nexo: abas de fichário, barra de comando, gaveta, foco e seus apps de verdade.">
+<meta name="description" content="Tela inicial para Android com cara de Pixel Nexo: mostrador com clima e bateria, abas de fichário, barra de comando, gaveta e foco.">
 <meta name="theme-color" content="#14042a">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.webmanifest">
@@ -14,13 +14,30 @@
 </head>
 <body>
   <div class="tela">
-    <header class="topo">
-      <div>
-        <time id="hora" class="hora">--:--</time>
-        <p id="data" class="data"></p>
+    <!-- Mostrador, no estilo de relógio: hora, sol, foco, bateria, clima e bolhas -->
+    <section class="mostrador" aria-label="Mostrador">
+      <div class="linha-sol">
+        <span id="nascer" class="tag"><b class="sol-n">◓</b> --:--</span>
+        <span id="dia" class="dia"></span>
+        <span id="por" class="tag">--:-- <b class="sol-p">◒</b></span>
       </div>
-      <span class="chip-versao" data-versao></span>
-    </header>
+      <div class="centro">
+        <button id="anel-foco" type="button" class="anel" aria-label="Foco de hoje">
+          <svg viewBox="0 0 100 100" aria-hidden="true"><circle class="trilho" cx="50" cy="50" r="42"/><circle id="arco-foco" class="arco" cx="50" cy="50" r="42"/></svg>
+          <span id="foco-min" class="anel-v">0<small>min</small></span><span id="foco-k" class="anel-k">foco</span>
+        </button>
+        <time class="relogio"><span id="hora">--:--</span><span id="segundos" class="seg">--</span></time>
+        <div id="anel-bateria" class="anel" aria-label="Bateria">
+          <svg id="tracos" viewBox="0 0 100 100" aria-hidden="true"></svg>
+          <span id="bat-v" class="anel-v">--<small>%</small></span><span id="bat-k" class="anel-k"></span>
+        </div>
+      </div>
+      <button id="clima" type="button" class="clima">
+        <span id="clima-agora" class="clima-agora">Toque para ver o clima</span>
+        <span id="clima-colunas" class="clima-colunas" hidden></span>
+      </button>
+      <div id="bolhas" class="bolhas"><span id="chip-versao" class="chip-versao" data-versao></span></div>
+    </section>
 
     <aside id="aviso" class="aviso" hidden></aside>
 
@@ -37,14 +54,13 @@
     </main>
 
     <div id="sugestoes" class="sugestoes" hidden></div>
-    <div id="comandos" class="comandos"></div>
     <form id="comando" class="comando" autocomplete="off">
+      <button id="abrir-gaveta" type="button" class="botao-gaveta" aria-label="Todos os apps">⌃</button>
       <span class="prompt">nexo:~$</span>
       <input id="campo" type="search" placeholder="buscar app ou comando…" enterkeyhint="go" aria-label="Buscar app ou comando">
       <button type="submit" class="enviar" aria-label="Ir">→</button>
     </form>
 
-    <button id="abrir-gaveta" type="button" class="alca" aria-label="Todos os apps">⌃</button>
     <nav id="barra" class="barra" aria-label="Barra fixa"></nav>
   </div>
 

@@ -7,28 +7,48 @@ celular falso desenhado na tela. Do **Foco Dev** ficou o foco: uma tarefa por
 vez e o bloco de foco que avisa no fim.
 
 ```
- 14:32                    [v2.0.0]   relógio e versão
- ▸ AGORA  Publicar o app   29:59     tarefa + bloco (toque abre a folha)
- [★ Início][>_][▣][♥][▦]             abas: Início · Dev · Trabalho · Social · Oficina
+ ◓ 05:16          QUA 28          17:50 ◒   nascer e pôr do sol
+ (75min)      14:32 ⁵⁷      (87% ⚡ 31°)     anel de foco · hora · bateria em traços
+        ⛅ Agora 22°  26° / 18°              clima agora, máxima e mínima
+ 🌡️22° │ 💧6% │ ☀️6 UV alto │ 🌬️23 km/h     sensação · chuva · UV · vento
+ 💬 11  ✓ CI  ▂▄▆ Wi-Fi  💾 38 GB  v2.1.0    bolhas
+ ▸ AGORA  Publicar o app   29:59             tarefa + bloco (toque abre a folha)
+ [★ Início][>_][▣][♥][▦]                     abas de fichário
  ┌────────────────────────────┐
- │  apps da aba               │      deslize para o lado: troca de aba
+ │  apps da aba  (⁹ notificações)│            deslize para o lado: troca de aba
  └────────────────────────────┘
- foco 25 · foco 45 · tarefa …        atalhos de comando
- nexo:~$ buscar ou comando  →        busca e comandos
-            ⌃                        gaveta com todos os apps (ou deslize para cima)
+ ⌃ nexo:~$ buscar ou comando  →              ⌃ abre a gaveta; tocar no campo mostra os comandos
  [ barra fixa: até 5 apps ]
 ```
 
+- **Mostrador**, no estilo do relógio Galaxy Watch:
+  - hora com **segundos** e o dia (`QUA 28`);
+  - **nascer e pôr do sol**;
+  - **anel de foco**: minutos de foco de hoje (enche em 120 min) e 🔥 a
+    sequência de dias seguidos com foco. Tocar abre a folha do foco;
+  - **bateria em 16 traços**, com ⚡ carregando e a temperatura (vermelha
+    abaixo de 20%);
+  - **clima** pela [Open-Meteo](https://open-meteo.com) (grátis, sem chave):
+    agora, máxima/mínima, sensação, chance de chuva, índice UV (laranja quando
+    alto) e vento. Usa a localização aproximada; sem ela, o comando
+    `cidade Itabira` escolhe a cidade. Busca de novo a cada 30 min; sem rede,
+    mostra o último;
+  - **bolhas**: 💬 total de notificações (precisa ligar o *Acesso a
+    notificações*; o Início só conta, não lê), ✓/✗ dos builds da Oficina no
+    GitHub (toque abre o Actions), rede com a força do sinal e o espaço livre.
+- **Notificações nos ícones**: o número aparece em cima de cada app, como no
+  launcher do celular.
 - **Abas de fichário.** *Início* tem os apps que você fixou. *Dev*,
   *Trabalho* e *Social* se enchem sozinhas pelo tipo de app (GitHub, Termux,
   Claude… / Gmail, Agenda, Drive… / WhatsApp, Instagram, YouTube…). *Oficina*
   tem os apps da Oficina (Alarme GPS, Britagem, SINAL e PAINEL abrem o APK, se
   estiver instalado). Toque e segure qualquer app para mudá-lo de aba.
 - **Barra de comando** `nexo:~$`: digite e o app aparece; *Enter* abre.
-  Comandos: `foco 30` (começa um bloco de 30 min), `tarefa revisar o PR`,
-  `pausar`, `gaveta`, e o nome de uma aba (`dev`, `oficina`…).
-- **Gaveta** com todos os apps de A a Z, com busca: toque em ⌃ ou deslize para
-  cima; deslize para baixo (ou o voltar) fecha.
+  Tocar no campo vazio mostra os comandos: `foco 30` (bloco de 30 min),
+  `tarefa revisar o PR`, `pausar`, `clima`, `cidade NOME`, `ci`,
+  `notificações`, `gaveta`, e o nome de uma aba (`dev`, `oficina`…).
+- **Gaveta** com todos os apps de A a Z, com busca: toque em ⌃ (no começo da
+  barra de comando) ou deslize para cima; deslize para baixo (ou o voltar) fecha.
 - **Barra fixa** embaixo, com até 5 apps. Na primeira vez ela já vem com
   Telefone, WhatsApp, Câmera, Chrome e Claude, se existirem.
 - **Agora**: toque no cartão para escrever a tarefa, quebrar em passos
@@ -81,5 +101,6 @@ Para voltar à tela do Redmi: mesmo caminho, escolha **Tela inicial do sistema**
   Mudança em `inicio/android/` recompila o APK pelo workflow `apk-inicio.yml`.
 - No navegador comum a página mostra uma lista de exemplo, para ver o visual;
   o fim do bloco vibra e apita pela própria página (só com ela aberta).
-- O aviso do bloco precisa do APK 1.1.0. Com o APK 1.0.0, a página atualiza
-  sozinha, mas o aviso só acontece com o Início na tela.
+- O mostrador completo precisa do APK 2.1.0 (bateria com temperatura,
+  armazenamento, rede, notificações e localização). Com um APK mais antigo, a
+  página atualiza sozinha e mostra o que der: clima por `cidade`, CI e foco.

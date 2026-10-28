@@ -64,26 +64,102 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
   padding: max(18px, env(safe-area-inset-top)) 16px max(12px, env(safe-area-inset-bottom));
 }
 
-/* ——— Topo ——— */
-.topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-top: 8px; }
-.hora {
-  display: block;
-  font-size: 64px;
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: -0.03em;
-  font-variant-numeric: tabular-nums;
+/* ——— Mostrador, no estilo de relógio ——— */
+.mostrador {
+  display: grid;
+  gap: 8px;
+  padding: 12px 12px 10px;
+  border: 1px solid var(--borda);
+  border-radius: 28px;
+  background: radial-gradient(120% 90% at 50% 0%, #2d0b52, #0d0219 75%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
 }
-.data { margin: 6px 0 0; font-size: 15px; color: var(--texto-fraco); }
-.data::first-letter { text-transform: uppercase; }
+.linha-sol { display: flex; align-items: center; justify-content: space-between; font: 600 12px var(--mono); color: var(--texto-fraco); }
+.linha-sol .tag b { font-size: 14px; }
+.sol-n { color: #fbbf24; }
+.sol-p { color: #f9a8d4; }
+.dia { font-weight: 800; font-size: 16px; color: var(--texto); }
+.dia b { color: #60a5fa; }
+.centro { display: grid; grid-template-columns: 70px 1fr 70px; align-items: center; gap: 4px; }
+.anel {
+  position: relative;
+  width: 70px;
+  height: 70px;
+  display: grid;
+  place-content: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: center;
+}
+.anel svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.anel .trilho, .anel .arco { fill: none; stroke-width: 7; stroke-linecap: round; }
+.anel .trilho { stroke: rgb(255 255 255 / 0.1); }
+.anel .arco { stroke: var(--ouro); transition: stroke-dasharray 0.4s; }
+.anel .arco.vazio { opacity: 0; }
+.anel line { stroke-width: 5; stroke-linecap: round; }
+.tr-on { stroke: #38bdf8; }
+.tr-baixa { stroke: #f43f5e; }
+.tr-off { stroke: rgb(255 255 255 / 0.12); }
+.anel-v { position: relative; font-weight: 800; font-size: 18px; line-height: 1; }
+.anel-v small { margin-left: 1px; font-size: 10px; font-weight: 600; color: var(--texto-fraco); }
+.anel-k { position: relative; margin-top: 2px; font: 600 10px var(--mono); color: var(--texto-fraco); }
+.relogio {
+  text-align: center;
+  font-weight: 800;
+  font-size: 46px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: #ede9fe;
+  white-space: nowrap;
+}
+.relogio .seg { margin-left: 3px; font-size: 22px; color: var(--ouro); vertical-align: top; }
+
+.clima {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: center;
+}
+.clima-agora { font-size: 15px; font-weight: 700; color: var(--texto-fraco); }
+.clima-agora > span { color: var(--texto); }
+.tempo-icone { font-size: 17px; }
+.rotulo-agora { color: #fbbf24; }
+.mm { margin-left: 4px; font: 600 12px var(--mono); color: var(--texto-fraco); }
+.onde { margin-left: 6px; font: 500 11px var(--mono); color: var(--texto-fraco); }
+.clima-colunas { display: grid; grid-template-columns: repeat(4, 1fr); }
+.clima-colunas .col { display: grid; justify-items: center; gap: 1px; padding: 2px 0; border-left: 1px solid rgb(255 255 255 / 0.12); }
+.clima-colunas .col:last-child { border-right: 1px solid rgb(255 255 255 / 0.12); }
+.clima-colunas i { font-style: normal; font-size: 16px; line-height: 1.2; }
+.clima-colunas b { font-size: 17px; font-weight: 800; }
+.clima-colunas small { font: 500 10px var(--mono); color: var(--texto-fraco); }
+.clima-colunas .alerta b { color: #fb923c; }
+
+.bolhas { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
+.bolha {
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.07);
+  font: 700 11px var(--mono);
+  color: var(--texto);
+}
+.bolha.fraca { color: var(--texto-fraco); }
+.zap b { color: #4ade80; }
+.ci-ok b { color: #10b981; }
+.ci-falhou b { color: #f43f5e; }
+.ci-falhou { color: #fda4af; }
+.ci-rodando b { color: var(--ouro); }
+.rede b { color: #38bdf8; letter-spacing: -2px; }
 .chip-versao {
-  flex: none;
-  margin-top: 6px;
-  padding: 5px 12px;
+  padding: 3px 8px;
   border: 1px solid var(--borda);
   border-radius: 999px;
-  background: var(--vidro);
-  font: 600 12px var(--mono);
+  font: 600 11px var(--mono);
   color: var(--ouro);
 }
 
@@ -198,7 +274,24 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
   border-radius: 16px;
   background: none;
 }
+.app { position: relative; }
 .app:active .icone { transform: scale(0.92); }
+.contador {
+  position: absolute;
+  top: 0;
+  left: calc(50% + 18px);
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 2px solid var(--noite);
+  border-radius: 999px;
+  background: #f43f5e;
+  color: #fff;
+  font: 700 11px/16px var(--mono);
+  text-align: center;
+}
+.sugestoes .contador, .barra .contador { left: auto; right: 0; }
+.sugestoes .contador { position: static; margin-left: auto; border: 0; }
 .app .nome {
   width: 100%;
   font-size: 12.5px;
@@ -226,33 +319,28 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
 .icone svg { width: 28px; height: 28px; }
 .icone.real { background: center / contain no-repeat; box-shadow: none; border-radius: 0; }
 
-/* ——— Comandos e barra de comando ——— */
-.comandos {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.comandos::-webkit-scrollbar { display: none; }
-.comandos button {
-  flex: none;
-  padding: 6px 10px;
-  border: 1px solid var(--borda);
-  border-radius: 10px;
-  background: rgb(30 8 54 / 0.8);
-  font: 600 12px var(--mono);
-  color: var(--ouro);
-}
+/* ——— Barra de comando ——— */
 .comando {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 6px 6px 16px;
+  gap: 8px;
+  padding: 6px;
   border: 1px solid var(--borda);
   border-radius: 999px;
   background: rgb(20 4 42 / 0.9);
 }
 .comando:focus-within { border-color: var(--ouro); }
+.botao-gaveta {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--borda);
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.06);
+  color: var(--ouro);
+  font-size: 20px;
+  line-height: 1;
+}
 .prompt { flex: none; font: 700 13px var(--mono); color: var(--ouro); }
 .comando input {
   flex: 1;
@@ -277,7 +365,15 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
 }
 
 /* Resultados da busca, em cima da barra de comando. */
+/* Flutua por cima dos apps, logo acima da barra de comando. */
+.tela { position: relative; }
 .sugestoes {
+  position: absolute;
+  z-index: 5;
+  left: 16px;
+  right: 16px;
+  bottom: calc(max(12px, env(safe-area-inset-bottom)) + 166px);
+  box-shadow: 0 -10px 30px rgb(0 0 0 / 0.45);
   display: grid;
   gap: 2px;
   max-height: 40dvh;
@@ -292,18 +388,19 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
 .sugestoes .icone svg { width: 20px; height: 20px; }
 .sugestoes .nome { text-align: left; font-size: 15px; }
 .sugestoes .tipo { flex: none; font: 500 11px var(--mono); color: var(--texto-fraco); }
-.sugestoes .linha-vazia { margin: 8px; color: var(--texto-fraco); font-size: 14px; }
-
-.alca {
-  align-self: center;
-  margin: -6px 0 -8px;
-  padding: 0 24px;
+.linha-comando {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 9px 10px;
   border: 0;
+  border-radius: 12px;
   background: none;
-  color: var(--texto-fraco);
-  font-size: 22px;
-  line-height: 1;
+  text-align: left;
 }
+.linha-comando b { font: 700 14px var(--mono); color: var(--ouro); }
+.linha-comando span { font-size: 13px; color: var(--texto-fraco); }
+.sugestoes .linha-vazia { margin: 8px; color: var(--texto-fraco); font-size: 14px; }
 
 /* ——— Barra fixa (dock) ——— */
 .barra {
