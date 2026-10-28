@@ -15,14 +15,16 @@
   (function () {
     var t = null;
     try { t = JSON.parse(localStorage.getItem('inicio:tema')); } catch (e) {}
-    t = t === 'grafite' ? 'grafite' : 'nexo';
+    t = t === 'grafite' || t === 'grafite3d' ? t : 'nexo';
     document.documentElement.dataset.tema = t;
-    document.querySelector('meta[name="theme-color"]').setAttribute('content', t === 'grafite' ? '#0e1418' : '#14042a');
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', t === 'nexo' ? '#14042a' : '#0e1418');
   })();
 </script>
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
+  <!-- Só aparece no tema 3D: luzes que flutuam e a grade em perspectiva. -->
+  <div class="fundo-3d" aria-hidden="true"><i></i><i></i><b></b></div>
   <div class="tela">
     <!-- Mostrador, no estilo de relógio: hora, sol, foco, bateria, clima e bolhas -->
     <section class="mostrador" aria-label="Mostrador">

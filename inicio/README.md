@@ -64,13 +64,15 @@ vez e o bloco de foco que avisa no fim.
 Tudo (Início, barra, abas, tarefa, passos e bloco) fica guardado só no
 aparelho. Os favoritos da 1.x viram a aba Início.
 
-**Dois temas** — a bolha 🎨 do mostrador (ou o comando `tema`) troca, e a
-escolha fica guardada no aparelho:
+**Três temas** — a bolha 🎨 do mostrador gira entre eles (Nexo → Grafite → 3D),
+e o comando `tema` também (`tema 3d`, `tema nexo`…). A escolha fica guardada no
+aparelho:
 
 | Tema | Cores | Letra | Formas |
 |---|---|---|---|
 | **Nexo** | roxo `#23083b` e dourado `#f5b942` | Plus Jakarta Sans | contornos coloridos, clima em colunas com ícones |
 | **Grafite** (redesign do Lovable) | grafite `#0e1418`, âmbar `#f2b33d` e ciano `#5cd3dc` | Space Grotesk | vidro fosco, clima em pílulas, abas com risquinho, folhas que sobem macias |
+| **3D** (redesign v3 do Lovable) | as do Grafite | Space Grotesk | o Grafite com profundidade: sombras em camadas, reflexo de vidro, hora metálica, ícones com brilho, botões que afundam, entrada em cascata, luzes e grade em perspectiva no fundo; o mostrador inclina com o dedo e com o movimento do celular |
 
 Nos dois, os números e o terminal usam
 [JetBrains Mono](https://www.jetbrains.com/lp/mono/). As letras
