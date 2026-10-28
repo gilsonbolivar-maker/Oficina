@@ -279,7 +279,7 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
 .contador {
   position: absolute;
   top: 0;
-  left: calc(50% + 18px);
+  left: calc(50% + 13px);
   min-width: 20px;
   height: 20px;
   padding: 0 5px;
@@ -305,18 +305,18 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
 .icone {
   display: grid;
   place-content: center;
-  width: 58px;
-  height: 58px;
+  width: 48px;
+  height: 48px;
   flex: none;
-  border-radius: 18px;
+  border-radius: 15px;
   background: var(--fundo-icone, linear-gradient(135deg, #5b2a86, #2a0b47)) center / cover no-repeat;
   box-shadow: 0 6px 16px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.18);
   color: #fff;
   font-weight: 800;
-  font-size: 22px;
+  font-size: 19px;
   transition: transform 0.12s;
 }
-.icone svg { width: 28px; height: 28px; }
+.icone svg { width: 24px; height: 24px; }
 .icone.real { background: center / contain no-repeat; box-shadow: none; border-radius: 0; }
 
 /* ——— Barra de comando ——— */
@@ -372,7 +372,7 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
   z-index: 5;
   left: 16px;
   right: 16px;
-  bottom: calc(max(12px, env(safe-area-inset-bottom)) + 166px);
+  bottom: calc(max(12px, env(safe-area-inset-bottom)) + 150px);
   box-shadow: 0 -10px 30px rgb(0 0 0 / 0.45);
   display: grid;
   gap: 2px;
@@ -407,13 +407,15 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
   display: flex;
   justify-content: space-around;
   gap: 4px;
-  min-height: 82px;
-  padding: 10px 8px;
+  min-height: 66px;
+  padding: 9px 8px;
   border: 1px solid var(--borda);
   border-radius: 28px;
   background: rgb(20 4 42 / 0.75);
 }
 .barra .app .nome { display: none; }
+.barra .icone { width: 44px; height: 44px; border-radius: 14px; font-size: 17px; }
+.barra .icone svg { width: 22px; height: 22px; }
 .barra .dica { align-self: center; font-size: 13px; color: var(--texto-fraco); text-align: center; padding: 0 12px; }
 
 /* ——— Gaveta ——— */
