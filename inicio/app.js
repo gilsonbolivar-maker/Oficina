@@ -10,7 +10,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '2.9.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '2.10.0';   // precisa casar com a VERSAO do sw.js
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
 
 const nativo = window.InicioNativo || null;
@@ -1512,12 +1512,15 @@ const RAINVIEWER = 'https://api.rainviewer.com/public/weather-maps.json';
 const ZOOM_RADAR = 7;              // o máximo que o RainViewer dá de graça
 const LADOS_KM = [30, 60, 100];
 const CHAVE_CEU_KM = 'inicio:ceu-km';
-const CHAVE_CEU_CONTRASTE = 'inicio:ceu-contraste';
-const CONTRASTES = ['normal', 'alto', 'cores'];
+// Chave nova: quem tinha "cores" guardado passa a abrir no mapa claro.
+const CHAVE_CEU_CONTRASTE = 'inicio:ceu-visual';
+// claro = mapa de verdade, anéis em volta de você e só a chuva colorida (como os sites de radar).
+const CONTRASTES = ['claro', 'normal', 'alto', 'cores'];
+const visualDoCeu = () => CONTRASTES.includes(ler(CHAVE_CEU_CONTRASTE, 'claro')) ? ler(CHAVE_CEU_CONTRASTE, 'claro') : 'claro';
 
 const ceu = {
   km: LADOS_KM.includes(ler(CHAVE_CEU_KM, 30)) ? ler(CHAVE_CEU_KM, 30) : 30,
-  mostrarIR: true,
+  mostrarIR: visualDoCeu() !== 'claro',   // no mapa claro, o satélite começa desligado
   mostrarRadar: true,
   tocando: true,
   chuva: null,     // { antes, agora }: fração do quadro com chuva no radar
@@ -1712,6 +1715,8 @@ function mostrarQuadro() {
   $('ceu-ir').hidden = !(ceu.mostrarIR && ir);
   if (ir && ceu.mostrarIR) $('ceu-ir').src = ir.url;
   $('ceu-radar').hidden = !(ceu.mostrarRadar && radar);
+  // Radar na tela: nuvens em cinza, só a chuva colorida (não se misturam).
+  $('ceu').dataset.radar = ceu.mostrarRadar && radar ? 'sim' : 'nao';
   if (radar && ceu.mostrarRadar) $('ceu-radar').src = radar.url;
   const partes = [];
   if (ir && ceu.mostrarIR) partes.push('sat ' + hhmmLocal(ir.hora));
@@ -1739,9 +1744,9 @@ function marcarBotoesCeu() {
   $('ceu-liga-radar').setAttribute('aria-pressed', String(ceu.mostrarRadar));
   $('ceu-tocar').textContent = ceu.tocando ? 'pausar' : 'tocar';
   for (const b of document.querySelectorAll('.ceu-km button')) b.setAttribute('aria-pressed', String(Number(b.dataset.km) === ceu.km));
-  const contraste = CONTRASTES.includes(ler(CHAVE_CEU_CONTRASTE, 'cores')) ? ler(CHAVE_CEU_CONTRASTE, 'cores') : 'cores';
+  const contraste = visualDoCeu();
   $('ceu').dataset.contraste = contraste;
-  $('ceu-contraste').textContent = 'contraste: ' + contraste;
+  $('ceu-contraste').textContent = 'visual: ' + contraste;
   $('ceu-contraste').setAttribute('aria-pressed', String(contraste !== 'normal'));
   $('ceu-lado').textContent = ceu.km + ' × ' + ceu.km + ' km';
 }
@@ -1789,8 +1794,13 @@ $('ceu-liga-ir').addEventListener('click', () => { ceu.mostrarIR = !ceu.mostrarI
 $('ceu-liga-radar').addEventListener('click', () => { ceu.mostrarRadar = !ceu.mostrarRadar; marcarBotoesCeu(); mostrarQuadro(); });
 $('ceu-contraste').addEventListener('click', () => {
   const atual = $('ceu').dataset.contraste;
-  guardar(CHAVE_CEU_CONTRASTE, CONTRASTES[(CONTRASTES.indexOf(atual) + 1) % CONTRASTES.length]);
+  const novo = CONTRASTES[(CONTRASTES.indexOf(atual) + 1) % CONTRASTES.length];
+  guardar(CHAVE_CEU_CONTRASTE, novo);
+  // Mapa claro é para ver a chuva: satélite desliga; nos escuros, volta.
+  ceu.mostrarIR = novo !== 'claro';
   marcarBotoesCeu();
+  mostrarQuadro();
+  if (!$('ceu-estado').hidden) descreverCeu();
 });
 $('ceu-tocar').addEventListener('click', () => {
   ceu.tocando = !ceu.tocando;

@@ -1101,3 +1101,29 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
 .voos-lista li small { font: 600 12px var(--mono); }
 .voos-lista li.escolhido { box-shadow: inset 0 0 0 1.5px var(--ouro); }
 :root[data-tema="britagem"] .voos-lista li { background: var(--roxo-claro); }
+
+/* Radar ligado: as nuvens perdem a cor (ficam brancas) e a chuva ganha
+   contorno escuro, para não confundir a cor do satélite com a da chuva. */
+.ceu[data-radar="sim"] .ceu-ir { opacity: 1; mix-blend-mode: normal; filter: contrast(1.4) url(#nuvens-cinza); }
+.ceu[data-radar="sim"] .ceu-radar { opacity: 1; filter: saturate(2) contrast(1.3) drop-shadow(0 0 1px rgb(0 0 0 / 0.9)) drop-shadow(0 0 3px rgb(0 0 0 / 0.6)); }
+.so-radar { display: none; }
+.folha-ceu:has(.ceu[data-radar="sim"]) .so-radar { display: inline; }
+.folha-ceu:has(.ceu[data-radar="sim"]) .so-nuvens { display: none; }
+
+/* Visual claro (o padrão): mapa de verdade, anéis a cada 10 km em volta de
+   você, e a chuva por cima em azul → verde → amarelo → vermelho. */
+.ceu[data-contraste="claro"] { background: #f2efe9; }
+.ceu[data-contraste="claro"] .ceu-mapa { filter: saturate(0.85); }
+.ceu[data-contraste="claro"] .ceu-grade {
+  background-image: repeating-radial-gradient(circle at center, transparent 0 calc(var(--dez-km, 30px) - 1.5px), rgb(40 40 40 / 0.45) calc(var(--dez-km, 30px) - 1.5px) var(--dez-km, 30px));
+  background-size: auto !important;
+}
+.ceu[data-contraste="claro"] .ceu-radar { opacity: 0.95; filter: saturate(1.6) contrast(1.2) drop-shadow(0 0 0.5px rgb(0 0 0 / 0.7)); }
+.ceu[data-contraste="claro"] .ceu-ir { opacity: 0.6; mix-blend-mode: normal; filter: contrast(1.4) url(#nuvens-cinza) brightness(0.45); }
+.ceu[data-contraste="claro"] .ceu-voce { border-color: #222; background: #222; box-shadow: 0 0 0 4px rgb(255 255 255 / 0.8); }
+/* O radar ampliado (milhares de px) não pode roubar o toque dos botões de baixo. */
+.ceu { contain: paint; }
+.ceu-camada, .ceu-radar, .ceu-mapa img { pointer-events: none; }
+/* Folha mais alta que a tela: rola, em vez de espremer as linhas (o mapa do
+   céu, quadrado, ficava por cima dos botões e roubava o toque). */
+.folha { grid-auto-rows: max-content; }
