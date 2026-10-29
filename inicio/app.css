@@ -930,3 +930,11 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
 .escala-ir { display: none; }
 .folha-ceu:has(.ceu[data-contraste="cores"]) .escala-ir { display: inline-flex; align-items: center; gap: 6px; margin-right: 4px; }
 .escala-ir i { display: inline-block; width: 70px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, #0d6fe6, #00c0c0, #2fe05a, #ffe600, #ff7300, #ff1a1a, #ffffff); }
+
+/* Bolha do satélite: em destaque, pulsando devagar. */
+/* Seletor reforçado: os temas Grafite e 3D pintam todas as bolhas de cinza. */
+.mostrador .bolhas .bolha.satelite { background: var(--ouro); color: var(--ouro-texto); animation: pulso-satelite 2.4s ease-in-out infinite; }
+.mostrador .bolhas .bolha.satelite b { color: var(--ouro-texto); }
+@keyframes pulso-satelite { 50% { box-shadow: 0 0 0 4px rgb(245 185 66 / 0.35); } }
+.aviso-satelite b { color: var(--ouro); }
+@media (prefers-reduced-motion: reduce) { .mostrador .bolhas .bolha.satelite { animation: none; } }
