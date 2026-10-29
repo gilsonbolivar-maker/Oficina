@@ -11,8 +11,8 @@ android {
         minSdk 26
         targetSdk 34
         // versionCode sobe a cada APK novo; versionName acompanha o app do site.
-        versionCode 7
-        versionName '2.5.0'
+        versionCode 8
+        versionName '2.6.0'
     }
 
     buildFeatures {
