@@ -10,7 +10,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '2.6.1';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '2.7.0';   // precisa casar com a VERSAO do sw.js
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
 
 const nativo = window.InicioNativo || null;
@@ -1280,9 +1280,14 @@ function desenharBolhas() {
   }
   let rede = null;
   if (nativo && typeof nativo.rede === 'function') { try { rede = JSON.parse(nativo.rede()); } catch (e) {} }
-  if (rede && rede.tipo) {
+  notarSatelite(rede);
+  if (rede && rede.satelite) {
+    // No satélite, a bolha da rede vira a do satélite, em destaque e na frente.
+    lista.unshift(bolha('satelite', '🛰', nomeDaRede(rede.operadora) || 'satélite', mostrarDicaSatelite, 'Conectado pelo satélite'));
+  } else if (rede && rede.tipo) {
     const barras = rede.nivel >= 0 ? '▂▄▆█'.slice(0, Math.max(1, rede.nivel)) : '';
-    lista.push(bolha('rede', barras || '•', rede.tipo === 'wifi' ? 'Wi-Fi' : rede.tipo === 'movel' ? 'Dados' : 'sem rede'));
+    const movel = (nomeDaRede(rede.operadora).split(' ')[0]) || 'Dados';
+    lista.push(bolha('rede', barras || '•', rede.tipo === 'wifi' ? 'Wi-Fi' : rede.tipo === 'movel' ? movel : 'sem rede'));
   } else {
     lista.push(bolha('rede', navigator.onLine ? '▂▄▆' : '•', navigator.onLine ? 'online' : 'sem rede'));
   }
@@ -1426,6 +1431,41 @@ async function conferirVersao() {
 }
 
 chipVersao.addEventListener('click', atualizarInicio);
+
+/* ——— Satélite: Vivo Satélite (Starlink) e outros ———
+   O APK diz se a rede ativa é satélite (Android 15+) ou se o nome da
+   operadora fala em Starlink/satélite. Ao entrar no satélite, mostra a dica
+   uma vez; a bolha 🛰 mostra de novo. */
+
+let noSatelite = false;
+
+// "VIVO STARLINK" → "Vivo Starlink"
+function nomeDaRede(nome) {
+  return String(nome || '').trim().toLowerCase().replace(/(^|\s)\S/g, l => l.toUpperCase());
+}
+
+function mostrarDicaSatelite() {
+  $('aviso-satelite').hidden = false;
+}
+
+function notarSatelite(rede) {
+  const agora = !!(rede && rede.satelite);
+  if (agora && !noSatelite) {
+    $('nome-satelite').textContent = nomeDaRede(rede.operadora) || 'satélite';
+    mostrarDicaSatelite();
+    if (navigator.vibrate) navigator.vibrate([60, 60, 60]);
+  }
+  if (!agora) $('aviso-satelite').hidden = true;
+  noSatelite = agora;
+}
+
+$('fechar-satelite').addEventListener('click', () => { $('aviso-satelite').hidden = true; });
+
+// O APK avisa quando a rede muda (Wi-Fi, dados, satélite).
+window.aoMudarRede = () => {
+  clearTimeout(window.aoMudarRede.espera);
+  window.aoMudarRede.espera = setTimeout(desenharBolhas, 300);
+};
 
 window.aoMudarNotificacoes = () => {
   clearTimeout(window.aoMudarNotificacoes.espera);

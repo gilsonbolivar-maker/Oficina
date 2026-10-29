@@ -16,6 +16,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.net.ConnectivityManager;
+import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
@@ -59,7 +60,11 @@ public class MainActivity extends Activity {
     private static final int TAMANHO_ICONE = 144;
     private static final int PEDIDO_LOCALIZACAO = 2;
 
+    /** NetworkCapabilities.TRANSPORT_SATELLITE, do Android 15 (API 35); o SDK 34 ainda não tem o nome. */
+    private static final int TRANSPORTE_SATELITE = 10;
+
     private WebView web;
+    private ConnectivityManager.NetworkCallback mudouRede;
     private String origemPendente;
     private GeolocationPermissions.Callback retornoPendente;
 
@@ -124,6 +129,13 @@ public class MainActivity extends Activity {
         NotificacoesService.aoMudar = () ->
             chamarPagina("window.aoMudarNotificacoes && window.aoMudarNotificacoes()");
 
+        // Rede mudou (Wi-Fi, dados, satélite): o mostrador redesenha as bolhas na hora.
+        mudouRede = new ConnectivityManager.NetworkCallback() {
+            @Override public void onCapabilitiesChanged(Network n, NetworkCapabilities c) { avisarRede(); }
+            @Override public void onLost(Network n) { avisarRede(); }
+        };
+        try { getSystemService(ConnectivityManager.class).registerDefaultNetworkCallback(mudouRede); } catch (Exception e) { mudouRede = null; }
+
         IntentFilter filtro = new IntentFilter();
         filtro.addAction(Intent.ACTION_PACKAGE_ADDED);
         filtro.addAction(Intent.ACTION_PACKAGE_REMOVED);
@@ -147,9 +159,16 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void avisarRede() {
+        chamarPagina("window.aoMudarRede && window.aoMudarRede()");
+    }
+
     @Override
     protected void onDestroy() {
         NotificacoesService.aoMudar = null;
+        if (mudouRede != null) {
+            try { getSystemService(ConnectivityManager.class).unregisterNetworkCallback(mudouRede); } catch (Exception e) { /* já saiu */ }
+        }
         unregisterReceiver(mudouApp);
         web.destroy();
         super.onDestroy();
@@ -328,7 +347,12 @@ public class MainActivity extends Activity {
             return saida.toString();
         }
 
-        /** { "tipo": "wifi" | "movel" | "nenhuma", "nivel": 0..4 } */
+        /**
+         * { "tipo": "wifi" | "movel" | "satelite" | "nenhuma", "nivel": 0..4,
+         *   "operadora": "Vivo", "satelite": true, "pelo": "transporte" | "nome" }
+         * Satélite: a rede ativa diz que é satélite (Android 15+), ou o nome da
+         * operadora fala em Starlink/satélite (a Vivo usa "VIVO STARLINK").
+         */
         @JavascriptInterface
         public String rede() {
             JSONObject saida = new JSONObject();
@@ -348,8 +372,17 @@ public class MainActivity extends Activity {
                         if (sinal != null) nivel = sinal.getLevel();
                     }
                 }
+                String operadora = "";
+                try { operadora = String.valueOf(getSystemService(TelephonyManager.class).getNetworkOperatorName()); } catch (Exception e) { /* sem chip */ }
+                String nome = operadora.toLowerCase(java.util.Locale.ROOT);
+                boolean pelaRede = Build.VERSION.SDK_INT >= 35 && caps != null && caps.hasTransport(TRANSPORTE_SATELITE);
+                boolean peloNome = nome.contains("starlink") || nome.contains("satélite") || nome.contains("satelite") || nome.contains("sat mode");
+                if (pelaRede) tipo = "satelite";
                 saida.put("tipo", tipo);
                 saida.put("nivel", nivel);
+                saida.put("operadora", operadora);
+                saida.put("satelite", pelaRede || peloNome);
+                if (pelaRede || peloNome) saida.put("pelo", pelaRede ? "transporte" : "nome");
             } catch (Exception e) { /* sem dado */ }
             return saida.toString();
         }
