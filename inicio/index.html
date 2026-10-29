@@ -11,13 +11,13 @@
 <link rel="icon" href="icones/icone-192.png" sizes="192x192">
 <link rel="apple-touch-icon" sizes="180x180" href="icones/icone-180.png">
 <script>
-  // Tema escolhido (Nexo ou Grafite) aplicado antes de pintar, para não piscar.
+  // Tema escolhido (Nexo, Grafite, 3D ou Britagem) aplicado antes de pintar, para não piscar.
   (function () {
     var t = null;
     try { t = JSON.parse(localStorage.getItem('inicio:tema')); } catch (e) {}
-    t = t === 'grafite' || t === 'grafite3d' ? t : 'nexo';
+    t = t === 'grafite' || t === 'grafite3d' || t === 'britagem' ? t : 'nexo';
     document.documentElement.dataset.tema = t;
-    document.querySelector('meta[name="theme-color"]').setAttribute('content', t === 'nexo' ? '#14042a' : '#0e1418');
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', t === 'nexo' ? '#14042a' : t === 'britagem' ? '#fbf4ec' : '#0e1418');
   })();
 </script>
 <link rel="stylesheet" href="app.css">

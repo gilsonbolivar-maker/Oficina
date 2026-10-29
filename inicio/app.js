@@ -10,7 +10,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '2.7.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '2.8.0';   // precisa casar com a VERSAO do sw.js
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
 
 const nativo = window.InicioNativo || null;
@@ -32,7 +32,7 @@ const CHAVE = {
   lugar: 'inicio:lugar',           // { lat, lon, nome, fonte: 'gps' | 'cidade' }
   clima: 'inicio:clima',           // última resposta da Open-Meteo, com a hora
   ci: 'inicio:ci',                 // último build da Oficina no GitHub
-  tema: 'inicio:tema'              // 'nexo' (roxo e dourado), 'grafite' ou 'grafite3d' (os do Lovable)
+  tema: 'inicio:tema'              // 'nexo' (roxo e dourado), 'grafite' ou 'grafite3d' (os do Lovable), 'britagem' (claro)
 };
 const META_FOCO = 120;             // minutos de foco que enchem o anel
 const ACTIONS = 'https://github.com/gilsonbolivar-maker/Oficina/actions';
@@ -561,7 +561,7 @@ const COMANDOS = [
   { texto: 'cidade …', ajuda: 'clima de uma cidade', faz: () => { campo.value = 'cidade '; campo.focus(); sugerir(); } },
   { texto: 'ci', ajuda: 'builds da Oficina', faz: () => abrirEndereco(ACTIONS) },
   { texto: 'gaveta', ajuda: 'todos os apps', faz: abrirGaveta },
-  { texto: 'tema', ajuda: 'troca Nexo → Grafite → 3D', faz: () => trocarTema() },
+  { texto: 'tema', ajuda: 'troca Nexo → Grafite → 3D → Britagem', faz: () => trocarTema() },
   { texto: 'atualizar', ajuda: 'baixa a versão nova do Início', faz: () => atualizarInicio() }
 ];
 
@@ -1309,10 +1309,13 @@ const chipVersao = $('chip-versao');
 const TEMAS = {
   nexo: { nome: 'Nexo', barras: '#14042a' },
   grafite: { nome: 'Grafite', barras: '#0e1418' },
-  grafite3d: { nome: '3D', barras: '#0e1418' }
+  grafite3d: { nome: '3D', barras: '#0e1418' },
+  // Claro: com o APK 2.5.0 os ícones das barras ficam escuros; no APK antigo
+  // ficariam brancos no creme, então as barras vão no abóbora.
+  britagem: { nome: 'Britagem', barras: '#fbf4ec', barrasAntigo: '#b4461a' }
 };
-const ORDEM_TEMAS = ['nexo', 'grafite', 'grafite3d'];
-const APELIDOS_TEMA = { '3d': 'grafite3d', 'grafite 3d': 'grafite3d', roxo: 'nexo' };
+const ORDEM_TEMAS = ['nexo', 'grafite', 'grafite3d', 'britagem'];
+const APELIDOS_TEMA = { '3d': 'grafite3d', 'grafite 3d': 'grafite3d', roxo: 'nexo', claro: 'britagem', 'abóbora': 'britagem', abobora: 'britagem' };
 
 const temaAtual = () => TEMAS[document.documentElement.dataset.tema] ? document.documentElement.dataset.tema : 'nexo';
 
@@ -1321,7 +1324,8 @@ function aplicarTema(tema) {
   document.querySelector('meta[name="theme-color"]').setAttribute('content', TEMAS[tema].barras);
   // No APK, as barras do Android (relógio em cima, navegação embaixo) acompanham.
   if (nativo && typeof nativo.corDasBarras === 'function') {
-    try { nativo.corDasBarras(TEMAS[tema].barras); } catch (e) {}
+    const claras = typeof nativo.barrasClaras === 'function';
+    try { nativo.corDasBarras(claras ? TEMAS[tema].barras : TEMAS[tema].barrasAntigo || TEMAS[tema].barras); } catch (e) {}
   }
 }
 
