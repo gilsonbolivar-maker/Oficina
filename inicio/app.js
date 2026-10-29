@@ -10,7 +10,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '2.6.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '2.6.1';   // precisa casar com a VERSAO do sw.js
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
 
 const nativo = window.InicioNativo || null;
@@ -1663,7 +1663,7 @@ function marcarBotoesCeu() {
   $('ceu-liga-radar').setAttribute('aria-pressed', String(ceu.mostrarRadar));
   $('ceu-tocar').textContent = ceu.tocando ? 'pausar' : 'tocar';
   for (const b of document.querySelectorAll('.ceu-km button')) b.setAttribute('aria-pressed', String(Number(b.dataset.km) === ceu.km));
-  const contraste = CONTRASTES.includes(ler(CHAVE_CEU_CONTRASTE, 'alto')) ? ler(CHAVE_CEU_CONTRASTE, 'alto') : 'alto';
+  const contraste = CONTRASTES.includes(ler(CHAVE_CEU_CONTRASTE, 'cores')) ? ler(CHAVE_CEU_CONTRASTE, 'cores') : 'cores';
   $('ceu').dataset.contraste = contraste;
   $('ceu-contraste').textContent = 'contraste: ' + contraste;
   $('ceu-contraste').setAttribute('aria-pressed', String(contraste !== 'normal'));
