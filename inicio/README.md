@@ -54,6 +54,17 @@ vez e o bloco de foco que avisa no fim.
   verde → amarelo → vermelho → branco, topo muito frio, tempestade), com o chão
   quente apagado.
   Grade a cada 10 km, escala e a hora de cada fonte no canto.
+- **Voos perto** (bolha ✈ do mostrador, ou comando `voos`): radar de aviões no
+  estilo sonar, preto e verde, com a varredura girando. Cada avião aparece com
+  o voo e a altitude em pés e anda pela velocidade e pelo rumo entre uma busca
+  e outra (a cada 10 s). Raio de 50, 100 ou 250 km. Embaixo, a lista dos mais
+  perto (tipo, altitude, km/h, distância e direção); tocar num avião mostra os
+  dados, e tocar de novo abre no mapa do adsb.lol. Os dados são ADS-B grátis e
+  sem chave: [adsb.lol](https://adsb.lol), [airplanes.live](https://airplanes.live)
+  e [OpenSky](https://opensky-network.org), nessa ordem. Vêm de receptores
+  caseiros, então no interior pode haver poucos aviões. Se o site barrar o
+  navegador (CORS), o APK 2.6.0 busca pelo Android (`buscar`, só nesses três
+  servidores).
 - **Satélite** (APK 2.4.0): quando o celular entra no **Vivo Satélite** (Starlink
   direto no celular) ou outro serviço por satélite, a bolha da rede vira
   **🛰 Vivo Starlink**, dourada e pulsando, e aparece uma dica do que funciona

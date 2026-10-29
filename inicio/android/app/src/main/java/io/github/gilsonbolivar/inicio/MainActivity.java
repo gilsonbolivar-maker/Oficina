@@ -45,6 +45,9 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.List;
 
 /**
@@ -206,8 +209,41 @@ public class MainActivity extends Activity {
         } catch (Exception e) { /* sem navegador */ }
     }
 
+    /** Só estes servidores (os de aviões) podem ser lidos pelo buscar(). */
+    static final String[] SERVIDORES_LIVRES = { "api.adsb.lol", "api.airplanes.live", "opensky-network.org" };
+
     /** O que a página do Início pode pedir ao Android. */
     class Ponte {
+
+        /** Lê um endereço pelo Android, sem o bloqueio de CORS do navegador, e
+         *  responde em window.aoBuscar(id, texto) — texto null se falhar. */
+        @JavascriptInterface
+        public void buscar(final String endereco, final int id) {
+            new Thread(() -> {
+                String texto = null;
+                HttpURLConnection c = null;
+                try {
+                    URL u = new URL(endereco);
+                    boolean livre = false;
+                    for (String h : SERVIDORES_LIVRES) livre |= u.getHost().equals(h);
+                    if (livre && "https".equals(u.getProtocol())) {
+                        c = (HttpURLConnection) u.openConnection();
+                        c.setConnectTimeout(10000);
+                        c.setReadTimeout(15000);
+                        c.setRequestProperty("User-Agent", "Inicio/" + BuildConfig.VERSION_NAME);
+                        if (c.getResponseCode() == 200) {
+                            InputStream in = c.getInputStream();
+                            ByteArrayOutputStream b = new ByteArrayOutputStream();
+                            byte[] pedaco = new byte[8192];
+                            for (int n; (n = in.read(pedaco)) > 0 && b.size() < 4_000_000; ) b.write(pedaco, 0, n);
+                            texto = b.toString("UTF-8");
+                        }
+                    }
+                } catch (Exception e) { texto = null; }
+                finally { if (c != null) c.disconnect(); }
+                chamarPagina("window.aoBuscar && window.aoBuscar(" + id + "," + (texto == null ? "null" : JSONObject.quote(texto)) + ")");
+            }).start();
+        }
 
         @JavascriptInterface
         public String versao() {

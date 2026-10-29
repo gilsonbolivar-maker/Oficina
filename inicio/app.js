@@ -10,7 +10,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '2.8.2';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '2.9.0';   // precisa casar com a VERSAO do sw.js
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
 
 const nativo = window.InicioNativo || null;
@@ -558,6 +558,7 @@ const COMANDOS = [
   { texto: 'tarefa …', ajuda: 'define a tarefa de agora', faz: () => { campo.value = 'tarefa '; campo.focus(); sugerir(); } },
   { texto: 'clima', ajuda: 'atualiza o clima', faz: () => atualizarClima(true) },
   { texto: 'chuva', ajuda: 'satélite e radar, 30 × 30 km', faz: () => abrirCeu() },
+  { texto: 'voos', ajuda: 'radar dos aviões perto de você', faz: () => abrirVoos() },
   { texto: 'cidade …', ajuda: 'clima de uma cidade', faz: () => { campo.value = 'cidade '; campo.focus(); sugerir(); } },
   { texto: 'ci', ajuda: 'builds da Oficina', faz: () => abrirEndereco(ACTIONS) },
   { texto: 'gaveta', ajuda: 'todos os apps', faz: abrirGaveta },
@@ -613,6 +614,7 @@ function executarComando(texto) {
   if (m) { buscarCidade(m[1]); return true; }
   if (/^(clima|tempo)$/i.test(t)) { atualizarClima(true); return true; }
   if (/^(chuva|radar|sat[eé]lite|c[eé]u)$/i.test(t)) { abrirCeu(); return true; }
+  if (/^(voos?|v[ôo]os?|avi[aã]o|avi[oõ]es|aeronaves?|radar de voos?)$/i.test(t)) { abrirVoos(); return true; }
   if (/^ci$/i.test(t)) { abrirEndereco(ACTIONS); return true; }
   if (/^atualiza/i.test(t)) { atualizarInicio(); return true; }
   m = /^tema(?:\s+(.+))?$/i.exec(t);
@@ -848,6 +850,7 @@ for (const fundo of document.querySelectorAll('.fundo-folha')) {
 function fecharFolha(fundo) {
   fundo.hidden = true;
   if (fundo.id === 'folha-ceu') pararCeu();
+  if (fundo.id === 'folha-voos') pararVoos();
   if (document.activeElement) document.activeElement.blur();
   if (fundo.id === 'menu') itemDoMenu = null;
 }
@@ -1297,12 +1300,16 @@ function desenharBolhas() {
       if (a.livre) lista.push(bolha('disco', '💾', textoGB(a.livre), null, textoGB(a.livre) + ' livres de ' + textoGB(a.total)));
     } catch (e) {}
   }
+  const ultimosVoos = ler(CHAVE_VOOS_CONTA, null);
+  lista.push(bolha('voos', '✈', ultimosVoos == null ? '' : String(ultimosVoos), () => abrirVoos(), 'Voos perto: toque para ver o radar'));
   lista.push(bolha('tema', '🎨', '', () => trocarTema(), 'Tema ' + TEMAS[temaAtual()].nome + ': tocar troca'));
   lista.push(chipVersao);
   $('bolhas').replaceChildren(...lista);
 }
 
 const chipVersao = $('chip-versao');
+const CHAVE_VOOS_KM = 'inicio:voos-km';
+const CHAVE_VOOS_CONTA = 'inicio:voos-conta';   // aviões no ar na última busca (aparece na bolha ✈)
 
 /* ——— Temas: Nexo (roxo e dourado), Grafite e 3D (os redesigns do Lovable) ——— */
 
@@ -1851,3 +1858,273 @@ atualizarMostrador();
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
+
+/* ——— Voos perto: radar de aviões, como um sonar ———
+   Os aviões mandam a posição pelo transponder (ADS-B); quem tem receptor em
+   casa reparte com sites abertos. Busca em três, nesta ordem, sem chave:
+   adsb.lol, airplanes.live e OpenSky. Se o navegador barrar (CORS), o APK
+   2.6.0 busca pelo Android (nativo.buscar). Entre uma busca e outra, cada
+   avião anda pela velocidade e o rumo, para o radar não pular. */
+
+const RAIOS_VOOS = [50, 100, 250];
+const FONTES_VOOS = [
+  { nome: 'adsb.lol', url: (l, nm) => `https://api.adsb.lol/v2/point/${l.lat.toFixed(4)}/${l.lon.toFixed(4)}/${nm}`, ler: lerReadsb },
+  { nome: 'airplanes.live', url: (l, nm) => `https://api.airplanes.live/v2/point/${l.lat.toFixed(4)}/${l.lon.toFixed(4)}/${nm}`, ler: lerReadsb },
+  { nome: 'OpenSky', url: (l, nm) => {
+      const dLat = nm * 1.852 / 111.32, dLon = dLat / Math.cos(l.lat * Math.PI / 180);
+      return 'https://opensky-network.org/api/states/all?lamin=' + (l.lat - dLat).toFixed(3) + '&lomin=' + (l.lon - dLon).toFixed(3) +
+        '&lamax=' + (l.lat + dLat).toFixed(3) + '&lomax=' + (l.lon + dLon).toFixed(3);
+    }, ler: lerOpenSky }
+];
+
+const voos = {
+  km: RAIOS_VOOS.includes(ler(CHAVE_VOOS_KM, 100)) ? ler(CHAVE_VOOS_KM, 100) : 100,
+  lista: [],        // { hex, nome, tipo, reg, lat, lon, altPes, chao, nos, rumo }
+  quando: 0,        // hora da última posição (ms)
+  fonte: '',
+  escolhido: null,  // hex do avião tocado
+  timer: null,
+  quadro: 0,
+  pedido: 0
+};
+
+// Formato readsb (adsb.lol, airplanes.live): { ac: [{ hex, flight, lat, lon, alt_baro, gs, track, t, r }] }
+function lerReadsb(d) {
+  return (d.ac || []).filter(a => a.lat != null && a.lon != null).map(a => ({
+    hex: a.hex, nome: (a.flight || '').trim() || (a.r || '').trim() || a.hex.toUpperCase(),
+    tipo: a.t || '', reg: a.r || '', lat: a.lat, lon: a.lon,
+    chao: a.alt_baro === 'ground', altPes: typeof a.alt_baro === 'number' ? a.alt_baro : (a.alt_geom || 0),
+    nos: a.gs || 0, rumo: a.track != null ? a.track : a.true_heading
+  }));
+}
+
+// Formato OpenSky: { states: [[icao24, callsign, país, …, lon(5), lat(6), alt m(7), no chão(8), m/s(9), rumo(10)]] }
+function lerOpenSky(d) {
+  return (d.states || []).filter(e => e[5] != null && e[6] != null).map(e => ({
+    hex: e[0], nome: (e[1] || '').trim() || e[0].toUpperCase(), tipo: '', reg: e[2] || '',
+    lat: e[6], lon: e[5], chao: !!e[8], altPes: Math.round((e[7] || 0) * 3.28084),
+    nos: (e[9] || 0) * 1.94384, rumo: e[10]
+  }));
+}
+
+// Busca JSON pelo navegador; se barrar, pelo APK.
+const esperasNativas = new Map();
+let proximaEspera = 1;
+window.aoBuscar = (id, texto) => {
+  const fim = esperasNativas.get(id);
+  if (fim) { esperasNativas.delete(id); fim(texto); }
+};
+function buscarPeloAndroid(url) {
+  return new Promise(resolve => {
+    if (!nativo || typeof nativo.buscar !== 'function') return resolve(null);
+    const id = proximaEspera++;
+    const t = setTimeout(() => { esperasNativas.delete(id); resolve(null); }, 20000);
+    esperasNativas.set(id, texto => { clearTimeout(t); resolve(texto); });
+    try { nativo.buscar(url, id); } catch (e) { clearTimeout(t); resolve(null); }
+  });
+}
+async function lerJSON(url) {
+  try {
+    const c = new AbortController();
+    const t = setTimeout(() => c.abort(), 12000);
+    const r = await fetch(url, { cache: 'no-store', signal: c.signal });
+    clearTimeout(t);
+    if (r.ok) return await r.json();
+  } catch (e) { /* CORS ou sem rede: tenta pelo APK */ }
+  const texto = await buscarPeloAndroid(url);
+  try { return texto ? JSON.parse(texto) : null; } catch (e) { return null; }
+}
+
+// Distância (km) e direção (graus, 0 = norte) de você até o avião.
+function rumoDe(l, a) {
+  const kmLat = 111.32, kmLon = 111.32 * Math.cos(l.lat * Math.PI / 180);
+  const dx = (a.lon - l.lon) * kmLon, dy = (a.lat - l.lat) * kmLat;
+  return { km: Math.hypot(dx, dy), dx, dy, graus: (Math.atan2(dx, dy) * 180 / Math.PI + 360) % 360 };
+}
+
+// Onde o avião está agora, andando desde a última posição (no máximo 1 min).
+function posicaoAgora(a) {
+  if (a.chao || !a.nos || a.rumo == null) return a;
+  const s = Math.min(60, (Date.now() - voos.quando) / 1000);
+  const km = a.nos * 1.852 * s / 3600, r = a.rumo * Math.PI / 180;
+  return { ...a, lat: a.lat + km * Math.cos(r) / 111.32, lon: a.lon + km * Math.sin(r) / (111.32 * Math.cos(a.lat * Math.PI / 180)) };
+}
+
+async function buscarVoos() {
+  const lugar = ler(CHAVE.lugar, null);
+  const estado = $('voos-estado');
+  if (!lugar) {
+    estado.innerHTML = '<b>Sem localização.</b> Toque no clima para permitir, ou digite “cidade” e o nome na barra.';
+    return;
+  }
+  const pedido = ++voos.pedido;
+  const nm = Math.min(250, Math.ceil(voos.km / 1.852));
+  for (const f of FONTES_VOOS) {
+    const d = await lerJSON(f.url(lugar, nm));
+    if (pedido !== voos.pedido) return;
+    if (!d) continue;
+    voos.lista = f.ler(d).filter(a => rumoDe(lugar, a).km <= voos.km);
+    voos.quando = Date.now();
+    voos.fonte = f.nome;
+    guardar(CHAVE_VOOS_CONTA, voos.lista.filter(a => !a.chao).length);
+    desenharListaVoos(lugar);
+    return;
+  }
+  estado.innerHTML = voos.lista.length
+    ? '<b>Sem resposta agora</b>; mostrando os últimos aviões.'
+    : '<b>Não consegui buscar os voos.</b> Confira a internet. ' + (nativo && typeof nativo.buscar !== 'function' ? 'Instale o APK 2.6.0, que busca pelo Android.' : '');
+}
+
+const pesMetros = p => p * 0.3048;
+function textoAltitude(a) {
+  if (a.chao) return 'no chão';
+  return a.altPes.toLocaleString('pt-BR') + ' ft (' + (pesMetros(a.altPes) / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' km)';
+}
+const PONTOS = ['N', 'NE', 'L', 'SE', 'S', 'SO', 'O', 'NO'];
+const pontoCardeal = g => PONTOS[Math.round(g / 45) % 8];
+
+function desenharListaVoos(lugar) {
+  const noAr = voos.lista.filter(a => !a.chao);
+  const perto = voos.lista.map(a => ({ a, r: rumoDe(lugar, a) })).sort((x, y) => x.r.km - y.r.km);
+  $('voos-estado').innerHTML = voos.lista.length
+    ? '<b>' + noAr.length + (noAr.length === 1 ? ' avião' : ' aviões') + '</b> no ar em ' + voos.km + ' km' +
+      (voos.lista.length > noAr.length ? ' · ' + (voos.lista.length - noAr.length) + ' no chão' : '') + ' · fonte ' + voos.fonte + ', ' + hhmmLocal(new Date(voos.quando))
+    : '<b>Nenhum avião</b> em ' + voos.km + ' km agora (fonte ' + voos.fonte + '). Tente 250 km: no interior há poucos receptores.';
+  $('voos-lista').replaceChildren(...perto.slice(0, 8).map(({ a, r }) => {
+    const li = document.createElement('li');
+    li.className = a.hex === voos.escolhido ? 'escolhido' : '';
+    li.innerHTML = '<b></b><span></span><small></small>';
+    li.children[0].textContent = a.nome;
+    li.children[1].textContent = [a.tipo, textoAltitude(a), a.chao ? '' : Math.round(a.nos * 1.852) + ' km/h'].filter(Boolean).join(' · ');
+    li.children[2].textContent = Math.round(r.km) + ' km ' + pontoCardeal(r.graus);
+    li.addEventListener('click', () => escolherVoo(a.hex));
+    return li;
+  }));
+}
+
+function escolherVoo(hex) {
+  if (voos.escolhido === hex) { abrirEndereco('https://globe.adsb.lol/?icao=' + hex); return; }
+  voos.escolhido = hex;
+  const lugar = ler(CHAVE.lugar, null);
+  if (lugar) desenharListaVoos(lugar);
+  const a = voos.lista.find(x => x.hex === hex);
+  if (a) $('voos-estado').innerHTML = '<b>' + a.nome + '</b>' + (a.reg && a.reg !== a.nome ? ' · ' + a.reg : '') + (a.tipo ? ' · ' + a.tipo : '') +
+    '<br>' + textoAltitude(a) + (a.chao ? '' : ' · ' + Math.round(a.nos * 1.852) + ' km/h · rumo ' + pontoCardeal(a.rumo || 0)) +
+    '<br>Toque de novo para ver no mapa (adsb.lol).';
+}
+
+// O sonar: fundo preto, anéis, varredura girando e os aviões em verde.
+function desenharSonar() {
+  const tela = $('sonar');
+  const lugar = ler(CHAVE.lugar, null);
+  const dpr = window.devicePixelRatio || 1;
+  const lado = tela.clientWidth || 300;
+  if (tela.width !== Math.round(lado * dpr)) { tela.width = tela.height = Math.round(lado * dpr); }
+  const g = tela.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const c = lado / 2, raio = c - 10;
+  const verde = '#5dff6a', escuro = 'rgb(93 255 106 / 0.35)';
+  g.clearRect(0, 0, lado, lado);
+  const fundo = g.createRadialGradient(c, c, 0, c, c, raio);
+  fundo.addColorStop(0, '#0b2a10'); fundo.addColorStop(1, '#020a03');
+  g.fillStyle = fundo; g.beginPath(); g.arc(c, c, raio, 0, 2 * Math.PI); g.fill();
+  // Anéis e cruz, com a distância de cada anel.
+  g.strokeStyle = escuro; g.lineWidth = 1.2; g.fillStyle = escuro; g.font = '600 10px ' + getComputedStyle(document.body).getPropertyValue('--mono');
+  for (let k = 1; k <= 3; k++) {
+    g.beginPath(); g.arc(c, c, raio * k / 3, 0, 2 * Math.PI); g.stroke();
+  }
+  // A distância de cada anel vai embaixo da linha do leste, longe do N.
+  g.textAlign = 'right';
+  for (let k = 1; k <= 3; k++) g.fillText(Math.round(voos.km * k / 3) + ' km', c + raio * k / 3 - 4, c + 13);
+  g.textAlign = 'left';
+  g.beginPath(); g.moveTo(c - raio, c); g.lineTo(c + raio, c); g.moveTo(c, c - raio); g.lineTo(c, c + raio); g.stroke();
+  g.fillStyle = verde; g.font = '700 13px sans-serif'; g.textAlign = 'center';
+  g.fillText('N', c, c - raio + 16); g.textAlign = 'left';
+  // Varredura: gira uma volta a cada 4 s, com rastro.
+  const angulo = (performance.now() / 4000 % 1) * 2 * Math.PI - Math.PI / 2;
+  for (let k = 0; k < 24; k++) {
+    g.fillStyle = 'rgb(93 255 106 / ' + (0.22 * (1 - k / 24)) + ')';
+    g.beginPath(); g.moveTo(c, c); g.arc(c, c, raio, angulo - (k + 1) * 0.03, angulo - k * 0.03); g.closePath(); g.fill();
+  }
+  // Você, no meio.
+  g.fillStyle = '#ffe14d'; g.beginPath(); g.arc(c, c, 4, 0, 2 * Math.PI); g.fill();
+  if (!lugar) return;
+  const escala = raio / voos.km;
+  for (const a0 of voos.lista) {
+    const a = posicaoAgora(a0);
+    const r = rumoDe(lugar, a);
+    if (r.km > voos.km) continue;
+    const x = c + r.dx * escala, y = c - r.dy * escala;
+    // Brilha forte quando a varredura acabou de passar e vai apagando.
+    const passou = ((angulo + Math.PI / 2 - r.graus * Math.PI / 180) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+    const brilho = 0.45 + 0.55 * Math.max(0, 1 - passou / (2 * Math.PI) * 1.6);
+    const escolhido = a.hex === voos.escolhido;
+    g.save(); g.translate(x, y); g.rotate((a.rumo || 0) * Math.PI / 180);
+    g.globalAlpha = a.chao ? 0.4 : brilho;
+    g.strokeStyle = g.fillStyle = escolhido ? '#ffe14d' : verde; g.lineWidth = 2; g.lineCap = 'round';
+    // Aviãozinho: fuselagem, asas e cauda.
+    g.beginPath(); g.moveTo(0, -8); g.lineTo(0, 8); g.moveTo(-8, 0); g.lineTo(8, 0); g.moveTo(-4, 7); g.lineTo(4, 7); g.stroke();
+    g.restore();
+    g.globalAlpha = a.chao ? 0.4 : brilho;
+    g.fillStyle = escolhido ? '#ffe14d' : verde;
+    g.font = '700 11px sans-serif'; g.fillText(a.nome, x + 10, y - 2);
+    g.font = '500 10px sans-serif'; g.fillText(a.chao ? 'no chão' : a.altPes.toLocaleString('pt-BR') + ' ft', x + 10, y + 10);
+    g.globalAlpha = 1;
+  }
+  // Borda acesa.
+  g.strokeStyle = verde; g.lineWidth = 2; g.beginPath(); g.arc(c, c, raio, 0, 2 * Math.PI); g.stroke();
+}
+
+function animarSonar() {
+  desenharSonar();
+  voos.quadro = requestAnimationFrame(animarSonar);
+}
+
+function marcarBotoesVoos() {
+  for (const b of document.querySelectorAll('.voos-km button')) b.setAttribute('aria-pressed', String(Number(b.dataset.km) === voos.km));
+  $('voos-raio').textContent = voos.km + ' km';
+}
+
+function abrirVoos() {
+  fecharSugestoes();
+  $('folha-voos').hidden = false;
+  marcarBotoesVoos();
+  $('voos-estado').innerHTML = 'Procurando aviões…';
+  cancelAnimationFrame(voos.quadro);
+  requestAnimationFrame(animarSonar);
+  buscarVoos();
+  clearInterval(voos.timer);
+  voos.timer = setInterval(() => { if (!document.hidden) buscarVoos(); }, 10000);
+}
+
+function pararVoos() {
+  clearInterval(voos.timer);
+  cancelAnimationFrame(voos.quadro);
+  voos.timer = null;
+  voos.pedido++;
+  desenharBolhas();
+}
+
+$('voos-atualizar').addEventListener('click', () => { $('voos-estado').innerHTML = 'Procurando aviões…'; buscarVoos(); });
+for (const b of document.querySelectorAll('.voos-km button')) {
+  b.addEventListener('click', () => {
+    voos.km = Number(b.dataset.km);
+    guardar(CHAVE_VOOS_KM, voos.km);
+    marcarBotoesVoos();
+    buscarVoos();
+  });
+}
+// Tocar no sonar escolhe o avião mais perto do dedo.
+$('sonar').addEventListener('click', e => {
+  const lugar = ler(CHAVE.lugar, null);
+  if (!lugar || !voos.lista.length) return;
+  const caixa = $('sonar').getBoundingClientRect();
+  const c = caixa.width / 2, escala = (c - 10) / voos.km;
+  let melhor = null, menor = 28;
+  for (const a0 of voos.lista) {
+    const r = rumoDe(lugar, posicaoAgora(a0));
+    const d = Math.hypot(e.clientX - caixa.left - (c + r.dx * escala), e.clientY - caixa.top - (c - r.dy * escala));
+    if (d < menor) { menor = d; melhor = a0; }
+  }
+  if (melhor) escolherVoo(melhor.hex);
+});

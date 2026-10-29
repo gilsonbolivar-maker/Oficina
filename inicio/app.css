@@ -901,7 +901,7 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
   color: #fff;
 }
 .ceu-controles { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.ceu-chave, .ceu-km button {
+.ceu-chave, .ceu-km button, .voos-km button {
   padding: 7px 11px;
   border: 1px solid var(--borda);
   border-radius: 999px;
@@ -909,8 +909,8 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
   font: 600 13px var(--mono);
   color: var(--texto-fraco);
 }
-.ceu-chave[aria-pressed="true"], .ceu-km button[aria-pressed="true"] { border-color: var(--ouro); color: var(--ouro); }
-.ceu-km { display: flex; gap: 4px; margin-left: auto; }
+.ceu-chave[aria-pressed="true"], .ceu-km button[aria-pressed="true"], .voos-km button[aria-pressed="true"] { border-color: var(--ouro); color: var(--ouro); }
+.ceu-km, .voos-km { display: flex; gap: 4px; margin-left: auto; }
 .ceu-legenda { margin: 0; font-size: 12px; line-height: 1.45; color: var(--texto-fraco); }
 .ceu-legenda b { color: var(--texto); }
 .radar-fraca { color: #7dd3fc; }
@@ -1090,3 +1090,14 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
 :root[data-tema="britagem"] .clima-colunas small { font-size: min(10px, 3.2cqi); }
 :root[data-tema="britagem"] .clima::after { font-size: min(10px, 3.2cqi); }
 :root[data-tema="britagem"] :is(.bolha, .chip-versao) { font-size: min(10.5px, 3.3cqi); }
+
+/* ——— Voos perto: o sonar é sempre preto e verde, em qualquer tema ——— */
+.sonar { width: 100%; max-width: 420px; margin: 0 auto; aspect-ratio: 1; border-radius: 50%; background: #111; box-shadow: 0 0 0 6px #1b1b1b, 0 10px 30px rgb(0 0 0 / 0.45); }
+.sonar canvas { display: block; width: 100%; height: 100%; touch-action: manipulation; }
+.voos-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.voos-lista li { display: grid; grid-template-columns: auto 1fr auto; align-items: baseline; gap: 8px; padding: 7px 10px; border-radius: 12px; background: rgb(255 255 255 / 0.05); font-size: 13px; }
+.voos-lista li b { font-family: var(--mono); color: var(--ouro); }
+.voos-lista li span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--texto-fraco); }
+.voos-lista li small { font: 600 12px var(--mono); }
+.voos-lista li.escolhido { box-shadow: inset 0 0 0 1.5px var(--ouro); }
+:root[data-tema="britagem"] .voos-lista li { background: var(--roxo-claro); }
