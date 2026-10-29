@@ -916,3 +916,5 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
 .radar-fraca { color: #7dd3fc; }
 .radar-forte { color: #f87171; }
 .clima::after { content: "🛰 toque para ver o céu"; display: block; margin-top: 2px; font: 600 10px var(--mono); color: var(--texto-fraco); opacity: 0.8; }
+.ceu-estado { margin: 0; padding: 8px 12px; border-radius: 12px; background: rgb(255 255 255 / 0.05); font-size: 13px; color: var(--texto); }
+.ceu-estado b { color: var(--ouro); }

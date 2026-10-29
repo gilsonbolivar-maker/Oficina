@@ -10,7 +10,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '2.5.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '2.5.1';   // precisa casar com a VERSAO do sw.js
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
 
 const nativo = window.InicioNativo || null;
@@ -1467,6 +1467,7 @@ const ceu = {
   mostrarIR: true,
   mostrarRadar: true,
   tocando: true,
+  chuva: null,     // { antes, agora }: fração do quadro com chuva no radar
   ir: [],          // { hora: Date, url }
   radar: [],       // { hora: Date, url }
   i: 0,
@@ -1548,6 +1549,33 @@ async function buscarIR(lugar, pedido) {
   ceu.ir = [];
 }
 
+/* Quanto do quadro tem chuva no radar: conta os pontos coloridos dentro do
+   pedaço que aparece na janela. Precisa que o servidor deixe ler a imagem
+   (CORS); se não deixar, responde null e a janela só não diz nada. */
+function chuvaNoQuadro(url, lugar) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const larguraKm = 40075.016 * Math.cos(lugar.lat * Math.PI / 180) / Math.pow(2, ZOOM_RADAR);
+        const lado = Math.max(4, Math.round(img.naturalWidth * ceu.km / larguraKm));
+        const x0 = Math.round((img.naturalWidth - lado) / 2);
+        const c = document.createElement('canvas');
+        c.width = c.height = lado;
+        const g = c.getContext('2d');
+        g.drawImage(img, x0, x0, lado, lado, 0, 0, lado, lado);
+        const px = g.getImageData(0, 0, lado, lado).data;
+        let coloridos = 0;
+        for (let i = 3; i < px.length; i += 4) if (px[i] > 40) coloridos++;
+        resolve(coloridos / (lado * lado));
+      } catch (e) { resolve(null); }
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+}
+
 async function buscarRadar(lugar, pedido) {
   try {
     const resp = await fetch(RAINVIEWER, { cache: 'no-store' });
@@ -1560,9 +1588,35 @@ async function buscarRadar(lugar, pedido) {
     const ok = await Promise.all(quadros.map(q => carregarImagem(q.url)));
     if (pedido !== ceu.pedido) return;
     ceu.radar = quadros.filter((_, k) => ok[k]);
+    // Olha o quadro mais novo e o mais velho: houve chuva na última hora?
+    ceu.chuva = null;
+    if (ceu.radar.length) {
+      const medidas = await Promise.all([ceu.radar[0], ceu.radar[ceu.radar.length - 1]].map(q => chuvaNoQuadro(q.url, lugar)));
+      if (pedido !== ceu.pedido) return;
+      if (medidas.every(m => m !== null)) ceu.chuva = { antes: medidas[0], agora: medidas[1] };
+    }
   } catch (e) {
     if (pedido === ceu.pedido) ceu.radar = [];
   }
+}
+
+// Diz em palavras o que o radar e o satélite trouxeram.
+function descreverCeu() {
+  const linhas = [];
+  if (!ceu.radar.length) linhas.push('<b>Radar</b>: não consegui baixar agora.');
+  else if (!ceu.chuva) linhas.push('<b>Radar</b>: ' + ceu.radar.length + ' quadros da última hora.');
+  else if (ceu.chuva.agora === 0 && ceu.chuva.antes === 0) {
+    linhas.push('<b>Radar</b>: sem chuva em ' + ceu.km + ' × ' + ceu.km + ' km na última hora. Se estiver chovendo aí, a região pode não ter radar no RainViewer; tente 100 km.');
+  } else {
+    const pct = Math.max(1, Math.round(ceu.chuva.agora * 100));
+    const tendencia = ceu.chuva.agora > ceu.chuva.antes * 1.2 ? 'aumentando' : ceu.chuva.agora < ceu.chuva.antes * 0.8 ? 'diminuindo' : 'estável';
+    linhas.push(ceu.chuva.agora === 0 ? '<b>Radar</b>: choveu na última hora, mas parou.'
+      : '<b>Radar</b>: chuva em ' + pct + '% do quadro, ' + tendencia + '.');
+  }
+  if (!ceu.ir.length) linhas.push('<b>Satélite</b>: sem imagem agora.');
+  else if (!ceu.mostrarIR) linhas.push('<b>Satélite</b>: desligado; toque em Infravermelho para ver as nuvens.');
+  $('ceu-estado').innerHTML = linhas.join('<br>');
+  $('ceu-estado').hidden = false;
 }
 
 // O radar vem num quadro bem maior (zoom 7: ~295 km de lado); amplia e centraliza.
@@ -1616,6 +1670,7 @@ async function carregarCeu() {
   $('ceu-mapa').replaceChildren();
   $('ceu-ir').hidden = $('ceu-radar').hidden = true;
   $('ceu-hora').textContent = '';
+  $('ceu-estado').hidden = true;
   if (!lugar) {
     avisoCeu('Sem localização. Toque fora, toque no clima para permitir, ou digite “cidade” e o nome na barra.');
     return;
@@ -1637,6 +1692,7 @@ async function carregarCeu() {
   avisoCeu(faltas.length === 2 ? 'Sem satélite e sem radar agora. Confira a internet e toque em “tocar” mais tarde.'
     : faltas.length ? 'Sem ' + faltas[0] + ' agora; mostrando o outro.' : '');
   if (faltas.length === 1) setTimeout(() => { if (pedido === ceu.pedido) avisoCeu(''); }, 3000);
+  descreverCeu();
   animarCeu();
 }
 
@@ -1647,7 +1703,7 @@ function abrirCeu() {
   requestAnimationFrame(() => carregarCeu());
 }
 
-$('ceu-liga-ir').addEventListener('click', () => { ceu.mostrarIR = !ceu.mostrarIR; marcarBotoesCeu(); mostrarQuadro(); });
+$('ceu-liga-ir').addEventListener('click', () => { ceu.mostrarIR = !ceu.mostrarIR; marcarBotoesCeu(); mostrarQuadro(); if (!$('ceu-estado').hidden) descreverCeu(); });
 $('ceu-liga-radar').addEventListener('click', () => { ceu.mostrarRadar = !ceu.mostrarRadar; marcarBotoesCeu(); mostrarQuadro(); });
 $('ceu-tocar').addEventListener('click', () => {
   ceu.tocando = !ceu.tocando;
