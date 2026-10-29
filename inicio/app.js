@@ -10,7 +10,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '2.8.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '2.8.1';   // precisa casar com a VERSAO do sw.js
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
 
 const nativo = window.InicioNativo || null;
@@ -1598,11 +1598,10 @@ async function buscarIR(lugar, pedido) {
 /* Quanto do quadro tem chuva no radar: conta os pontos coloridos dentro do
    pedaço que aparece na janela. Precisa que o servidor deixe ler a imagem
    (CORS); se não deixar, responde null e a janela só não diz nada. */
+const imagensRadar = new Map();   // url → imagem já lida, para medir de novo sem baixar
 function chuvaNoQuadro(url, lugar) {
   return new Promise(resolve => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
+    const medir = img => {
       try {
         const larguraKm = 40075.016 * Math.cos(lugar.lat * Math.PI / 180) / Math.pow(2, ZOOM_RADAR);
         const lado = Math.max(4, Math.round(img.naturalWidth * ceu.km / larguraKm));
@@ -1617,13 +1616,29 @@ function chuvaNoQuadro(url, lugar) {
         resolve(coloridos / (lado * lado));
       } catch (e) { resolve(null); }
     };
+    if (imagensRadar.has(url)) { medir(imagensRadar.get(url)); return; }
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => { imagensRadar.set(url, img); medir(img); };
     img.onerror = () => resolve(null);
     img.src = url;
   });
 }
 
+/* Os quadros do radar não mudam com o lado (30, 60 ou 100 km): é a mesma
+   imagem, só ampliada de outro jeito. Guarda os últimos por 5 min para não
+   baixar de novo a cada toque: o RainViewer grátis recusa pedidos demais
+   (desde 2026, ~100 por minuto), e era aí que o radar sumia no 60 e no 100. */
+let radarGuardado = { chave: '', quando: 0, quadros: [] };
+
 async function buscarRadar(lugar, pedido) {
   try {
+    const chave = lugar.lat.toFixed(4) + ',' + lugar.lon.toFixed(4);
+    if (radarGuardado.chave === chave && Date.now() - radarGuardado.quando < 5 * 60 * 1000 && radarGuardado.quadros.length) {
+      ceu.radar = radarGuardado.quadros;
+      await medirChuva(lugar, pedido);
+      return;
+    }
     const resp = await fetch(RAINVIEWER, { cache: 'no-store' });
     const dados = await resp.json();
     const passado = (dados.radar && dados.radar.past) || [];
@@ -1634,16 +1649,26 @@ async function buscarRadar(lugar, pedido) {
     const ok = await Promise.all(quadros.map(q => carregarImagem(q.url)));
     if (pedido !== ceu.pedido) return;
     ceu.radar = quadros.filter((_, k) => ok[k]);
-    // Olha o quadro mais novo e o mais velho: houve chuva na última hora?
-    ceu.chuva = null;
     if (ceu.radar.length) {
-      const medidas = await Promise.all([ceu.radar[0], ceu.radar[ceu.radar.length - 1]].map(q => chuvaNoQuadro(q.url, lugar)));
-      if (pedido !== ceu.pedido) return;
-      if (medidas.every(m => m !== null)) ceu.chuva = { antes: medidas[0], agora: medidas[1] };
+      radarGuardado = { chave, quando: Date.now(), quadros: ceu.radar };
+      imagensRadar.clear();
     }
+    await medirChuva(lugar, pedido);
   } catch (e) {
-    if (pedido === ceu.pedido) ceu.radar = [];
+    if (pedido !== ceu.pedido) return;
+    // Sem rede ou recusado: usa os últimos quadros, se houver.
+    ceu.radar = radarGuardado.quadros;
+    await medirChuva(lugar, pedido);
   }
+}
+
+// Olha o quadro mais novo e o mais velho: houve chuva na última hora?
+async function medirChuva(lugar, pedido) {
+  ceu.chuva = null;
+  if (!ceu.radar.length) return;
+  const medidas = await Promise.all([ceu.radar[0], ceu.radar[ceu.radar.length - 1]].map(q => chuvaNoQuadro(q.url, lugar)));
+  if (pedido !== ceu.pedido) return;
+  if (medidas.every(m => m !== null)) ceu.chuva = { antes: medidas[0], agora: medidas[1] };
 }
 
 // Diz em palavras o que o radar e o satélite trouxeram.
