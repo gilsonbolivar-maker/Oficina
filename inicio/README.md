@@ -48,11 +48,15 @@ vez e o bloco de foco que avisa no fim.
     já está caindo. A versão grátis vai até o zoom 7 (~600 m por ponto), então
     no quadro de 30 km o radar aparece quadriculado.
   A última hora anima; os botões ligam e desligam cada camada e pausam.
-  **Contraste** gira entre *normal*, *alto* (mapa mais escuro, nuvens mais
-  brilhantes e radar com cores vivas) e *cores* (o padrão), que pinta o
+  **Visual** gira entre *claro* (o padrão, como os sites de radar: mapa de
+  verdade, anéis a cada 10 km em volta de você e só a chuva colorida, azul →
+  verde → amarelo → vermelho; o satélite começa desligado e, se ligado, vem
+  em cinza), *normal*, *alto* (mapa mais escuro, nuvens mais
+  brilhantes e radar com cores vivas) e *cores*, que pinta o
   infravermelho pela temperatura, como nos sites de meteorologia (azul baixa →
   verde → amarelo → vermelho → branco, topo muito frio, tempestade), com o chão
-  quente apagado.
+  quente apagado. Com o radar ligado, as nuvens ficam sempre em branco e
+  cinza, para a cor do satélite não se misturar com a da chuva.
   Grade a cada 10 km, escala e a hora de cada fonte no canto.
 - **Voos perto** (bolha ✈ do mostrador, ou comando `voos`): radar de aviões no
   estilo sonar, preto e verde, com a varredura girando. Cada avião aparece com

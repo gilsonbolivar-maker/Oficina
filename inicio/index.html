@@ -133,8 +133,18 @@
             <feFuncA type="table" tableValues="0 0 0.45 0.75 0.9 0.95 1 1"/>
           </feComponentTransfer>
         </filter>
+        <!-- Com o radar ligado: nuvens só em branco e cinza, para a chuva colorida se destacar. -->
+        <filter id="nuvens-cinza" color-interpolation-filters="sRGB">
+          <feColorMatrix type="matrix" values="0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0"/>
+          <feComponentTransfer>
+            <feFuncR type="table" tableValues="0.55 0.62 0.7 0.8 0.9 1"/>
+            <feFuncG type="table" tableValues="0.55 0.62 0.7 0.8 0.9 1"/>
+            <feFuncB type="table" tableValues="0.6 0.66 0.74 0.83 0.92 1"/>
+            <feFuncA type="table" tableValues="0 0 0.25 0.45 0.6 0.7"/>
+          </feComponentTransfer>
+        </filter>
       </svg>
-      <div id="ceu" class="ceu" data-contraste="cores">
+      <div id="ceu" class="ceu" data-contraste="claro">
         <div id="ceu-mapa" class="ceu-camada ceu-mapa"></div>
         <img id="ceu-ir" class="ceu-camada ceu-ir" alt="" hidden>
         <div class="ceu-camada ceu-caixa-radar"><img id="ceu-radar" class="ceu-radar" alt="" hidden></div>
@@ -149,16 +159,18 @@
         <button id="ceu-liga-ir" type="button" class="ceu-chave" aria-pressed="true">Infravermelho</button>
         <button id="ceu-liga-radar" type="button" class="ceu-chave" aria-pressed="true">Radar</button>
         <button id="ceu-tocar" type="button" class="ceu-chave">pausar</button>
-        <button id="ceu-contraste" type="button" class="ceu-chave" aria-pressed="true">contraste: cores</button>
+        <button id="ceu-contraste" type="button" class="ceu-chave" aria-pressed="true">visual: claro</button>
         <span class="ceu-km">
           <button type="button" data-km="30">30</button><button type="button" data-km="60">60</button><button type="button" data-km="100">100 km</button>
         </span>
       </div>
       <p id="ceu-estado" class="ceu-estado" hidden></p>
       <p class="ceu-legenda">
-        <b>Infravermelho</b>: quanto mais clara ou colorida, mais fria e alta a nuvem; é nela que a chuva se forma.
-        <span class="escala-ir"><i></i>baixa → topo frio (tempestade)</span>
-        <b>Radar</b>: <span class="radar-fraca">fraca</span> → <span class="radar-forte">forte</span>.
+        <span class="so-radar"><b>Chuva</b> (radar), em cores: <span class="radar-fraca">fraca</span> → <span class="radar-forte">forte</span>.
+        <b>Nuvens</b> (satélite, se ligado) em branco: quanto mais branca, mais alta e fria; é nelas que a chuva se forma.
+        Desligue o radar para ver as nuvens coloridas pela temperatura.</span>
+        <span class="so-nuvens"><b>Infravermelho</b>: quanto mais clara ou colorida, mais fria e alta a nuvem; é nela que a chuva se forma.
+        <span class="escala-ir"><i></i>baixa → topo frio (tempestade)</span></span>
         Satélite GOES-19 (NASA GIBS, cerca de 1 h de atraso) · radar RainViewer · mapa © OpenStreetMap.
       </p>
       <button type="button" class="fechar-folha" data-fecha>Fechar</button>
