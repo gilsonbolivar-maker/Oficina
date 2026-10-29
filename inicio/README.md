@@ -36,6 +36,19 @@ vez e o bloco de foco que avisa no fim.
   - **bolhas**: 💬 total de notificações (precisa ligar o *Acesso a
     notificações*; o Início só conta, não lê), ✓/✗ dos builds da Oficina no
     GitHub (toque abre o Actions), rede com a força do sinal e o espaço livre.
+- **Céu agora** (toque no clima, ou comando `chuva`): janela com um quadro de
+  **30 × 30 km** centrado em você (ou 60 e 100 km), com três camadas:
+  - mapa do [OpenStreetMap](https://www.openstreetmap.org), escurecido;
+  - **satélite infravermelho** do GOES-19 (banda 13, pela
+    [NASA GIBS](https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api)):
+    o topo das nuvens; as mais frias (claras) são as que crescem e formam chuva.
+    Sai a cada 10 min, com cerca de 1 h de atraso; a janela procura os quadros
+    mais novos que já existem;
+  - **radar** do [RainViewer](https://www.rainviewer.com/api.html): a chuva que
+    já está caindo. A versão grátis vai até o zoom 7 (~600 m por ponto), então
+    no quadro de 30 km o radar aparece quadriculado.
+  A última hora anima; os botões ligam e desligam cada camada e pausam.
+  Grade a cada 10 km, escala e a hora de cada fonte no canto.
 - **Atualizar** (chip da versão, no fim das bolhas): um toque confere no site,
   baixa a versão nova e recarrega, sem precisar forçar a parada do app. A cada
   3 horas ele confere sozinho e fica dourado (`↻ v2.3.0 nova`) quando há
@@ -49,7 +62,7 @@ vez e o bloco de foco que avisa no fim.
   estiver instalado). Toque e segure qualquer app para mudá-lo de aba.
 - **Barra de comando** `nexo:~$`: digite e o app aparece; *Enter* abre.
   Tocar no campo vazio mostra os comandos: `foco 30` (bloco de 30 min),
-  `tarefa revisar o PR`, `pausar`, `clima`, `cidade NOME`, `ci`,
+  `tarefa revisar o PR`, `pausar`, `clima`, `chuva`, `cidade NOME`, `ci`,
   `notificações`, `tema`, `atualizar`, `gaveta`, e o nome de uma aba (`dev`, `oficina`…).
 - **Gaveta** com todos os apps de A a Z, com busca: toque em ⌃ (no começo da
   barra de comando) ou deslize para cima; deslize para baixo (ou o voltar) fecha.

@@ -10,7 +10,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '2.4.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '2.5.0';   // precisa casar com a VERSAO do sw.js
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
 
 const nativo = window.InicioNativo || null;
@@ -557,6 +557,7 @@ const COMANDOS = [
   { texto: 'foco 45', ajuda: 'bloco de 45 min', faz: () => comecarBloco(45) },
   { texto: 'tarefa …', ajuda: 'define a tarefa de agora', faz: () => { campo.value = 'tarefa '; campo.focus(); sugerir(); } },
   { texto: 'clima', ajuda: 'atualiza o clima', faz: () => atualizarClima(true) },
+  { texto: 'chuva', ajuda: 'satélite e radar, 30 × 30 km', faz: () => abrirCeu() },
   { texto: 'cidade …', ajuda: 'clima de uma cidade', faz: () => { campo.value = 'cidade '; campo.focus(); sugerir(); } },
   { texto: 'ci', ajuda: 'builds da Oficina', faz: () => abrirEndereco(ACTIONS) },
   { texto: 'gaveta', ajuda: 'todos os apps', faz: abrirGaveta },
@@ -611,6 +612,7 @@ function executarComando(texto) {
   m = /^cidade\s+(.+)$/i.exec(t);
   if (m) { buscarCidade(m[1]); return true; }
   if (/^(clima|tempo)$/i.test(t)) { atualizarClima(true); return true; }
+  if (/^(chuva|radar|sat[eé]lite|c[eé]u)$/i.test(t)) { abrirCeu(); return true; }
   if (/^ci$/i.test(t)) { abrirEndereco(ACTIONS); return true; }
   if (/^atualiza/i.test(t)) { atualizarInicio(); return true; }
   m = /^tema(?:\s+(.+))?$/i.exec(t);
@@ -845,6 +847,7 @@ for (const fundo of document.querySelectorAll('.fundo-folha')) {
 
 function fecharFolha(fundo) {
   fundo.hidden = true;
+  if (fundo.id === 'folha-ceu') pararCeu();
   if (document.activeElement) document.activeElement.blur();
   if (fundo.id === 'menu') itemDoMenu = null;
 }
@@ -1210,7 +1213,11 @@ async function buscarCidade(nome) {
   }
 }
 
-$('clima').addEventListener('click', () => atualizarClima(true));
+// Com o lugar conhecido, o clima abre a janela do céu; sem ele, pede a localização.
+$('clima').addEventListener('click', () => {
+  if (ler(CHAVE.lugar, null)) abrirCeu();
+  else atualizarClima(true);
+});
 
 /* Bolhas: notificações, CI da Oficina, rede e armazenamento. */
 
@@ -1441,6 +1448,222 @@ function atualizarMostrador() {
 // Enquanto o Início está na tela, renova bateria e bolhas a cada minuto.
 setInterval(() => { if (!document.hidden) { lerBateria(); desenharBolhas(); atualizarClima(false); atualizarCI(); } }, 60000);
 
+/* ——— Céu agora: satélite infravermelho e radar num quadro em volta de você ———
+   Três camadas, alinhadas pelo mesmo centro e pelos mesmos quilômetros:
+   - mapa do OpenStreetMap, escurecido, para saber onde é cada coisa;
+   - infravermelho do GOES-19 (NASA GIBS, banda 13, a cada 10 min, ~1 h de
+     atraso): mostra o topo das nuvens; as mais frias são as que crescem e chovem;
+   - radar do RainViewer (grátis até o zoom 7): a chuva que já está caindo.
+   A última hora anima em quadros. Tudo pelo navegador, sem chave. */
+
+const GIBS = 'https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi';
+const RAINVIEWER = 'https://api.rainviewer.com/public/weather-maps.json';
+const ZOOM_RADAR = 7;              // o máximo que o RainViewer dá de graça
+const LADOS_KM = [30, 60, 100];
+const CHAVE_CEU_KM = 'inicio:ceu-km';
+
+const ceu = {
+  km: LADOS_KM.includes(ler(CHAVE_CEU_KM, 30)) ? ler(CHAVE_CEU_KM, 30) : 30,
+  mostrarIR: true,
+  mostrarRadar: true,
+  tocando: true,
+  ir: [],          // { hora: Date, url }
+  radar: [],       // { hora: Date, url }
+  i: 0,
+  timer: null,
+  pedido: 0        // descarta respostas antigas quando o lugar ou o lado muda
+};
+
+const metrosPorGrau = 111320;
+const hhmmLocal = d => d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+function avisoCeu(texto) {
+  $('ceu-aviso').textContent = texto || '';
+  $('ceu-aviso').hidden = !texto;
+}
+
+// Carrega uma imagem e responde se deu certo (sem travar se o servidor não responder).
+function carregarImagem(url, limite = 20000) {
+  return new Promise(resolve => {
+    const img = new Image();
+    const fim = ok => { clearTimeout(t); img.onload = img.onerror = null; resolve(ok); };
+    const t = setTimeout(() => fim(false), limite);
+    img.onload = () => fim(img.naturalWidth > 0);
+    img.onerror = () => fim(false);
+    img.src = url;
+  });
+}
+
+// Mapa de fundo: as peças do OpenStreetMap que cobrem o quadro.
+function desenharMapaCeu(lugar, lado) {
+  const caixa = $('ceu-mapa');
+  const latR = lugar.lat * Math.PI / 180;
+  const metrosPorPixelDesejado = ceu.km * 1000 / lado;
+  const mpp = z => 156543.03 * Math.cos(latR) / Math.pow(2, z);
+  const z = Math.max(3, Math.min(15, Math.round(Math.log2(156543.03 * Math.cos(latR) / metrosPorPixelDesejado))));
+  const escala = mpp(z) / metrosPorPixelDesejado;
+  const n = Math.pow(2, z) * 256;
+  const cx = (lugar.lon + 180) / 360 * n;
+  const cy = (1 - Math.log(Math.tan(latR) + 1 / Math.cos(latR)) / Math.PI) / 2 * n;
+  const meio = lado / 2 / escala;
+  const pecas = [];
+  for (let tx = Math.floor((cx - meio) / 256); tx <= Math.floor((cx + meio) / 256); tx++) {
+    for (let ty = Math.floor((cy - meio) / 256); ty <= Math.floor((cy + meio) / 256); ty++) {
+      const img = document.createElement('img');
+      img.alt = '';
+      img.src = 'https://tile.openstreetmap.org/' + z + '/' + ((tx % (n / 256)) + n / 256) % (n / 256) + '/' + ty + '.png';
+      img.style.left = ((tx * 256 - (cx - meio)) * escala) + 'px';
+      img.style.top = ((ty * 256 - (cy - meio)) * escala) + 'px';
+      img.style.width = img.style.height = (256 * escala) + 'px';
+      pecas.push(img);
+    }
+  }
+  caixa.replaceChildren(...pecas);
+}
+
+function urlIR(lugar, hora) {
+  const meioKm = ceu.km / 2;
+  const dLat = meioKm * 1000 / metrosPorGrau;
+  const dLon = dLat / Math.cos(lugar.lat * Math.PI / 180);
+  // WMS 1.3.0 em EPSG:4326: a caixa vai em latitude, longitude.
+  const bbox = [lugar.lat - dLat, lugar.lon - dLon, lugar.lat + dLat, lugar.lon + dLon].map(v => v.toFixed(4)).join(',');
+  return GIBS + '?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=GOES-East_ABI_Band13_Clean_Infrared' +
+    '&STYLES=&FORMAT=image/png&TRANSPARENT=true&CRS=EPSG:4326&WIDTH=512&HEIGHT=512&BBOX=' + bbox +
+    '&TIME=' + hora.toISOString().slice(0, 16) + ':00Z';
+}
+
+// Os 6 quadros mais novos que já existem. O GIBS chega com atraso, então
+// procura a partir de 40 min atrás e vai voltando até achar.
+async function buscarIR(lugar, pedido) {
+  const dez = 10 * 60 * 1000;
+  let base = Math.floor((Date.now() - 40 * 60 * 1000) / dez) * dez;
+  for (let tentativa = 0; tentativa < 3; tentativa++) {
+    const horas = Array.from({ length: 6 }, (_, k) => new Date(base - (5 - k) * dez));
+    const ok = await Promise.all(horas.map(h => carregarImagem(urlIR(lugar, h))));
+    if (pedido !== ceu.pedido) return;
+    const achados = horas.filter((_, k) => ok[k]).map(h => ({ hora: h, url: urlIR(lugar, h) }));
+    if (achados.length >= 2) { ceu.ir = achados; return; }
+    base -= 60 * 60 * 1000;
+  }
+  ceu.ir = [];
+}
+
+async function buscarRadar(lugar, pedido) {
+  try {
+    const resp = await fetch(RAINVIEWER, { cache: 'no-store' });
+    const dados = await resp.json();
+    const passado = (dados.radar && dados.radar.past) || [];
+    const quadros = passado.slice(-6).map(q => ({
+      hora: new Date(q.time * 1000),
+      url: dados.host + q.path + '/512/' + ZOOM_RADAR + '/' + lugar.lat.toFixed(4) + '/' + lugar.lon.toFixed(4) + '/2/1_1.png'
+    }));
+    const ok = await Promise.all(quadros.map(q => carregarImagem(q.url)));
+    if (pedido !== ceu.pedido) return;
+    ceu.radar = quadros.filter((_, k) => ok[k]);
+  } catch (e) {
+    if (pedido === ceu.pedido) ceu.radar = [];
+  }
+}
+
+// O radar vem num quadro bem maior (zoom 7: ~295 km de lado); amplia e centraliza.
+function posicionarRadar(lugar, lado) {
+  const larguraKm = 40075.016 * Math.cos(lugar.lat * Math.PI / 180) / Math.pow(2, ZOOM_RADAR);
+  const px = lado * larguraKm / ceu.km;
+  const r = $('ceu-radar');
+  r.style.width = r.style.height = px + 'px';
+  r.style.left = r.style.top = ((lado - px) / 2) + 'px';
+}
+
+function mostrarQuadro() {
+  const ir = ceu.ir.length ? ceu.ir[ceu.i % ceu.ir.length] : null;
+  const radar = ceu.radar.length ? ceu.radar[ceu.i % ceu.radar.length] : null;
+  $('ceu-ir').hidden = !(ceu.mostrarIR && ir);
+  if (ir && ceu.mostrarIR) $('ceu-ir').src = ir.url;
+  $('ceu-radar').hidden = !(ceu.mostrarRadar && radar);
+  if (radar && ceu.mostrarRadar) $('ceu-radar').src = radar.url;
+  const partes = [];
+  if (ir && ceu.mostrarIR) partes.push('sat ' + hhmmLocal(ir.hora));
+  if (radar && ceu.mostrarRadar) partes.push('radar ' + hhmmLocal(radar.hora));
+  $('ceu-hora').textContent = partes.join(' · ');
+}
+
+function animarCeu() {
+  clearInterval(ceu.timer);
+  ceu.timer = null;
+  mostrarQuadro();
+  const n = Math.max(ceu.ir.length, ceu.radar.length);
+  if (!ceu.tocando || n < 2) return;
+  ceu.timer = setInterval(() => { ceu.i = (ceu.i + 1) % n; mostrarQuadro(); }, 700);
+}
+
+function pararCeu() {
+  clearInterval(ceu.timer);
+  ceu.timer = null;
+  ceu.pedido++;
+}
+
+function marcarBotoesCeu() {
+  $('ceu-liga-ir').setAttribute('aria-pressed', String(ceu.mostrarIR));
+  $('ceu-liga-radar').setAttribute('aria-pressed', String(ceu.mostrarRadar));
+  $('ceu-tocar').textContent = ceu.tocando ? 'pausar' : 'tocar';
+  for (const b of document.querySelectorAll('.ceu-km button')) b.setAttribute('aria-pressed', String(Number(b.dataset.km) === ceu.km));
+  $('ceu-lado').textContent = ceu.km + ' × ' + ceu.km + ' km';
+}
+
+async function carregarCeu() {
+  const lugar = ler(CHAVE.lugar, null);
+  marcarBotoesCeu();
+  $('ceu-mapa').replaceChildren();
+  $('ceu-ir').hidden = $('ceu-radar').hidden = true;
+  $('ceu-hora').textContent = '';
+  if (!lugar) {
+    avisoCeu('Sem localização. Toque fora, toque no clima para permitir, ou digite “cidade” e o nome na barra.');
+    return;
+  }
+  const lado = $('ceu').clientWidth || 340;
+  const dezKm = lado * 10 / ceu.km;
+  $('ceu-grade').style.backgroundSize = dezKm + 'px ' + dezKm + 'px';
+  $('ceu').style.setProperty('--dez-km', dezKm + 'px');
+  desenharMapaCeu(lugar, lado);
+  posicionarRadar(lugar, lado);
+  avisoCeu('Buscando satélite e radar…');
+  const pedido = ++ceu.pedido;
+  ceu.ir = []; ceu.radar = []; ceu.i = 0;
+  await Promise.all([buscarIR(lugar, pedido), buscarRadar(lugar, pedido)]);
+  if (pedido !== ceu.pedido) return;
+  const faltas = [];
+  if (!ceu.ir.length) faltas.push('satélite');
+  if (!ceu.radar.length) faltas.push('radar');
+  avisoCeu(faltas.length === 2 ? 'Sem satélite e sem radar agora. Confira a internet e toque em “tocar” mais tarde.'
+    : faltas.length ? 'Sem ' + faltas[0] + ' agora; mostrando o outro.' : '');
+  if (faltas.length === 1) setTimeout(() => { if (pedido === ceu.pedido) avisoCeu(''); }, 3000);
+  animarCeu();
+}
+
+function abrirCeu() {
+  fecharSugestoes();
+  $('folha-ceu').hidden = false;
+  // Espera a folha aparecer para medir o tamanho do quadro.
+  requestAnimationFrame(() => carregarCeu());
+}
+
+$('ceu-liga-ir').addEventListener('click', () => { ceu.mostrarIR = !ceu.mostrarIR; marcarBotoesCeu(); mostrarQuadro(); });
+$('ceu-liga-radar').addEventListener('click', () => { ceu.mostrarRadar = !ceu.mostrarRadar; marcarBotoesCeu(); mostrarQuadro(); });
+$('ceu-tocar').addEventListener('click', () => {
+  ceu.tocando = !ceu.tocando;
+  marcarBotoesCeu();
+  if (ceu.tocando && !ceu.ir.length && !ceu.radar.length) carregarCeu(); else animarCeu();
+});
+for (const b of document.querySelectorAll('.ceu-km button')) {
+  b.addEventListener('click', () => {
+    ceu.km = Number(b.dataset.km);
+    guardar(CHAVE_CEU_KM, ceu.km);
+    carregarCeu();
+  });
+}
+// Com a janela aberta, busca de novo a cada 10 minutos.
+setInterval(() => { if (!$('folha-ceu').hidden && !document.hidden) carregarCeu(); }, 10 * 60 * 1000);
+
 /* ——— Chamadas do APK ——— */
 
 function fecharTudo() {
@@ -1469,6 +1692,7 @@ window.aoApertarInicio = () => {
 window.aoVoltarBotao = () => {
   if (!$('menu').hidden) fecharFolha($('menu'));
   else if (!$('folha-foco').hidden) fecharFolha($('folha-foco'));
+  else if (!$('folha-ceu').hidden) fecharFolha($('folha-ceu'));
   else if (!$('gaveta').hidden) fecharGaveta();
   else limparComando();
 };
