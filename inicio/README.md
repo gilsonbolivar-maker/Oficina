@@ -48,6 +48,11 @@ vez e o bloco de foco que avisa no fim.
     já está caindo. A versão grátis vai até o zoom 7 (~600 m por ponto), então
     no quadro de 30 km o radar aparece quadriculado.
   A última hora anima; os botões ligam e desligam cada camada e pausam.
+  **Contraste** gira entre *normal*, *alto* (o padrão: mapa mais escuro, nuvens
+  mais brilhantes e radar com cores vivas) e *cores*, que pinta o
+  infravermelho pela temperatura, como nos sites de meteorologia (azul baixa →
+  verde → amarelo → vermelho → branco, topo muito frio, tempestade), com o chão
+  quente apagado.
   Grade a cada 10 km, escala e a hora de cada fonte no canto.
 - **Atualizar** (chip da versão, no fim das bolhas): um toque confere no site,
   baixa a versão nova e recarrega, sem precisar forçar a parada do app. A cada
