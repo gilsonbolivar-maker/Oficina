@@ -30,6 +30,8 @@ import android.provider.Settings;
 import android.telephony.SignalStrength;
 import android.telephony.TelephonyManager;
 import android.util.Base64;
+import android.view.View;
+import android.view.WindowInsetsController;
 import android.webkit.GeolocationPermissions;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
@@ -397,12 +399,27 @@ public class MainActivity extends Activity {
         public void corDasBarras(String hex) {
             final int cor;
             try { cor = Color.parseColor(hex); } catch (Exception e) { return; }
+            // Barra clara (tema Britagem): relógio e ícones do Android em escuro.
+            final boolean clara = (Color.red(cor) * 299 + Color.green(cor) * 587 + Color.blue(cor) * 114) / 1000 > 160;
             runOnUiThread(() -> {
                 getWindow().setStatusBarColor(cor);
                 getWindow().setNavigationBarColor(cor);
                 if (web != null) web.setBackgroundColor(cor);
+                if (Build.VERSION.SDK_INT >= 30 && getWindow().getInsetsController() != null) {
+                    int claros = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
+                    getWindow().getInsetsController().setSystemBarsAppearance(clara ? claros : 0, claros);
+                } else {
+                    View decor = getWindow().getDecorView();
+                    int claros = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+                    int flags = decor.getSystemUiVisibility();
+                    decor.setSystemUiVisibility(clara ? flags | claros : flags & ~claros);
+                }
             });
         }
+
+        /** Diz à página que este APK sabe pintar barras claras com ícones escuros. */
+        @JavascriptInterface
+        public boolean barrasClaras() { return true; }
 
         /** Abre o "Acesso a notificações", onde a pessoa liga o Início. */
         @JavascriptInterface

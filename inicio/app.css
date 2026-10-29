@@ -938,3 +938,134 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
 @keyframes pulso-satelite { 50% { box-shadow: 0 0 0 4px rgb(245 185 66 / 0.35); } }
 .aviso-satelite b { color: var(--ouro); }
 @media (prefers-reduced-motion: reduce) { .mostrador .bolhas .bolha.satelite { animation: none; } }
+
+/* ————————————————————————————————————————————————————————————
+   Tema Britagem: o creme e o abóbora do app Britagem, e as abas do
+   fichário em pé na lateral esquerda (como TURNO, LEITURAS… de lá).
+   Claro: só troca cores e o lugar das abas; o resto é o Nexo.
+   ———————————————————————————————————————————————————————————— */
+:root[data-tema="britagem"] {
+  color-scheme: light;
+  --noite: #fbf4ec;
+  --roxo: #fffdfa;
+  --roxo-claro: #f6e9dc;
+  --vidro: #fffdfa;
+  --borda: #edd9c5;
+  --texto: #2a1a10;
+  --texto-fraco: #7a5a45;
+  --ouro: #c4501f;
+  --ouro-texto: #ffffff;
+  --verde: #2c7f47;
+  --alerta: #c0391b;
+  --raio: 18px;
+  --trilho: 48px;
+  --sombra-leve: 0 6px 18px rgb(150 90 40 / 0.12);
+}
+:root[data-tema="britagem"] body {
+  font-family: system-ui, Roboto, "Plus Jakarta Sans", sans-serif;
+  background: var(--noite);
+}
+:root[data-tema="britagem"] :is(.mostrador, .agora, .painel, .comando, .barra) {
+  border: 1px solid var(--borda);
+  background: var(--roxo);
+  box-shadow: var(--sombra-leve);
+}
+:root[data-tema="britagem"] .mostrador { border-radius: 18px; }
+
+/* Mostrador */
+:root[data-tema="britagem"] .sol-n { color: #d97706; }
+:root[data-tema="britagem"] .sol-p { color: #be185d; }
+:root[data-tema="britagem"] .dia b { color: var(--ouro); }
+:root[data-tema="britagem"] .relogio { color: var(--texto); }
+:root[data-tema="britagem"] .anel .trilho, :root[data-tema="britagem"] .tr-off { stroke: #efdfcf; }
+:root[data-tema="britagem"] .tr-on { stroke: var(--verde); }
+:root[data-tema="britagem"] .tr-baixa { stroke: var(--alerta); }
+:root[data-tema="britagem"] .clima { background: var(--roxo-claro); }
+:root[data-tema="britagem"] .rotulo-agora { color: var(--ouro); }
+:root[data-tema="britagem"] .clima-colunas .col, :root[data-tema="britagem"] .clima-colunas .col:last-child { border-color: var(--borda); }
+:root[data-tema="britagem"] .clima-colunas .alerta b { color: var(--alerta); }
+:root[data-tema="britagem"] .bolha { background: var(--roxo-claro); }
+:root[data-tema="britagem"] .rede b { color: #1d6fa5; }
+:root[data-tema="britagem"] :is(.zap, .ci-ok) b { color: var(--verde); }
+:root[data-tema="britagem"] .ci-falhou, :root[data-tema="britagem"] .ci-falhou b { color: var(--alerta); }
+:root[data-tema="britagem"] .chip-versao.em-dia { border-color: var(--verde); color: var(--verde); }
+:root[data-tema="britagem"] .chip-versao.falhou { border-color: var(--alerta); color: var(--alerta); }
+:root[data-tema="britagem"] .aviso { background: rgb(224 102 42 / 0.08); }
+
+/* Agora */
+:root[data-tema="britagem"] .agora-tempo { background: var(--roxo-claro); color: var(--texto); }
+:root[data-tema="britagem"] .agora.correndo .agora-tempo { background: var(--ouro); color: var(--ouro-texto); }
+
+/* Abas em pé na lateral, como no Britagem. */
+:root[data-tema="britagem"] .tela { padding-left: calc(var(--trilho) + 8px); }
+:root[data-tema="britagem"] .abas {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
+  width: var(--trilho);
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: max(18px, env(safe-area-inset-top)) 0 max(12px, env(safe-area-inset-bottom));
+  overflow: visible;
+  pointer-events: none;
+}
+:root[data-tema="britagem"] .aba {
+  pointer-events: auto;
+  justify-content: center;
+  writing-mode: vertical-rl;
+  width: 40px;
+  min-height: 96px;
+  padding: 14px 0;
+  border: 1px solid var(--borda);
+  border-left: 0;
+  border-radius: 0 14px 14px 0;
+  background: var(--roxo);
+  box-shadow: 2px 3px 10px rgb(150 90 40 / 0.12);
+  color: var(--texto-fraco);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: width 0.15s ease;
+}
+:root[data-tema="britagem"] .aba svg { display: none; }
+:root[data-tema="britagem"] .aba .nome-aba { display: inline; }
+:root[data-tema="britagem"] .aba[aria-selected="true"] {
+  width: 48px;
+  border-color: transparent;
+  background: linear-gradient(180deg, #e0662a, #b4461a);
+  box-shadow: 3px 4px 14px rgb(150 90 40 / 0.3);
+  color: #fff;
+}
+
+/* Apps */
+:root[data-tema="britagem"] .icone { box-shadow: 0 4px 10px rgb(150 90 40 / 0.25); }
+:root[data-tema="britagem"] .icone.real { box-shadow: none; }
+:root[data-tema="britagem"] .contador { border-color: var(--roxo); background: var(--alerta); }
+
+/* Barra de comando, sugestões e barra fixa */
+:root[data-tema="britagem"] .botao-gaveta { background: var(--roxo-claro); }
+:root[data-tema="britagem"] .enviar { background: linear-gradient(180deg, #e0662a, #b4461a); }
+:root[data-tema="britagem"] .sugestoes {
+  left: calc(var(--trilho) + 8px);
+  background: var(--roxo);
+  box-shadow: 0 -10px 30px rgb(150 90 40 / 0.25);
+}
+
+/* Gaveta e folhas */
+:root[data-tema="britagem"] .gaveta { background: var(--noite); }
+:root[data-tema="britagem"] :is(.busca-gaveta, .fechar) { background: var(--roxo); }
+:root[data-tema="britagem"] .fundo-folha { background: rgb(60 30 10 / 0.32); }
+:root[data-tema="britagem"] .folha { background: var(--roxo); }
+:root[data-tema="britagem"] :is(.novo-passo, .bloco, .opcao, .ceu-estado) { background: var(--roxo-claro); }
+:root[data-tema="britagem"] .bloco-estado { color: var(--verde); }
+:root[data-tema="britagem"] .botao-ouro { background: linear-gradient(180deg, #e0662a, #b4461a); }
+:root[data-tema="britagem"] .menu-abas button[aria-pressed="true"] { background: rgb(224 102 42 / 0.1); }
+/* A lateral come 56px: bolhas mais justas para o chip da versão caber. */
+:root[data-tema="britagem"] .bolhas { gap: 3px; }
+:root[data-tema="britagem"] :is(.bolha, .chip-versao) { padding-left: 5px; padding-right: 5px; font-size: 10.5px; }
+:root[data-tema="britagem"] .mostrador { padding-left: 8px; padding-right: 8px; }
