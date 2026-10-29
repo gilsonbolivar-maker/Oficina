@@ -918,3 +918,15 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
 .clima::after { content: "🛰 toque para ver o céu"; display: block; margin-top: 2px; font: 600 10px var(--mono); color: var(--texto-fraco); opacity: 0.8; }
 .ceu-estado { margin: 0; padding: 8px 12px; border-radius: 12px; background: rgb(255 255 255 / 0.05); font-size: 13px; color: var(--texto); }
 .ceu-estado b { color: var(--ouro); }
+
+/* Contraste da janela do céu: normal, alto ou cores (realce do infravermelho). */
+.ceu[data-contraste="alto"] .ceu-mapa, .ceu[data-contraste="cores"] .ceu-mapa { filter: grayscale(1) invert(1) brightness(0.5) contrast(1.4); }
+.ceu[data-contraste="alto"] .ceu-ir { opacity: 0.95; filter: contrast(2) brightness(1.1); }
+.ceu[data-contraste="cores"] .ceu-ir { opacity: 1; mix-blend-mode: normal; filter: contrast(1.6) url(#realce-ir); }
+.ceu:is([data-contraste="alto"], [data-contraste="cores"]) .ceu-radar { opacity: 1; filter: saturate(1.9) contrast(1.4); }
+.ceu:is([data-contraste="alto"], [data-contraste="cores"]) .ceu-grade {
+  background-image: linear-gradient(rgb(255 255 255 / 0.16) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.16) 1px, transparent 1px);
+}
+.escala-ir { display: none; }
+.folha-ceu:has(.ceu[data-contraste="cores"]) .escala-ir { display: inline-flex; align-items: center; gap: 6px; margin-right: 4px; }
+.escala-ir i { display: inline-block; width: 70px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, #0d6fe6, #00c0c0, #2fe05a, #ffe600, #ff7300, #ff1a1a, #ffffff); }
