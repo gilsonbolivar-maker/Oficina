@@ -3,7 +3,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '2.5.0';   // precisa casar com a VERSAO do app.js
+const VERSAO = '2.5.1';   // precisa casar com a VERSAO do app.js
 const CACHE_APP = 'inicio-app-' + VERSAO;
 
 const ARQUIVOS = [
