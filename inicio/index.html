@@ -114,6 +114,38 @@
     </section>
   </div>
 
+  <!-- Céu agora: satélite infravermelho e radar num quadro de 30 × 30 km -->
+  <div id="folha-ceu" class="fundo-folha" hidden>
+    <section class="folha folha-ceu" role="dialog" aria-labelledby="titulo-ceu">
+      <p id="titulo-ceu" class="rotulo">Céu agora · <span id="ceu-lado">30 × 30 km</span></p>
+      <div id="ceu" class="ceu">
+        <div id="ceu-mapa" class="ceu-camada ceu-mapa"></div>
+        <img id="ceu-ir" class="ceu-camada ceu-ir" alt="" hidden>
+        <div class="ceu-camada ceu-caixa-radar"><img id="ceu-radar" class="ceu-radar" alt="" hidden></div>
+        <div id="ceu-grade" class="ceu-camada ceu-grade"></div>
+        <span class="ceu-voce" title="Você"></span>
+        <span class="ceu-norte">N</span>
+        <span class="ceu-escala"><i></i>10 km</span>
+        <span id="ceu-hora" class="ceu-hora"></span>
+        <p id="ceu-aviso" class="ceu-aviso" hidden></p>
+      </div>
+      <div class="ceu-controles">
+        <button id="ceu-liga-ir" type="button" class="ceu-chave" aria-pressed="true">Infravermelho</button>
+        <button id="ceu-liga-radar" type="button" class="ceu-chave" aria-pressed="true">Radar</button>
+        <button id="ceu-tocar" type="button" class="ceu-chave">pausar</button>
+        <span class="ceu-km">
+          <button type="button" data-km="30">30</button><button type="button" data-km="60">60</button><button type="button" data-km="100">100 km</button>
+        </span>
+      </div>
+      <p class="ceu-legenda">
+        <b>Infravermelho</b>: quanto mais clara ou colorida, mais fria e alta a nuvem; é nela que a chuva se forma.
+        <b>Radar</b>: <span class="radar-fraca">fraca</span> → <span class="radar-forte">forte</span>.
+        Satélite GOES-19 (NASA GIBS, cerca de 1 h de atraso) · radar RainViewer · mapa © OpenStreetMap.
+      </p>
+      <button type="button" class="fechar-folha" data-fecha>Fechar</button>
+    </section>
+  </div>
+
   <!-- Menu do toque longo -->
   <div id="menu" class="fundo-folha" hidden>
     <section class="folha" role="dialog" aria-labelledby="menu-nome">
