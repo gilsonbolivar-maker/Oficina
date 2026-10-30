@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
 import android.provider.DocumentsContract;
 import android.webkit.JavascriptInterface;
+import android.webkit.MimeTypeMap;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -22,7 +23,11 @@ import org.json.JSONObject;
 
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
+import java.io.FilterInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -50,7 +55,13 @@ public class MainActivity extends Activity {
     private static final int PEDIDO_PASTA = 52;
 
     /** id (string) → documento da pasta (salva ou recém-escolhida). */
-    private final Map<String, Uri> arquivosNativos = new ConcurrentHashMap<>();
+    private final Map<String, ArquivoNativo> arquivosNativos = new ConcurrentHashMap<>();
+
+    private static final class ArquivoNativo {
+        final Uri uri;
+        final String mime;
+        ArquivoNativo(Uri uri, String mime) { this.uri = uri; this.mime = mime; }
+    }
 
     @Override
     protected void onCreate(Bundle salvo) {
@@ -210,7 +221,7 @@ public class MainActivity extends Activity {
                 } else if (ehAudio(mime, nome)) {
                     Uri docUri = DocumentsContract.buildDocumentUriUsingTree(pastaUri, docId);
                     String id = String.valueOf(contador.incrementAndGet());
-                    arquivosNativos.put(id, docUri);
+                    arquivosNativos.put(id, new ArquivoNativo(docUri, mimeDeAudio(mime, nome)));
                     try {
                         JSONObject o = new JSONObject();
                         o.put("id", id);
@@ -227,16 +238,30 @@ public class MainActivity extends Activity {
         return nome != null && nome.matches("(?i).*\\.(mp3|m4a|aac|flac|ogg|oga|opus|wav|wma)$");
     }
 
+    /**
+     * O Android às vezes não sabe o tipo do arquivo (ou devolve algo
+     * genérico, tipo "application/octet-stream"); nesses casos adivinha
+     * pela extensão. Nunca devolve um tipo com "*", que o navegador recusa
+     * como Content-Type — isso fazia a música não tocar.
+     */
+    private static String mimeDeAudio(String mime, String nome) {
+        if (mime != null && mime.startsWith("audio/") && !mime.contains("*")) return mime;
+        String extensao = MimeTypeMap.getFileExtensionFromUrl(nome);
+        if (extensao != null) {
+            String porExtensao = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extensao.toLowerCase(Locale.ROOT));
+            if (porExtensao != null && porExtensao.startsWith("audio/")) return porExtensao;
+        }
+        return "application/octet-stream";
+    }
+
     private WebResourceResponse responderArquivoNativo(String id, String cabecalhoRange) {
-        Uri docUri = arquivosNativos.get(id);
-        if (docUri == null) {
+        ArquivoNativo arquivo = arquivosNativos.get(id);
+        if (arquivo == null) {
             return new WebResourceResponse("text/plain", "utf-8", 404, "Não encontrado", null,
                 new ByteArrayInputStream(new byte[0]));
         }
         try {
-            String mime = getContentResolver().getType(docUri);
-            if (mime == null) mime = "audio/*";
-            long tamanho = tamanhoDoDocumento(docUri);
+            long tamanho = tamanhoDoDocumento(arquivo.uri);
 
             long inicio = 0;
             boolean parcial = false;
@@ -247,10 +272,16 @@ public class MainActivity extends Activity {
                 if (!ini.isEmpty()) { inicio = Long.parseLong(ini); parcial = true; }
             }
 
-            ParcelFileDescriptor pfd = getContentResolver().openFileDescriptor(docUri, "r");
+            ParcelFileDescriptor pfd = getContentResolver().openFileDescriptor(arquivo.uri, "r");
             if (pfd == null) throw new IllegalStateException("sem descritor de arquivo");
-            FileInputStream fluxo = new FileInputStream(pfd.getFileDescriptor());
-            if (inicio > 0) fluxo.getChannel().position(inicio);
+            FileInputStream fluxoBase = new FileInputStream(pfd.getFileDescriptor());
+            if (inicio > 0) fluxoBase.getChannel().position(inicio);
+            // Fecha o descritor junto com o fluxo, quando a WebView terminar de ler.
+            InputStream fluxo = new FilterInputStream(fluxoBase) {
+                @Override public void close() throws IOException {
+                    try { super.close(); } finally { pfd.close(); }
+                }
+            };
 
             Map<String, String> cabecalhos = new HashMap<>();
             cabecalhos.put("Accept-Ranges", "bytes");
@@ -260,7 +291,7 @@ public class MainActivity extends Activity {
             }
             int codigo = parcial ? 206 : 200;
             String motivo = parcial ? "Partial Content" : "OK";
-            return new WebResourceResponse(mime, null, codigo, motivo, cabecalhos, fluxo);
+            return new WebResourceResponse(arquivo.mime, null, codigo, motivo, cabecalhos, fluxo);
         } catch (Exception e) {
             return new WebResourceResponse("text/plain", "utf-8", 500, "Erro ao ler o arquivo", null,
                 new ByteArrayInputStream(new byte[0]));
