@@ -19,7 +19,9 @@ sempre da pasta escolhida no aparelho, não do cache).
    salvos no aparelho e valem para as próximas músicas também.
 
 Como o navegador não guarda permissão para a pasta entre visitas, é preciso
-escolhê-la de novo a cada vez que o app abre.
+escolhê-la de novo a cada vez que o app abre. **No app Android (APK) não**: a
+pasta fica guardada e é lida sozinha na próxima vez que o app abrir (veja
+abaixo).
 
 O equalizador usa a Web Audio API: o `<audio>` passa por 5 filtros
 `BiquadFilterNode` (um por faixa de frequência) e depois por um filtro
@@ -36,12 +38,24 @@ Baixe em
 |---|---|---|
 | Tela | precisa ficar acesa para controlar | **pode apagar** |
 | Controles | só na página | **na notificação e na tela de bloqueio** |
+| Pasta de música | pede de novo sempre | **guardada; abre sozinha da próxima vez** |
 
 Quem decodifica, equaliza e toca o áudio é sempre a página, no `<audio>` dela
-(com a cadeia de filtros Web Audio); o APK só acrescenta uma notificação de
-mídia nativa (`PlayerService`, com `android.media.session.MediaSession`) que
-mostra os controles e repassa os comandos de volta à página por
-`window.pixelmusicComando(...)`. A página avisa o app a cada troca de estado
-pela ponte `window.PixelMusicNativo`. O código fica em `android/` e o GitHub
-Actions (`.github/workflows/apk-pixelmusic.yml`) compila e publica o APK
-quando esse código muda.
+(com a cadeia de filtros Web Audio); o APK acrescenta duas coisas nativas:
+
+- Uma notificação de mídia (`PlayerService`, com
+  `android.media.session.MediaSession`) que mostra os controles e repassa os
+  comandos de volta à página por `window.pixelmusicComando(...)`. A página
+  avisa o app a cada troca de estado pela ponte `window.PixelMusicNativo`.
+- A pasta escolhida: na primeira vez que o usuário escolhe uma pasta, o APK
+  guarda a permissão dela para sempre (Storage Access Framework —
+  `takePersistableUriPermission`). Da próxima vez que o app abre, a página
+  chama `PixelMusicNativo.listarPastaSalva()` e recebe a lista de músicas
+  pronta; cada faixa toca direto do `content://` da pasta, servido pela
+  própria `MainActivity` (`shouldInterceptRequest`, com suporte a
+  `Range` para a barra de progresso funcionar bem). Escolher outra pasta
+  troca a guardada.
+
+O código fica em `android/` e o GitHub Actions
+(`.github/workflows/apk-pixelmusic.yml`) compila e publica o APK quando esse
+código muda.

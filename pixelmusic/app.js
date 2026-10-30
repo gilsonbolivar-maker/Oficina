@@ -6,7 +6,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.1.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.2.0';   // precisa casar com a VERSAO do sw.js
 
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
 
@@ -88,6 +88,35 @@ function montarLista() {
 function escaparHtml(s) {
   return s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
+
+/* ——— pasta salva (só dentro do APK) ———
+   O app Android guarda a permissão da pasta (Storage Access Framework) e,
+   ao abrir de novo, lista sozinho as músicas por aqui — sem passar pelo
+   seletor de arquivos. No navegador comum window.PixelMusicNativo não
+   existe, então isso não faz nada e a pasta continua sendo pedida sempre. */
+
+function restaurarPastaSalva() {
+  if (!window.PixelMusicNativo || typeof window.PixelMusicNativo.listarPastaSalva !== 'function') return;
+  let lista;
+  try {
+    lista = JSON.parse(window.PixelMusicNativo.listarPastaSalva() || '[]');
+  } catch (e) {
+    return;
+  }
+  if (!Array.isArray(lista) || lista.length === 0) return;
+
+  lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  faixas = lista.map(item => ({
+    nome: nomeSemExtensao(item.nome),
+    url: 'pixelmusic-nativo/' + item.id
+  }));
+  montarLista();
+  estado.textContent = faixas.length + (faixas.length === 1 ? ' música na pasta salva' : ' músicas na pasta salva');
+  vazio.hidden = true;
+  listaFaixas.hidden = false;
+}
+
+restaurarPastaSalva();
 
 /* ——— tocar ——— */
 
