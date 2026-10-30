@@ -55,8 +55,10 @@ desenho como imagem na área de transferência, **Enviar** manda a imagem pela
 folha de compartilhamento, **↶** tira o último traço e **Limpar** apaga tudo
 (perguntando antes). A alça **⠿** some — arrastar é coisa de texto.
 
-Depois que a Pencil toca a folha uma vez, o dedo deixa de desenhar: é o apoio
-da mão, não um traço.
+**Apoio de mão:** só a ponta da Pencil deixa tinta, então dá para descansar a
+mão na folha enquanto desenha. A palma não risca nada — nem quando encosta
+antes da caneta, que era o caso que mais estragava o desenho. Quem quiser
+desenhar com o dedo desliga em **Aa › Só a Pencil desenha**.
 
 Os traços são guardados como pontos, não como imagem. Ocupa pouco espaço, o
 desfazer é imediato e o desenho sai nítido quando a tela muda de tamanho ou
@@ -102,6 +104,7 @@ já na nova; as notas continuam onde estavam.
 
 | Versão | O que mudou |
 | ------ | ----------- |
+| 1.6.0 | Apoio de mão: só a Pencil desenha, com chave em **Aa** para o dedo. |
 | 1.5.0 | Aba **Desenhar** (tinta da Pencil) e botão de tema no topo. |
 | 1.4.2 | O **Limpar** foi para a direita, ao lado do **＋**: em janela, o iPadOS cobre o canto esquerdo com os controles dela. |
 | 1.4.1 | O **Limpar** desceu um pouco (não bastava — ver 1.4.2). |

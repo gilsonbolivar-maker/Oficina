@@ -5,7 +5,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.5.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.6.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -32,7 +32,8 @@ const padrao = () => ({
   fonte: 22,
   pauta: 22,      // décimos: 22 = 2,2× o tamanho da letra
   linhas: true,
-  juntar: false
+  juntar: false,
+  soCaneta: true    // apoio de mão: só a Pencil deixa tinta
 });
 
 let dados = carregar();
@@ -282,7 +283,15 @@ Desenho.montar(el('tela-desenho'), () => {
   el('dica-desenho').hidden = !Desenho.vazio();
   atualizarEstado();
   gravar();
-});
+}, avisarDedoRecusado);
+
+// Avisa uma vez só: senão repetiria a cada toque da palma na folha.
+let avisouDedo = false;
+function avisarDedoRecusado() {
+  if (avisouDedo) return;
+  avisouDedo = true;
+  mostrarAviso('Só a Pencil desenha. Para usar o dedo, desligue em Aa.');
+}
 
 for (const b of document.querySelectorAll('[data-ferramenta]')) {
   b.addEventListener('click', () => {
@@ -500,6 +509,8 @@ function aplicarAparencia() {
   el('ajuste-pauta').value = dados.pauta;
   el('ajuste-linhas').checked = dados.linhas;
   el('ajuste-juntar').checked = dados.juntar;
+  el('ajuste-so-caneta').checked = dados.soCaneta;
+  Desenho.travarNaCaneta(dados.soCaneta);
 }
 
 el('ajuste-fonte').addEventListener('input', ev => {
@@ -512,7 +523,8 @@ el('ajuste-pauta').addEventListener('input', ev => {
   aplicarAparencia();
   gravar();
 });
-for (const [id, campo] of [['ajuste-linhas', 'linhas'], ['ajuste-juntar', 'juntar']]) {
+for (const [id, campo] of [['ajuste-linhas', 'linhas'], ['ajuste-juntar', 'juntar'],
+                           ['ajuste-so-caneta', 'soCaneta']]) {
   el(id).addEventListener('change', ev => {
     dados[campo] = ev.target.checked;
     aplicarAparencia();
