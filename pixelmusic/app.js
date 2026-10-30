@@ -6,7 +6,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.2.2';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.2.3';   // precisa casar com a VERSAO do sw.js
 
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
 
@@ -409,8 +409,21 @@ function avisarNativo() {
   } catch (e) { /* sem ponte nativa */ }
 }
 
-/* ——— service worker ——— */
+/* ——— service worker ———
+   O sw.js troca de versão a cada mudança, mas o navegador só aplica a
+   versão nova a partir da PRÓXIMA vez que a página carrega — a aba aberta
+   continua com o código antigo até isso acontecer. No app Android,
+   reinstalar o APK não limpa esse cache (ele é do WebView, não do app),
+   então sem isso o usuário ficava preso no código antigo até fechar e abrir
+   o app umas duas vezes. Aqui a página recarrega sozinha assim que o
+   service worker novo assume o controle, pra aplicar a versão nova na hora. */
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
+  let jaRecarregou = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (jaRecarregou) return;
+    jaRecarregou = true;
+    location.reload();
+  });
 }
