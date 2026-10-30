@@ -1130,3 +1130,173 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
 
 /* Satélite desligado: a bolha fica, apagada, para mostrar que está vigiando. */
 .mostrador .bolhas .bolha.satelite-fora { opacity: 0.55; filter: grayscale(1); }
+
+/* ————————————————————————————————————————————————————————————
+   Tema HUD: painel de nave, preto e ciano. Caixas com cantos marcados,
+   rótulos em maiúsculas com sublinhado (CLIMA_), anéis tracejados e
+   ícones monocromáticos em ciano dentro de molduras quadradas.
+   ———————————————————————————————————————————————————————————— */
+:root[data-tema="hud"] {
+  --noite: #030707;
+  --roxo: #071010;
+  --roxo-claro: #0b1818;
+  --vidro: #061010;
+  --borda: rgb(57 198 192 / 0.45);
+  --texto: #d8fbf9;
+  --texto-fraco: #6fa9a6;
+  --ouro: #39c6c0;
+  --ouro-texto: #021010;
+  --ciano: #39c6c0;
+  --raio: 4px;
+  --hud-fino: rgb(57 198 192 / 0.18);
+}
+:root[data-tema="hud"] body {
+  font-family: "Space Grotesk", "JetBrains Mono", sans-serif;
+  background:
+    repeating-linear-gradient(0deg, rgb(57 198 192 / 0.035) 0 1px, transparent 1px 4px),
+    linear-gradient(var(--hud-fino) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(90deg, var(--hud-fino) 1px, transparent 1px) 0 0 / 28px 28px,
+    radial-gradient(80% 50% at 50% 0%, #0a2324, var(--noite) 70%);
+}
+
+/* Caixas: borda fina, cantos chanfrados e cantoneiras acesas. */
+:root[data-tema="hud"] :is(.mostrador, .agora, .painel, .comando, .barra) {
+  position: relative;
+  border: 1px solid var(--borda);
+  border-radius: 2px;
+  background: linear-gradient(180deg, rgb(57 198 192 / 0.07), transparent 40%), rgb(3 10 10 / 0.88);
+  box-shadow: inset 0 0 24px rgb(57 198 192 / 0.06);
+  clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+}
+:root[data-tema="hud"] :is(.mostrador, .agora, .painel, .barra)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--ouro), var(--ouro)) 14px 0 / 34px 3px no-repeat,
+    linear-gradient(var(--ouro), var(--ouro)) calc(100% - 14px) 100% / 34px 3px no-repeat,
+    linear-gradient(135deg, var(--ouro) 0 10px, transparent 10px) 0 0 / 14px 14px no-repeat,
+    linear-gradient(-45deg, var(--ouro) 0 10px, transparent 10px) 100% 100% / 14px 14px no-repeat;
+}
+/* Rótulo de cada caixa, como SYSTEM_ e WEATHER_ do desenho. */
+:root[data-tema="hud"] .mostrador::after, :root[data-tema="hud"] .painel::after {
+  position: absolute;
+  top: 3px;
+  right: 10px;
+  font: 700 9px var(--mono);
+  letter-spacing: 0.18em;
+  color: var(--ouro);
+  opacity: 0.8;
+}
+:root[data-tema="hud"] .mostrador::after { content: "SISTEMA_"; }
+:root[data-tema="hud"] .painel::after { content: "APPS_"; }
+:root[data-tema="hud"] .mostrador { padding-top: 16px; }
+
+/* Mostrador */
+:root[data-tema="hud"] .linha-sol { text-transform: uppercase; letter-spacing: 0.1em; }
+:root[data-tema="hud"] .sol-n, :root[data-tema="hud"] .sol-p, :root[data-tema="hud"] .dia b { color: var(--ouro); }
+:root[data-tema="hud"] .dia { color: var(--texto); letter-spacing: 0.25em; }
+:root[data-tema="hud"] .relogio { font-family: "JetBrains Mono", monospace; font-weight: 700; color: var(--texto); text-shadow: 0 0 18px rgb(57 198 192 / 0.55); letter-spacing: -0.04em; }
+:root[data-tema="hud"] .relogio .seg { color: var(--ouro); }
+:root[data-tema="hud"] .anel .trilho { stroke: rgb(57 198 192 / 0.15); stroke-dasharray: 2 3; }
+:root[data-tema="hud"] .anel .arco { stroke: var(--ouro); filter: drop-shadow(0 0 3px rgb(57 198 192 / 0.8)); }
+:root[data-tema="hud"] .anel::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 1px dashed rgb(57 198 192 / 0.4);
+  border-radius: 50%;
+  animation: hud-gira 24s linear infinite;
+}
+@keyframes hud-gira { to { transform: rotate(360deg); } }
+:root[data-tema="hud"] .tr-on { stroke: var(--ouro); }
+:root[data-tema="hud"] .tr-off { stroke: rgb(57 198 192 / 0.14); }
+:root[data-tema="hud"] .anel-k, :root[data-tema="hud"] #bat-k { color: var(--ouro); }
+:root[data-tema="hud"] .clima { border-radius: 2px; background: none; }
+:root[data-tema="hud"] .clima-agora { text-transform: uppercase; letter-spacing: 0.06em; font-size: 13px; }
+:root[data-tema="hud"] .rotulo-agora { color: var(--ouro); }
+:root[data-tema="hud"] .clima-colunas { gap: 4px; }
+:root[data-tema="hud"] .clima-colunas .col, :root[data-tema="hud"] .clima-colunas .col:last-child {
+  border: 0;
+  border-radius: 2px;
+  background: linear-gradient(180deg, rgb(57 198 192 / 0.85), rgb(57 198 192 / 0.6));
+  color: var(--ouro-texto);
+}
+:root[data-tema="hud"] .clima-colunas small { color: rgb(2 16 16 / 0.75); font-weight: 700; text-transform: uppercase; }
+:root[data-tema="hud"] .clima-colunas .alerta { background: linear-gradient(180deg, #f2b33d, #c98a1c); }
+:root[data-tema="hud"] .clima-colunas .alerta b { color: var(--ouro-texto); }
+:root[data-tema="hud"] .clima::after { color: var(--ouro); }
+:root[data-tema="hud"] .bolha { border-radius: 2px; background: none; box-shadow: inset 0 0 0 1px var(--borda); }
+:root[data-tema="hud"] :is(.rede, .zap, .ci-ok) b { color: var(--ouro); }
+:root[data-tema="hud"] .chip-versao { border-radius: 2px; }
+:root[data-tema="hud"] .aviso { border-radius: 2px; background: rgb(57 198 192 / 0.08); }
+:root[data-tema="hud"] :is(.aviso button, .aviso a, .botao-ouro, .enviar) { border-radius: 2px; }
+
+/* Agora */
+:root[data-tema="hud"] .agora-rotulo { letter-spacing: 0.2em; }
+:root[data-tema="hud"] .agora-rotulo::after { content: "_"; animation: hud-pisca 1s steps(1) infinite; }
+@keyframes hud-pisca { 50% { opacity: 0; } }
+:root[data-tema="hud"] .agora-tempo { border-radius: 2px; background: none; box-shadow: inset 0 0 0 1px var(--borda); color: var(--ouro); }
+
+/* Abas: etiquetas inclinadas; a aberta acesa em ciano. */
+:root[data-tema="hud"] .abas { margin-bottom: 0; gap: 3px; padding: 0 2px; }
+:root[data-tema="hud"] .aba {
+  border: 0;
+  border-radius: 0;
+  padding: 7px 16px 7px 12px;
+  background: rgb(57 198 192 / 0.12);
+  color: var(--texto-fraco);
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 100%, 0 100%);
+  font: 700 11px var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+:root[data-tema="hud"] .aba svg { color: currentColor; }
+:root[data-tema="hud"] .aba[aria-selected="true"] { background: var(--ouro); color: var(--ouro-texto); }
+:root[data-tema="hud"] .aba[aria-selected="true"] .nome-aba::after { content: "_"; }
+:root[data-tema="hud"] .painel { padding-top: 22px; }
+
+/* Ícones: molduras quadradas, o desenho do app em ciano. */
+:root[data-tema="hud"] .icone {
+  border-radius: 3px;
+  background: #061414;
+  box-shadow: inset 0 0 0 1px var(--borda), 0 0 12px rgb(57 198 192 / 0.12);
+  color: var(--ouro);
+}
+:root[data-tema="hud"] .icone.real {
+  padding: 8px;
+  border-radius: 3px;
+  background-origin: content-box;
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-color: #061414;
+  box-shadow: inset 0 0 0 1px var(--borda);
+  filter: grayscale(1) brightness(1.35) sepia(1) hue-rotate(130deg) saturate(2.6);
+}
+:root[data-tema="hud"] .app .nome { font: 500 10.5px var(--mono); letter-spacing: 0.04em; text-transform: uppercase; color: var(--texto-fraco); }
+:root[data-tema="hud"] .contador { border-radius: 2px; border-color: var(--noite); background: #f2b33d; color: #1d140a; }
+
+/* Barra de comando e barra fixa */
+:root[data-tema="hud"] .comando { border-radius: 2px; }
+:root[data-tema="hud"] .botao-gaveta { border-radius: 2px; background: none; }
+:root[data-tema="hud"] .comando:focus-within { box-shadow: 0 0 0 1px var(--ouro), 0 0 18px rgb(57 198 192 / 0.35); }
+:root[data-tema="hud"] .sugestoes { border-radius: 2px; background: #041010; }
+:root[data-tema="hud"] .linha-comando b::before { content: "» "; }
+:root[data-tema="hud"] .barra { border-radius: 2px; }
+
+/* Gaveta e folhas */
+:root[data-tema="hud"] .gaveta { background: var(--noite); }
+:root[data-tema="hud"] .busca-gaveta, :root[data-tema="hud"] .fechar { border-radius: 2px; background: #041010; }
+:root[data-tema="hud"] .marca, :root[data-tema="hud"] .letra { text-transform: uppercase; letter-spacing: 0.15em; }
+:root[data-tema="hud"] .fundo-folha { background: rgb(0 6 6 / 0.7); }
+:root[data-tema="hud"] .folha { border-radius: 2px; background: #041010; border-color: var(--borda); clip-path: polygon(18px 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%, 0 18px); }
+:root[data-tema="hud"] .rotulo::after { content: "_"; }
+:root[data-tema="hud"] :is(.novo-passo, .bloco, .opcao, .ceu-estado, .voos-lista li, .ceu-chave, .ceu-km button, .voos-km button, .duracoes button, .menu-abas button) { border-radius: 2px; }
+:root[data-tema="hud"] .ceu { border-radius: 2px; }
+@media (prefers-reduced-motion: reduce) { :root[data-tema="hud"] .anel::before, :root[data-tema="hud"] .agora-rotulo::after { animation: none; } }
+/* Bolhas mais justas para o chip da versão caber inteiro. */
+:root[data-tema="hud"] .bolhas { gap: 3px; }
+:root[data-tema="hud"] :is(.bolha, .chip-versao) { padding-left: 4px; padding-right: 4px; font-size: 10px; letter-spacing: -0.02em; }
+:root[data-tema="hud"] .mostrador { padding-left: 8px; padding-right: 8px; }
