@@ -24,6 +24,7 @@ import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -46,9 +47,10 @@ public class MainActivity extends Activity {
     private WebView web;
     private ValueCallback<Uri[]> retornoArquivo;
     private static final int PEDIDO_ARQUIVO = 51;
+    private static final int PEDIDO_PASTA = 52;
 
-    /** id (string) → documento da pasta salva, montado a cada listarPastaSalva(). */
-    private final Map<String, Uri> arquivosNativos = new HashMap<>();
+    /** id (string) → documento da pasta (salva ou recém-escolhida). */
+    private final Map<String, Uri> arquivosNativos = new ConcurrentHashMap<>();
 
     @Override
     protected void onCreate(Bundle salvo) {
@@ -122,7 +124,34 @@ public class MainActivity extends Activity {
             }
             return;
         }
+        if (codigo == PEDIDO_PASTA) {
+            tratarPastaEscolhida(resultado, dados);
+            return;
+        }
         super.onActivityResult(codigo, resultado, dados);
+    }
+
+    /**
+     * Resultado do seletor de pasta nativo do Android (chamado por
+     * Ponte.escolherPasta()). Diferente do seletor da WebView — que no
+     * WebView do Android não abre um seletor de pasta de verdade, só um de
+     * arquivo —, este sempre deixa escolher a pasta inteira.
+     */
+    private void tratarPastaEscolhida(int resultado, Intent dados) {
+        if (resultado != RESULT_OK || dados == null || dados.getData() == null) {
+            web.evaluateJavascript("window.pixelmusicPastaEscolhida && window.pixelmusicPastaEscolhida(null)", null);
+            return;
+        }
+        Uri pastaUri = dados.getData();
+        salvarPastaEscolhida(pastaUri);
+        new Thread(() -> {
+            arquivosNativos.clear();
+            JSONArray saida = new JSONArray();
+            listarRecursivo(pastaUri, DocumentsContract.getTreeDocumentId(pastaUri), saida, new AtomicInteger(0), 0);
+            String json = saida.toString();
+            runOnUiThread(() -> web.evaluateJavascript(
+                "window.pixelmusicPastaEscolhida && window.pixelmusicPastaEscolhida(" + json + ")", null));
+        }).start();
     }
 
     @Override
@@ -268,6 +297,24 @@ public class MainActivity extends Activity {
         public void parar() {
             Intent i = new Intent(MainActivity.this, PlayerService.class).setAction(PlayerService.ACAO_PARAR);
             try { startService(i); } catch (Exception e) { /* serviço já parado */ }
+        }
+
+        /**
+         * Chamada pelo botão "Escolher pasta de música": abre o seletor de
+         * pasta nativo do Android (não o da WebView, que só deixa escolher
+         * um arquivo de cada vez). O resultado chega em
+         * window.pixelmusicPastaEscolhida(lista) — null se o usuário cancelou.
+         */
+        @JavascriptInterface
+        public void escolherPasta() {
+            Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+            runOnUiThread(() -> {
+                try {
+                    startActivityForResult(i, PEDIDO_PASTA);
+                } catch (Exception e) {
+                    web.evaluateJavascript("window.pixelmusicPastaEscolhida && window.pixelmusicPastaEscolhida(null)", null);
+                }
+            });
         }
 
         /**
