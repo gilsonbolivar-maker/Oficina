@@ -37,6 +37,30 @@ O canto de cima à esquerda fica vazio de propósito: com o app em janela, o
 iPadOS desenha ali os controles dela e cobriria qualquer botão.
 
 | **＋** | Folha nova. |
+| **☀/☾** | Troca o tema na hora, sem abrir o **Aa**. |
+| **Caneta / Borracha** | Só na aba **Desenhar**. |
+
+## As duas abas
+
+| Aba | O que é |
+| --- | ------- |
+| **Escrever** | A folha de sempre: o Rabisco converte sua letra em texto. |
+| **Desenhar** | A tinta da Pencil, sem converter nada — assinatura, croqui, rabisco. |
+
+Cada nota guarda as duas coisas: o texto e o desenho. A aba escolhida fica
+guardada, então o app reabre onde você parou.
+
+Na aba **Desenhar**, os botões de baixo mudam de serviço: **Copiar** põe o
+desenho como imagem na área de transferência, **Enviar** manda a imagem pela
+folha de compartilhamento, **↶** tira o último traço e **Limpar** apaga tudo
+(perguntando antes). A alça **⠿** some — arrastar é coisa de texto.
+
+Depois que a Pencil toca a folha uma vez, o dedo deixa de desenhar: é o apoio
+da mão, não um traço.
+
+Os traços são guardados como pontos, não como imagem. Ocupa pouco espaço, o
+desfazer é imediato e o desenho sai nítido quando a tela muda de tamanho ou
+troca de tema — a tinta acompanha a cor do texto.
 
 ## Enviar para outro app
 
@@ -78,6 +102,7 @@ já na nova; as notas continuam onde estavam.
 
 | Versão | O que mudou |
 | ------ | ----------- |
+| 1.5.0 | Aba **Desenhar** (tinta da Pencil) e botão de tema no topo. |
 | 1.4.2 | O **Limpar** foi para a direita, ao lado do **＋**: em janela, o iPadOS cobre o canto esquerdo com os controles dela. |
 | 1.4.1 | O **Limpar** desceu um pouco (não bastava — ver 1.4.2). |
 | 1.4.0 | Botão **Limpar** no topo; o **☰** foi para o centro. |
@@ -101,6 +126,7 @@ fora do caderno.
 | ------- | ------- |
 | `index.html` | A tela. |
 | `app.css` | Estilo, papel e pauta. |
-| `app.js` | Notas, cópia, ajustes. |
+| `app.js` | Notas, cópia, abas, ajustes. |
+| `desenho.js` | A folha de desenho: traços, borracha, desfazer. |
 | `sw.js` | Service worker: abre sem internet. |
 | `manifest.webmanifest` | Faz virar app na Tela de Início. |

@@ -44,6 +44,9 @@
     <span aria-hidden="true">☰</span>
   </button>
   <div class="acoes-topo">
+    <button class="icone" id="btn-tema" type="button" aria-label="Trocar o tema">
+      <span aria-hidden="true" id="icone-tema">☾</span>
+    </button>
     <button class="icone texto" id="btn-limpar" type="button"
             aria-label="Limpar a folha">Limpar</button>
     <button class="icone" id="btn-nova" type="button" aria-label="Nova nota">
@@ -54,8 +57,16 @@
   <small class="versao-app" data-versao></small>
 </header>
 
+<!-- ————————————————— abas ————————————————— -->
+<div class="abas" role="tablist" aria-label="Modo da folha">
+  <button class="aba" type="button" role="tab" id="aba-escrever"
+          data-aba-opcao="escrever" aria-selected="true">Escrever</button>
+  <button class="aba" type="button" role="tab" id="aba-desenhar"
+          data-aba-opcao="desenhar" aria-selected="false">Desenhar</button>
+</div>
+
 <!-- ————————————————— folha de escrita ————————————————— -->
-<main class="folha">
+<main class="folha" id="folha-texto" role="tabpanel" aria-labelledby="aba-escrever">
   <textarea
     id="texto"
     class="papel"
@@ -67,8 +78,19 @@
     enterkeyhint="enter"></textarea>
 </main>
 
+<!-- ————————————————— folha de desenho ————————————————— -->
+<main class="folha folha-desenho" id="folha-desenho" role="tabpanel"
+      aria-labelledby="aba-desenhar" hidden>
+  <canvas id="tela-desenho" aria-label="Folha de desenho"></canvas>
+  <p class="dica-desenho" id="dica-desenho">Desenhe aqui com a Pencil.</p>
+</main>
+
 <!-- ————————————————— barra de ações ————————————————— -->
 <footer class="barra">
+  <div class="ferramentas" id="ferramentas" role="group" aria-label="Ferramenta" hidden>
+    <button class="botao" type="button" data-ferramenta="caneta" aria-pressed="true">Caneta</button>
+    <button class="botao" type="button" data-ferramenta="borracha" aria-pressed="false">Borracha</button>
+  </div>
   <button class="botao principal" id="btn-copiar" type="button">Copiar</button>
   <button class="botao" id="btn-compartilhar" type="button">Enviar</button>
   <button class="botao alca" id="alca" type="button" draggable="true"
@@ -187,6 +209,7 @@
   <button class="botao" id="btn-atualizar" type="button">Atualizar</button>
 </div>
 
+<script src="desenho.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

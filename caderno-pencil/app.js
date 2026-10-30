@@ -5,7 +5,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.4.2';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.5.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -80,6 +80,7 @@ function novaNota(texto) {
   const nota = {
     id: 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     texto: texto || '',
+    tracos: [],
     criada: Date.now(),
     alterada: Date.now()
   };
@@ -90,7 +91,8 @@ function novaNota(texto) {
 
 function titulo(nota) {
   const primeira = (nota.texto || '').trim().split('\n')[0].trim();
-  return primeira ? primeira.slice(0, 60) : 'Sem título';
+  if (primeira) return primeira.slice(0, 60);
+  return (nota.tracos && nota.tracos.length) ? 'Desenho' : 'Sem título';
 }
 
 function quando(ms) {
@@ -110,6 +112,15 @@ function contarPalavras(texto) {
 
 function atualizarEstado(msg) {
   if (msg) { estadoTexto.textContent = msg; return; }
+
+  if (naAbaDesenho()) {
+    const n = Desenho.quantos();
+    estadoTexto.textContent = n
+      ? n + (n === 1 ? ' traço' : ' traços')
+      : 'Folha em branco';
+    return;
+  }
+
   const palavras = contarPalavras(areaTexto.value);
   if (!palavras) estadoTexto.textContent = 'Folha em branco';
   else estadoTexto.textContent = palavras + (palavras === 1 ? ' palavra' : ' palavras')
@@ -121,9 +132,11 @@ function abrirNota(id) {
   if (!nota) return;
   dados.atual = id;
   areaTexto.value = nota.texto;
+  Desenho.carregar(nota.tracos);
   gravar(true);
   atualizarEstado();
   desenharLista();
+  if (naAbaDesenho()) return;
   areaTexto.focus();
   areaTexto.setSelectionRange(areaTexto.value.length, areaTexto.value.length);
 }
@@ -143,7 +156,10 @@ function desenharLista() {
 
     const meta = document.createElement('p');
     meta.className = 'meta';
-    meta.textContent = quando(nota.alterada) + ' · ' + contarPalavras(nota.texto) + ' palavras';
+    const quantosTracos = (nota.tracos || []).length;
+    meta.textContent = quando(nota.alterada)
+      + ' · ' + contarPalavras(nota.texto) + ' palavras'
+      + (quantosTracos ? ' · ' + quantosTracos + ' traços' : '');
 
     const apagar = document.createElement('button');
     apagar.className = 'apagar';
@@ -175,6 +191,11 @@ function apagarNota(id) {
       .sort((a, b) => b.alterada - a.alterada)[0].id;
     else novaNota('');
     areaTexto.value = (notaAtual() || {}).texto || '';
+Desenho.carregar((notaAtual() || {}).tracos);
+
+let abaInicial = 'escrever';
+try { if (localStorage.getItem(CHAVE_ABA) === 'desenhar') abaInicial = 'desenhar'; } catch (e) {}
+mostrarAba(abaInicial);
   }
   gravar(true);
   desenharLista();
@@ -218,7 +239,87 @@ function copiarPorSelecao(texto) {
   return ok;
 }
 
+/* ——— abas: Escrever e Desenhar ———
+   A aba escolhida fica no <html data-aba>, que o CSS usa para mostrar a
+   folha certa e trocar os botões do rodapé. */
+const CHAVE_ABA = 'caderno-pencil:aba';
+const naAbaDesenho = () => document.documentElement.dataset.aba === 'desenhar';
+
+function mostrarAba(qual) {
+  const desenhar = qual === 'desenhar';
+  document.documentElement.dataset.aba = desenhar ? 'desenhar' : 'escrever';
+
+  el('folha-texto').hidden = desenhar;
+  el('folha-desenho').hidden = !desenhar;
+  el('ferramentas').hidden = !desenhar;
+  el('alca').hidden = desenhar;      // arrastar é coisa de texto
+
+  for (const b of document.querySelectorAll('[data-aba-opcao]')) {
+    b.setAttribute('aria-selected', String(b.dataset.abaOpcao === (desenhar ? 'desenhar' : 'escrever')));
+  }
+
+  if (desenhar) {
+    // O canvas escondido não tem tamanho: acerta agora que está à vista.
+    Desenho.acertarTamanho();
+    el('dica-desenho').hidden = !Desenho.vazio();
+  } else {
+    areaTexto.focus();
+  }
+
+  try { localStorage.setItem(CHAVE_ABA, document.documentElement.dataset.aba); } catch (e) {}
+  atualizarEstado();
+}
+
+for (const b of document.querySelectorAll('[data-aba-opcao]')) {
+  b.addEventListener('click', () => mostrarAba(b.dataset.abaOpcao));
+}
+
+/* ——— desenho ——— */
+Desenho.montar(el('tela-desenho'), () => {
+  const nota = notaAtual() || novaNota('');
+  nota.tracos = Desenho.pegar();
+  nota.alterada = Date.now();
+  el('dica-desenho').hidden = !Desenho.vazio();
+  atualizarEstado();
+  gravar();
+});
+
+for (const b of document.querySelectorAll('[data-ferramenta]')) {
+  b.addEventListener('click', () => {
+    Desenho.usar(b.dataset.ferramenta);
+    for (const outro of document.querySelectorAll('[data-ferramenta]')) {
+      outro.setAttribute('aria-pressed', String(outro === b));
+    }
+  });
+}
+
+function copiarDesenho() {
+  if (Desenho.vazio()) { mostrarAviso('Não há nada desenhado ainda.'); return; }
+  if (!navigator.clipboard || !window.ClipboardItem) {
+    mostrarAviso('Este navegador não copia imagem. Use Enviar.');
+    return;
+  }
+  // O Safari exige o ClipboardItem criado já no toque; a imagem vem depois.
+  navigator.clipboard.write([new ClipboardItem({ 'image/png': Desenho.paraBlob() })])
+    .then(() => mostrarAviso('Desenho copiado — é só colar'))
+    .catch(() => mostrarAviso('Não deu para copiar o desenho. Use Enviar.'));
+}
+
+function enviarDesenho() {
+  if (Desenho.vazio()) { mostrarAviso('Não há nada desenhado ainda.'); return; }
+  Desenho.paraBlob().then(blob => {
+    if (!blob) return;
+    const arquivo = new File([blob], 'desenho.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [arquivo] })) {
+      navigator.share({ files: [arquivo] }).catch(() => {});
+    } else {
+      mostrarAviso('Este navegador não envia imagem. Use Copiar.');
+    }
+  });
+}
+
 el('btn-copiar').addEventListener('click', () => {
+  if (naAbaDesenho()) { copiarDesenho(); return; }
   const { texto, parcial } = textoParaSaida();
   if (!texto) { mostrarAviso('Não há nada escrito ainda.'); return; }
   const recado = parcial ? 'Trecho copiado — é só colar' : 'Texto copiado — é só colar';
@@ -235,6 +336,7 @@ el('btn-copiar').addEventListener('click', () => {
 });
 
 el('btn-compartilhar').addEventListener('click', () => {
+  if (naAbaDesenho()) { enviarDesenho(); return; }
   const { texto } = textoParaSaida();
   if (!texto) { mostrarAviso('Não há nada escrito ainda.'); return; }
   abrirPainel(painelEnviar);
@@ -312,25 +414,39 @@ alca.addEventListener('click', () => {
 });
 
 el('btn-desfazer').addEventListener('click', () => {
+  if (naAbaDesenho()) {
+    if (!Desenho.desfazer()) mostrarAviso('Não há traço para desfazer.');
+    return;
+  }
   areaTexto.focus();
   try { document.execCommand('undo'); } catch (e) { /* sem desfazer nativo */ }
 });
 
 el('btn-nova').addEventListener('click', () => {
   const atual = notaAtual();
-  if (atual && !atual.texto.trim()) { areaTexto.focus(); return; }
+  const jaVazia = atual && !atual.texto.trim() && !(atual.tracos || []).length;
+  if (jaVazia) { if (!naAbaDesenho()) areaTexto.focus(); return; }
   novaNota('');
   areaTexto.value = '';
+  Desenho.carregar([]);
   gravar(true);
   desenharLista();
   atualizarEstado();
-  areaTexto.focus();
+  if (naAbaDesenho()) el('dica-desenho').hidden = false;
+  else areaTexto.focus();
   mostrarAviso('Folha nova');
 });
 
 /* Limpa a folha sem mexer nas outras notas: apaga só o texto desta.
    Pede confirmação porque o ↶ não desfaz uma troca feita por código. */
 el('btn-limpar').addEventListener('click', () => {
+  if (naAbaDesenho()) {
+    if (Desenho.vazio()) { mostrarAviso('A folha já está vazia.'); return; }
+    if (!confirm('Limpar o desenho? Os traços serão apagados.')) return;
+    Desenho.limpar();
+    mostrarAviso('Desenho limpo');
+    return;
+  }
   if (!areaTexto.value.trim()) { mostrarAviso('A folha já está vazia.'); return; }
   if (!confirm('Limpar a folha? O texto escrito será apagado.')) return;
 
@@ -415,13 +531,27 @@ function aplicarTema(tema) {
   const cor = document.querySelector('meta[name="theme-color"]');
   if (cor) cor.setAttribute('content', CORES_TEMA[tema]);
   for (const b of botoesTema) b.setAttribute('aria-pressed', String(b.dataset.temaOpcao === tema));
+
+  // O botão do topo mostra para onde ele leva, não onde você está.
+  const vaiPara = tema === 'escuro' ? 'claro' : 'escuro';
+  el('icone-tema').textContent = vaiPara === 'escuro' ? '☾' : '☀';
+  el('btn-tema').setAttribute('aria-label',
+    vaiPara === 'escuro' ? 'Mudar para o tema Escuro' : 'Mudar para o tema Claro');
+
+  Desenho.repintar();   // a tinta acompanha a cor do texto
 }
 
+function guardarTema(tema) {
+  aplicarTema(tema);
+  try { localStorage.setItem(CHAVE_TEMA, tema); } catch (e) {}
+}
+
+el('btn-tema').addEventListener('click', () => {
+  guardarTema(document.documentElement.dataset.tema === 'escuro' ? 'claro' : 'escuro');
+});
+
 for (const b of botoesTema) {
-  b.addEventListener('click', () => {
-    aplicarTema(b.dataset.temaOpcao);
-    try { localStorage.setItem(CHAVE_TEMA, b.dataset.temaOpcao); } catch (e) {}
-  });
+  b.addEventListener('click', () => guardarTema(b.dataset.temaOpcao));
 }
 aplicarTema(document.documentElement.dataset.tema);
 
@@ -443,6 +573,11 @@ if (!notaAtual()) {
   }
 }
 areaTexto.value = (notaAtual() || {}).texto || '';
+Desenho.carregar((notaAtual() || {}).tracos);
+
+let abaInicial = 'escrever';
+try { if (localStorage.getItem(CHAVE_ABA) === 'desenhar') abaInicial = 'desenhar'; } catch (e) {}
+mostrarAba(abaInicial);
 aplicarAparencia();
 atualizarEstado();
 desenharLista();
