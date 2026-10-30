@@ -3,7 +3,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.4.2';   // precisa casar com a VERSAO do app.js
+const VERSAO = '1.5.0';   // precisa casar com a VERSAO do app.js
 const CACHE_APP = 'caderno-pencil-app-' + VERSAO;
 
 const ARQUIVOS = [
@@ -11,6 +11,7 @@ const ARQUIVOS = [
   'index.html',
   'app.css',
   'app.js',
+  'desenho.js',
   'manifest.webmanifest',
   'icones/icone-180.png',
   'icones/icone-192.png',
