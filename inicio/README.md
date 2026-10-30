@@ -74,7 +74,9 @@ vez e o bloco de foco que avisa no fim.
   **🛰 Vivo Starlink**, dourada e pulsando, e aparece uma dica do que funciona
   (WhatsApp, mensagens e mapas). O Início sabe pelo Android 15+ (a rede ativa
   diz que é satélite) ou pelo nome da rede ("VIVO STARLINK" / "VIVO SATÉLITE").
-  Fora do satélite, a bolha dos dados móveis mostra o nome da operadora, e as
+  Fora do satélite, a bolha 🛰 fica **cinza** ao lado da rede (o Início está
+  vigiando); tocar nela explica quando o satélite entra e como o seu Android
+  avisa. A bolha dos dados móveis mostra o nome da operadora, e as
   bolhas se atualizam na hora quando a rede muda.
 - **Atualizar** (chip da versão, no fim das bolhas): um toque confere no site,
   baixa a versão nova e recarrega, sem precisar forçar a parada do app. A cada

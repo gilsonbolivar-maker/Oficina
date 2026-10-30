@@ -10,7 +10,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '2.10.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '2.10.1';   // precisa casar com a VERSAO do sw.js
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
 
 const nativo = window.InicioNativo || null;
@@ -1291,6 +1291,7 @@ function desenharBolhas() {
     const barras = rede.nivel >= 0 ? '▂▄▆█'.slice(0, Math.max(1, rede.nivel)) : '';
     const movel = (nomeDaRede(rede.operadora).split(' ')[0]) || 'Dados';
     lista.push(bolha('rede', barras || '•', rede.tipo === 'wifi' ? 'Wi-Fi' : rede.tipo === 'movel' ? movel : 'sem rede'));
+    lista.push(bolha('satelite-fora', '🛰', '', explicarSatelite, 'Vivo Satélite: desligado agora; toque para saber mais'));
   } else {
     lista.push(bolha('rede', navigator.onLine ? '▂▄▆' : '•', navigator.onLine ? 'online' : 'sem rede'));
   }
@@ -1456,6 +1457,25 @@ function nomeDaRede(nome) {
 }
 
 function mostrarDicaSatelite() {
+  $('satelite-fora').hidden = true;
+  $('satelite-dentro').hidden = false;
+  $('aviso-satelite').hidden = false;
+}
+
+// Fora do satélite: a bolha fica cinza; o toque explica como ele entra.
+function androidDoCelular() {
+  const m = /Android (\d+)/.exec(navigator.userAgent);
+  return m ? Number(m[1]) : 0;
+}
+function explicarSatelite() {
+  const v = androidDoCelular();
+  const deteccao = v >= 15
+    ? 'Seu Android ' + v + ' avisa quando a rede é por satélite: a detecção é direta.'
+    : v ? 'Seu Android ' + v + ' não avisa o tipo de rede; o Início percebe pelo nome (“VIVO STARLINK”).' : '';
+  $('satelite-fora').innerHTML = '🛰 <b>Vivo Satélite: desligado agora</b> (você está na rede normal). Ele entra sozinho quando você fica ' +
+    '<b>sem sinal da Vivo e a céu aberto</b>; aí esta bolha fica dourada e o celular vibra. ' + deteccao;
+  $('satelite-fora').hidden = false;
+  $('satelite-dentro').hidden = true;
   $('aviso-satelite').hidden = false;
 }
 
@@ -1466,7 +1486,8 @@ function notarSatelite(rede) {
     mostrarDicaSatelite();
     if (navigator.vibrate) navigator.vibrate([60, 60, 60]);
   }
-  if (!agora) $('aviso-satelite').hidden = true;
+  // Saiu do satélite: fecha a dica de “conectado” (a explicação, não).
+  if (!agora && noSatelite) $('aviso-satelite').hidden = true;
   noSatelite = agora;
 }
 

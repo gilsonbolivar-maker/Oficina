@@ -1127,3 +1127,6 @@ input { font: inherit; color: inherit; -webkit-user-select: text; user-select: t
 /* Folha mais alta que a tela: rola, em vez de espremer as linhas (o mapa do
    céu, quadrado, ficava por cima dos botões e roubava o toque). */
 .folha { grid-auto-rows: max-content; }
+
+/* Satélite desligado: a bolha fica, apagada, para mostrar que está vigiando. */
+.mostrador .bolhas .bolha.satelite-fora { opacity: 0.55; filter: grayscale(1); }
