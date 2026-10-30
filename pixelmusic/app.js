@@ -1,11 +1,12 @@
 /* ————————————————————————————————————————————————————————————
-   Tocador — lê uma pasta de música escolhida no aparelho e toca as
-   faixas, com Media Session (controles na notificação do navegador)
-   e uma ponte opcional para o app Android (window.TocadorNativo).
+   PixelMusic — lê uma pasta de música escolhida no aparelho e toca
+   as faixas, com equalizador e reforço de grave (Web Audio API),
+   Media Session (controles na notificação do navegador) e uma ponte
+   opcional para o app Android (window.PixelMusicNativo).
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.0.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.1.0';   // precisa casar com a VERSAO do sw.js
 
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
 
@@ -26,6 +27,12 @@ const btnProxima = document.getElementById('btn-proxima');
 const btnAleatorio = document.getElementById('btn-aleatorio');
 const btnRepetir = document.getElementById('btn-repetir');
 const audio = document.getElementById('audio');
+const btnEq = document.getElementById('btn-eq');
+const painelEq = document.getElementById('painel-eq');
+const eqBandas = document.getElementById('eq-bandas');
+const btnEqResetar = document.getElementById('btn-eq-resetar');
+const sliderGrave = document.getElementById('slider-grave');
+const valorGrave = document.getElementById('valor-grave');
 
 let faixas = [];        // [{nome, arquivo, url}]
 let indiceAtual = -1;
@@ -89,6 +96,7 @@ function tocarIndice(i) {
   indiceAtual = i;
   const f = faixas[i];
   audio.src = f.url;
+  iniciarAudioGrafo();
   audio.play().catch(() => {});
   atualizarDestaque();
   atualizarInfo();
@@ -112,7 +120,7 @@ function atualizarInfo() {
   if ('mediaSession' in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: f.nome,
-      artist: 'Tocador',
+      artist: 'PixelMusic',
       album: ''
     });
   }
@@ -137,6 +145,7 @@ function anterior() {
 }
 
 btnTocar.addEventListener('click', () => {
+  iniciarAudioGrafo();
   if (audio.paused) audio.play().catch(() => {});
   else audio.pause();
 });
@@ -184,6 +193,124 @@ function formatarTempo(s) {
   return m + ':' + String(seg).padStart(2, '0');
 }
 
+/* ——— equalizador e reforço de grave (Web Audio API) ———
+   A cadeia só é montada na primeira vez que o usuário toca (precisa de um
+   gesto para o AudioContext funcionar). Antes disso o <audio> toca normal. */
+
+const FREQUENCIAS_EQ = [60, 230, 910, 3600, 14000];
+const CHAVE_EQ = 'pixelmusic:eq';
+
+let contextoAudio = null;
+let filtrosBanda = [];
+let filtroGrave = null;
+let grafoMontado = false;
+
+let ajustesEq = carregarAjustesEq();
+
+function carregarAjustesEq() {
+  const padrao = { bandas: FREQUENCIAS_EQ.map(() => 0), grave: 0 };
+  try {
+    const salvo = JSON.parse(localStorage.getItem(CHAVE_EQ));
+    if (salvo && Array.isArray(salvo.bandas) && salvo.bandas.length === FREQUENCIAS_EQ.length) {
+      return { bandas: salvo.bandas.map(Number), grave: Number(salvo.grave) || 0 };
+    }
+  } catch (e) { /* modo privado ou nada salvo */ }
+  return padrao;
+}
+
+function salvarAjustesEq() {
+  try { localStorage.setItem(CHAVE_EQ, JSON.stringify(ajustesEq)); } catch (e) { /* modo privado */ }
+}
+
+function iniciarAudioGrafo() {
+  if (grafoMontado) return;
+  grafoMontado = true;
+  try {
+    const Contexto = window.AudioContext || window.webkitAudioContext;
+    contextoAudio = new Contexto();
+    const fonte = contextoAudio.createMediaElementSource(audio);
+
+    filtrosBanda = FREQUENCIAS_EQ.map(freq => {
+      const f = contextoAudio.createBiquadFilter();
+      f.type = 'peaking';
+      f.frequency.value = freq;
+      f.Q.value = 1;
+      f.gain.value = 0;
+      return f;
+    });
+
+    filtroGrave = contextoAudio.createBiquadFilter();
+    filtroGrave.type = 'lowshelf';
+    filtroGrave.frequency.value = 120;
+    filtroGrave.gain.value = 0;
+
+    let no = fonte;
+    for (const f of filtrosBanda) { no.connect(f); no = f; }
+    no.connect(filtroGrave);
+    filtroGrave.connect(contextoAudio.destination);
+  } catch (e) {
+    grafoMontado = false;   // sem Web Audio: o <audio> continua tocando normalmente
+    return;
+  }
+  aplicarAjustesEq();
+}
+
+function aplicarAjustesEq() {
+  if (filtrosBanda.length) {
+    ajustesEq.bandas.forEach((db, i) => { filtrosBanda[i].gain.value = db; });
+  }
+  if (filtroGrave) filtroGrave.gain.value = (ajustesEq.grave / 100) * 15;
+}
+
+function montarPainelEq() {
+  eqBandas.innerHTML = '';
+  FREQUENCIAS_EQ.forEach((freq, i) => {
+    const div = document.createElement('div');
+    div.className = 'eq-banda';
+    const rotuloFreq = freq >= 1000 ? (freq / 1000) + 'k' : String(freq);
+    div.innerHTML =
+      '<span class="valor" data-valor>' + ajustesEq.bandas[i] + '</span>' +
+      '<input type="range" min="-12" max="12" step="1" value="' + ajustesEq.bandas[i] + '">' +
+      '<span class="rotulo">' + rotuloFreq + '</span>';
+    const slider = div.querySelector('input');
+    const valor = div.querySelector('[data-valor]');
+    slider.addEventListener('input', () => {
+      const db = Number(slider.value);
+      ajustesEq.bandas[i] = db;
+      valor.textContent = db;
+      if (filtrosBanda[i]) filtrosBanda[i].gain.value = db;
+      salvarAjustesEq();
+    });
+    eqBandas.appendChild(div);
+  });
+
+  sliderGrave.value = String(ajustesEq.grave);
+  valorGrave.textContent = ajustesEq.grave + '%';
+}
+
+sliderGrave.addEventListener('input', () => {
+  const pct = Number(sliderGrave.value);
+  ajustesEq.grave = pct;
+  valorGrave.textContent = pct + '%';
+  if (filtroGrave) filtroGrave.gain.value = (pct / 100) * 15;
+  salvarAjustesEq();
+});
+
+btnEq.addEventListener('click', () => {
+  const abrir = painelEq.hidden;
+  painelEq.hidden = !abrir;
+  btnEq.setAttribute('aria-pressed', String(abrir));
+});
+
+btnEqResetar.addEventListener('click', () => {
+  ajustesEq = { bandas: FREQUENCIAS_EQ.map(() => 0), grave: 0 };
+  salvarAjustesEq();
+  aplicarAjustesEq();
+  montarPainelEq();
+});
+
+montarPainelEq();
+
 /* ——— Media Session (controles do navegador/SO) ——— */
 
 if ('mediaSession' in navigator) {
@@ -197,22 +324,22 @@ if ('mediaSession' in navigator) {
   });
 }
 
-/* ——— ponte com o app Android (window.TocadorNativo), se existir ———
+/* ——— ponte com o app Android (window.PixelMusicNativo), se existir ———
    O APK hospeda uma notificação de mídia nativa; como as faixas tocam
    no <audio> da página, a notificação só repassa comandos para aqui. */
 
-window.tocadorComando = function (acao) {
+window.pixelmusicComando = function (acao) {
   if (acao === 'play') audio.play().catch(() => {});
   else if (acao === 'pause') audio.pause();
-  else if (acao === 'next') proxima();
-  else if (acao === 'previous') anterior();
+  else if (acao === 'proxima') proxima();
+  else if (acao === 'anterior') anterior();
 };
 
 function avisarNativo() {
-  if (!window.TocadorNativo || typeof window.TocadorNativo.atualizar !== 'function') return;
+  if (!window.PixelMusicNativo || typeof window.PixelMusicNativo.atualizar !== 'function') return;
   const f = faixas[indiceAtual];
   try {
-    window.TocadorNativo.atualizar(JSON.stringify({
+    window.PixelMusicNativo.atualizar(JSON.stringify({
       titulo: f ? f.nome : '',
       tocando: !audio.paused,
       duracao: audio.duration || 0,

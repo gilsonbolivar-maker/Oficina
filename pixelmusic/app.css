@@ -11,7 +11,7 @@
 
 html, body {
   margin: 0;
-  min-height: 100dvh;
+  height: 100dvh;
   background: var(--fundo);
   color: var(--texto);
   font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -33,6 +33,7 @@ body {
 
 .tela {
   flex: 1;
+  min-height: 0;
   padding: 16px 16px 24px;
   overflow-y: auto;
 }
@@ -114,3 +115,74 @@ body {
 }
 .controles .icone.grande { font-size: 34px; }
 .controles .icone[aria-pressed="true"] { color: var(--acento); }
+
+.controles-extra {
+  display: flex;
+  justify-content: center;
+  margin-top: 6px;
+}
+.controles-extra .icone {
+  background: none;
+  border: 1px solid var(--borda);
+  border-radius: 99px;
+  color: var(--texto-fraco);
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+.controles-extra .icone[aria-pressed="true"] { color: var(--acento); border-color: var(--acento); }
+
+.equalizador {
+  margin: 18px 0 0;
+  padding: 14px;
+  border: 1px solid var(--borda);
+  border-radius: 14px;
+  background: var(--superficie);
+}
+.eq-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.eq-cabecalho h2 { margin: 0; font-size: 16px; }
+.eq-cabecalho .botao { padding: 6px 14px; font-size: 13px; font-weight: 500; }
+
+.eq-bandas {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  height: 140px;
+}
+.eq-banda {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  gap: 6px;
+}
+.eq-banda .valor { font-size: 11px; color: var(--texto-fraco); }
+.eq-banda input[type="range"] {
+  flex: 1;
+  width: 110px;
+  accent-color: var(--acento);
+  /* range vertical, sem precisar de orient="vertical" (não suportado no Chrome) */
+  writing-mode: vertical-lr;
+  direction: rtl;
+}
+.eq-banda .rotulo { font-size: 11px; color: var(--texto-fraco); }
+
+.eq-grave {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--borda);
+}
+.eq-grave-rotulo {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.eq-grave-rotulo span { color: var(--acento); font-weight: 600; }
+.eq-grave input[type="range"] { width: 100%; accent-color: var(--acento); }

@@ -1,11 +1,11 @@
 /* ————————————————————————————————————————————————————————————
-   Service worker: deixa o Tocador abrir sem rede. As músicas em si
+   Service worker: deixa o PixelMusic abrir sem rede. As músicas em si
    não passam por aqui — vêm direto da pasta escolhida no aparelho.
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.0.0';   // precisa casar com a VERSAO do app.js
-const CACHE_APP = 'tocador-app-' + VERSAO;
+const VERSAO = '1.1.0';   // precisa casar com a VERSAO do app.js
+const CACHE_APP = 'pixelmusic-app-' + VERSAO;
 
 const ARQUIVOS = [
   '.',
@@ -31,7 +31,7 @@ self.addEventListener('activate', ev => {
   ev.waitUntil(
     caches.keys()
       .then(nomes => Promise.all(
-        nomes.filter(n => n.startsWith('tocador-app-') && n !== CACHE_APP)
+        nomes.filter(n => n.startsWith('pixelmusic-app-') && n !== CACHE_APP)
              .map(n => caches.delete(n))
       ))
       .then(() => self.clients.claim())

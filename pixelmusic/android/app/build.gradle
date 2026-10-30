@@ -3,16 +3,16 @@ plugins {
 }
 
 android {
-    namespace 'io.github.gilsonbolivar.tocador'
+    namespace 'io.github.gilsonbolivar.pixelmusic'
     compileSdk 34
 
     defaultConfig {
-        applicationId 'io.github.gilsonbolivar.tocador'
+        applicationId 'io.github.gilsonbolivar.pixelmusic'
         minSdk 24
         targetSdk 34
         // versionCode sobe a cada APK novo; versionName acompanha o app do site.
         versionCode 1
-        versionName '1.0.0'
+        versionName '1.1.0'
     }
 
     buildFeatures {
@@ -23,9 +23,9 @@ android {
         // Chave fixa: o APK novo instala por cima do antigo sem desinstalar.
         oficina {
             storeFile file('../assinatura.jks')
-            storePassword 'tocador'
-            keyAlias 'tocador'
-            keyPassword 'tocador'
+            storePassword 'pixelmusic'
+            keyAlias 'pixelmusic'
+            keyPassword 'pixelmusic'
         }
     }
 

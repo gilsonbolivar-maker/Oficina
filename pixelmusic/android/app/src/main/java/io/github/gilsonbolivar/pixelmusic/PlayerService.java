@@ -1,4 +1,4 @@
-package io.github.gilsonbolivar.tocador;
+package io.github.gilsonbolivar.pixelmusic;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -18,11 +18,11 @@ import android.os.Looper;
 import android.webkit.WebView;
 
 /**
- * Mostra os controles do Tocador na notificação (e na tela de bloqueio),
+ * Mostra os controles do PixelMusic na notificação (e na tela de bloqueio),
  * mesmo com a tela apagada ou o app em segundo plano. Quem decodifica e toca
  * o áudio continua sendo a página, no <audio> dela; este serviço só espelha
  * o estado dela com android.media.session.MediaSession e repassa os
- * comandos de volta via window.tocadorComando(...) na WebView.
+ * comandos de volta via window.pixelmusicComando(...) na WebView.
  */
 public class PlayerService extends Service {
 
@@ -33,7 +33,7 @@ public class PlayerService extends Service {
     private static final String ACAO_ANTERIOR = "anterior";
     private static final String ACAO_PROXIMA = "proxima";
 
-    private static final String CANAL = "tocador";
+    private static final String CANAL = "pixelmusic";
     private static final int NOTIF = 1;
 
     /** Definida pela MainActivity enquanto ela existe; o serviço só comanda a página por aqui. */
@@ -48,7 +48,7 @@ public class PlayerService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        sessao = new MediaSession(this, "Tocador");
+        sessao = new MediaSession(this, "PixelMusic");
         sessao.setCallback(new MediaSession.Callback() {
             @Override public void onPlay() { comandar(ACAO_PLAY); }
             @Override public void onPause() { comandar(ACAO_PAUSE); }
@@ -74,7 +74,7 @@ public class PlayerService extends Service {
         }
 
         titulo = intent.getStringExtra("titulo");
-        if (titulo == null || titulo.isEmpty()) titulo = "Tocador";
+        if (titulo == null || titulo.isEmpty()) titulo = "PixelMusic";
         tocando = intent.getBooleanExtra("tocando", false);
 
         criarCanal();
@@ -93,7 +93,7 @@ public class PlayerService extends Service {
         WebView w = webView;
         if (w != null) {
             naTela.post(() -> w.evaluateJavascript(
-                "window.tocadorComando && window.tocadorComando('" + acao + "')", null));
+                "window.pixelmusicComando && window.pixelmusicComando('" + acao + "')", null));
         }
         if (ACAO_PLAY.equals(acao)) tocando = true;
         else if (ACAO_PAUSE.equals(acao)) tocando = false;
@@ -111,7 +111,7 @@ public class PlayerService extends Service {
         sessao.setPlaybackState(b.build());
         android.media.MediaMetadata m = new android.media.MediaMetadata.Builder()
             .putString(android.media.MediaMetadata.METADATA_KEY_TITLE, titulo)
-            .putString(android.media.MediaMetadata.METADATA_KEY_ARTIST, "Tocador")
+            .putString(android.media.MediaMetadata.METADATA_KEY_ARTIST, "PixelMusic")
             .build();
         sessao.setMetadata(m);
     }
@@ -159,7 +159,7 @@ public class PlayerService extends Service {
             : new Notification.Builder(this))
             .setSmallIcon(R.drawable.ic_notificacao)
             .setContentTitle(titulo)
-            .setContentText("Tocador")
+            .setContentText("PixelMusic")
             .setOngoing(tocando)
             .setOnlyAlertOnce(true)
             .setContentIntent(pAbrir)

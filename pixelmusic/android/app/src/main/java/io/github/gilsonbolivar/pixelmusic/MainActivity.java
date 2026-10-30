@@ -1,4 +1,4 @@
-package io.github.gilsonbolivar.tocador;
+package io.github.gilsonbolivar.pixelmusic;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -16,14 +16,14 @@ import android.webkit.WebViewClient;
 import org.json.JSONObject;
 
 /**
- * Abre o Tocador do site numa WebView. A página escolhe a pasta de música e
- * toca tudo sozinha; esta Activity só oferece a ponte "TocadorNativo", que
+ * Abre o PixelMusic do site numa WebView. A página escolhe a pasta de música e
+ * toca tudo sozinha; esta Activity só oferece a ponte "PixelMusicNativo", que
  * entrega o estado (faixa, se está tocando) ao PlayerService, para que ele
  * mostre os controles na notificação mesmo com a tela apagada.
  */
 public class MainActivity extends Activity {
 
-    static final String ENDERECO = "https://gilsonbolivar-maker.github.io/Oficina/tocador/";
+    static final String ENDERECO = "https://gilsonbolivar-maker.github.io/Oficina/pixelmusic/";
     static final String HOST = "gilsonbolivar-maker.github.io";
 
     private WebView web;
@@ -42,16 +42,16 @@ public class MainActivity extends Activity {
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
         s.setMediaPlaybackRequiresUserGesture(false);
-        s.setUserAgentString(s.getUserAgentString() + " Tocador-Android/" + BuildConfig.VERSION_NAME);
+        s.setUserAgentString(s.getUserAgentString() + " PixelMusic-Android/" + BuildConfig.VERSION_NAME);
 
-        web.addJavascriptInterface(new Ponte(), "TocadorNativo");
+        web.addJavascriptInterface(new Ponte(), "PixelMusicNativo");
         PlayerService.webView = web;
 
         web.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest pedido) {
                 Uri u = pedido.getUrl();
-                if (HOST.equals(u.getHost()) && u.getPath() != null && u.getPath().startsWith("/Oficina/tocador")) {
+                if (HOST.equals(u.getHost()) && u.getPath() != null && u.getPath().startsWith("/Oficina/pixelmusic")) {
                     return false;
                 }
                 try { startActivity(new Intent(Intent.ACTION_VIEW, u)); } catch (Exception e) { /* sem navegador */ }
@@ -108,7 +108,7 @@ public class MainActivity extends Activity {
         super.onDestroy();
     }
 
-    /** O que a página enxerga como window.TocadorNativo. */
+    /** O que a página enxerga como window.PixelMusicNativo. */
     class Ponte {
         /** A página chama a cada mudança: {titulo, tocando, duracao, posicao}. */
         @JavascriptInterface
