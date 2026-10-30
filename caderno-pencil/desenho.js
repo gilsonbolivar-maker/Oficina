@@ -22,7 +22,8 @@ const Desenho = (() => {
   let emCurso = null;
   let ferramenta = 'caneta';
   let aoMudar = () => {};
-  let viuCaneta = false;       // depois da primeira Pencil, o dedo não desenha
+  let aoRecusarDedo = () => {};
+  let soCaneta = true;         // apoio de mão: só a Pencil deixa tinta
   let largura = 0, altura = 0; // tamanho em pixels de CSS
 
   /* ——— tamanho e nitidez ——— */
@@ -114,16 +115,23 @@ const Desenho = (() => {
   }
 
   function aceita(ev) {
-    if (ev.pointerType === 'pen') { viuCaneta = true; return true; }
-    // Depois que a Pencil apareceu, o dedo só rola a tela — é o apoio da mão.
-    return !viuCaneta;
+    if (ev.pointerType === 'pen') return true;
+    // Apoio de mão: com a trava ligada, a palma e o dedo não deixam tinta.
+    if (soCaneta) { aoRecusarDedo(); return false; }
+    return true;
   }
 
   function comecar(ev) {
+    // A Pencil encostou enquanto um traço de dedo estava em curso: era a palma.
+    if (ev.pointerType === 'pen' && emCurso && emCurso.deDedo) {
+      tracos.pop();
+      emCurso = null;
+    }
     if (!aceita(ev)) return;
     ev.preventDefault();
     tela.setPointerCapture(ev.pointerId);
     emCurso = { ferramenta, pontos: [ponto(ev)] };
+    if (ev.pointerType !== 'pen') emCurso.deDedo = true;
     tracos.push(emCurso);
     redesenhar();
   }
@@ -150,10 +158,11 @@ const Desenho = (() => {
 
   /* ——— o que o app usa ——— */
   return {
-    montar(elemento, aoMudarCallback) {
+    montar(elemento, aoMudarCallback, aoRecusarDedoCallback) {
       tela = elemento;
       ctx = tela.getContext('2d');
       aoMudar = aoMudarCallback || (() => {});
+      aoRecusarDedo = aoRecusarDedoCallback || (() => {});
 
       tela.addEventListener('pointerdown', comecar);
       tela.addEventListener('pointermove', seguir);
@@ -182,6 +191,9 @@ const Desenho = (() => {
 
     usar(qual) { ferramenta = qual === 'borracha' ? 'borracha' : 'caneta'; },
     ferramentaAtual: () => ferramenta,
+
+    // true = só a Pencil desenha (apoio de mão livre para descansar na tela).
+    travarNaCaneta(ligado) { soCaneta = Boolean(ligado); },
 
     desfazer() {
       if (!tracos.length) return false;

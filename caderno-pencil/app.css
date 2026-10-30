@@ -401,6 +401,12 @@ html[data-pauta="on"] .papel {
   color: var(--acento-texto);
 }
 
+.ajuda-opcao {
+  margin: -4px 0 6px 31px;
+  font-size: 13px;
+  color: var(--texto-fraco);
+}
+
 .ajuda { margin-top: 20px; color: var(--texto-fraco); font-size: 14px; }
 .ajuda summary { cursor: pointer; padding: 8px 0; color: var(--texto); font-weight: 600; }
 .ajuda p { margin: 8px 0; }
