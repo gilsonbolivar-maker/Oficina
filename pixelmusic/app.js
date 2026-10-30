@@ -6,7 +6,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.2.3';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.2.4';   // precisa casar com a VERSAO do sw.js
 
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
 
@@ -27,6 +27,7 @@ const btnProxima = document.getElementById('btn-proxima');
 const btnAleatorio = document.getElementById('btn-aleatorio');
 const btnRepetir = document.getElementById('btn-repetir');
 const audio = document.getElementById('audio');
+const erroAudio = document.getElementById('erro-audio');
 const btnEq = document.getElementById('btn-eq');
 const painelEq = document.getElementById('painel-eq');
 const eqBandas = document.getElementById('eq-bandas');
@@ -156,12 +157,41 @@ function tocarIndice(i) {
   if (i < 0 || i >= faixas.length) return;
   indiceAtual = i;
   const f = faixas[i];
+  limparErroAudio();
   audio.src = f.url;
   iniciarAudioGrafo();
-  audio.play().catch(() => {});
+  audio.play().catch(mostrarErroAudio);
   atualizarDestaque();
   atualizarInfo();
 }
+
+/* ——— mostra o erro de verdade na tela, em vez de só falhar quieto ——— */
+
+function mostrarErroAudio(motivo) {
+  const codigos = {
+    1: 'carregamento cancelado',
+    2: 'falha de rede ao buscar o arquivo',
+    3: 'não consegui decodificar esse arquivo',
+    4: 'formato não suportado ou arquivo não encontrado'
+  };
+  let texto = 'Não consegui tocar essa faixa';
+  if (audio.error && codigos[audio.error.code]) {
+    texto += ': ' + codigos[audio.error.code] + ' (código ' + audio.error.code + ')';
+  } else if (motivo && motivo.message) {
+    texto += ': ' + motivo.message;
+  } else if (motivo) {
+    texto += ': ' + String(motivo);
+  }
+  erroAudio.textContent = texto;
+  erroAudio.hidden = false;
+}
+
+function limparErroAudio() {
+  erroAudio.hidden = true;
+  erroAudio.textContent = '';
+}
+
+audio.addEventListener('error', () => mostrarErroAudio());
 
 function atualizarDestaque() {
   [...listaFaixas.children].forEach((li, i) => {
@@ -207,7 +237,7 @@ function anterior() {
 
 btnTocar.addEventListener('click', () => {
   iniciarAudioGrafo();
-  if (audio.paused) audio.play().catch(() => {});
+  if (audio.paused) audio.play().then(limparErroAudio).catch(mostrarErroAudio);
   else audio.pause();
 });
 btnAnterior.addEventListener('click', anterior);
@@ -223,7 +253,7 @@ btnRepetir.addEventListener('click', () => {
   audio.loop = repetir && faixas.length === 1;
 });
 
-audio.addEventListener('play', () => { btnTocar.textContent = '⏸'; avisarNativo(); });
+audio.addEventListener('play', () => { btnTocar.textContent = '⏸'; limparErroAudio(); avisarNativo(); });
 audio.addEventListener('pause', () => { btnTocar.textContent = '▶'; avisarNativo(); });
 audio.addEventListener('ended', () => {
   if (repetir && faixas.length === 1) return;   // audio.loop já cuida disso

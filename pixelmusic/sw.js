@@ -4,7 +4,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.2.3';   // precisa casar com a VERSAO do app.js
+const VERSAO = '1.2.4';   // precisa casar com a VERSAO do app.js
 const CACHE_APP = 'pixelmusic-app-' + VERSAO;
 
 const ARQUIVOS = [

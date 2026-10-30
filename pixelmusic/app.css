@@ -91,6 +91,7 @@ body {
 .tocador .info { text-align: center; margin-bottom: 6px; }
 .tocador .titulo { margin: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tocador .sub { margin: 2px 0 0; font-size: 13px; color: var(--texto-fraco); }
+.tocador .erro { margin: 6px 0 0; font-size: 13px; color: #ff6b6b; }
 
 .progresso { display: flex; align-items: center; gap: 8px; }
 .progresso span { font-size: 12px; color: var(--texto-fraco); width: 3.2em; flex: none; }
