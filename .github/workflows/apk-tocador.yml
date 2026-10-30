@@ -1,0 +1,49 @@
+# Compila o APK do Tocador e publica em
+# https://github.com/gilsonbolivar-maker/Oficina/releases/download/tocador-apk/tocador.apk
+# O APK abre a página do site; só precisa recompilar quando o código Android muda.
+name: APK do Tocador
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tocador/android/**'
+      - '.github/workflows/apk-tocador.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk-tocador
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Compilar
+        working-directory: tocador/android
+        run: gradle --no-daemon assembleRelease
+
+      - name: Publicar o APK
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cp tocador/android/app/build/outputs/apk/release/app-release.apk tocador.apk
+          gh release delete tocador-apk --yes --cleanup-tag || true
+          gh release create tocador-apk tocador.apk \
+            --title "Tocador para Android" \
+            --notes "APK do Tocador: toca as músicas do celular com controles na notificação. Compilado de ${GITHUB_SHA::7}." \
+            --target "$GITHUB_SHA"

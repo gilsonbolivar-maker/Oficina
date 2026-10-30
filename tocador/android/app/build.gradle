@@ -1,0 +1,43 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'io.github.gilsonbolivar.tocador'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'io.github.gilsonbolivar.tocador'
+        minSdk 24
+        targetSdk 34
+        // versionCode sobe a cada APK novo; versionName acompanha o app do site.
+        versionCode 1
+        versionName '1.0.0'
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    signingConfigs {
+        // Chave fixa: o APK novo instala por cima do antigo sem desinstalar.
+        oficina {
+            storeFile file('../assinatura.jks')
+            storePassword 'tocador'
+            keyAlias 'tocador'
+            keyPassword 'tocador'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.oficina
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
