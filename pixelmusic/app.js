@@ -6,7 +6,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.2.1';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.2.2';   // precisa casar com a VERSAO do sw.js
 
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
 
@@ -67,10 +67,13 @@ window.pixelmusicPastaEscolhida = function (lista) {
     url: 'pixelmusic-nativo/' + item.id
   }));
   montarLista();
-  estado.textContent = faixas.length + (faixas.length === 1 ? ' música encontrada' : ' músicas encontradas');
+  estado.textContent = faixas.length + (faixas.length === 1 ? ' música encontrada — toque pra tocar' : ' músicas encontradas — toque numa pra tocar');
   vazio.hidden = true;
   listaFaixas.hidden = false;
-  tocarIndice(0);
+  // Sem tocarIndice(0) aqui de propósito: isso chega da ponte nativa, fora
+  // de um toque real do usuário, e o equalizador (Web Audio API) exige um
+  // gesto de verdade pra começar a tocar som — sem isso, o áudio "toca"
+  // mas fica mudo. O toque na faixa logo abaixo já é esse gesto.
 };
 
 entradaPasta.addEventListener('change', () => {
