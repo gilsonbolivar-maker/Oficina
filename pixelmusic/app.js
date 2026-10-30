@@ -6,7 +6,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.2.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.2.1';   // precisa casar com a VERSAO do sw.js
 
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
 
@@ -40,9 +40,38 @@ let aleatorio = false;
 let repetir = false;
 let arrastandoBarra = false;
 
-/* ——— escolher a pasta ——— */
+/* ——— escolher a pasta ———
+   Dentro do APK, o seletor de pasta da WebView do Android não abre um
+   seletor de pasta de verdade (só deixa escolher um arquivo por vez), então
+   o botão usa o seletor nativo do Android (window.PixelMusicNativo) quando
+   ele existe. No navegador comum, continua usando o <input webkitdirectory>. */
 
-btnEscolher.addEventListener('click', () => entradaPasta.click());
+btnEscolher.addEventListener('click', () => {
+  if (window.PixelMusicNativo && typeof window.PixelMusicNativo.escolherPasta === 'function') {
+    window.PixelMusicNativo.escolherPasta();
+  } else {
+    entradaPasta.click();
+  }
+});
+
+window.pixelmusicPastaEscolhida = function (lista) {
+  if (lista == null) return;   // usuário cancelou o seletor
+  if (!Array.isArray(lista) || lista.length === 0) {
+    estado.textContent = 'Nenhuma música encontrada nessa pasta';
+    return;
+  }
+  lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  faixas.forEach(f => { try { URL.revokeObjectURL(f.url); } catch (e) {} });
+  faixas = lista.map(item => ({
+    nome: nomeSemExtensao(item.nome),
+    url: 'pixelmusic-nativo/' + item.id
+  }));
+  montarLista();
+  estado.textContent = faixas.length + (faixas.length === 1 ? ' música encontrada' : ' músicas encontradas');
+  vazio.hidden = true;
+  listaFaixas.hidden = false;
+  tocarIndice(0);
+};
 
 entradaPasta.addEventListener('change', () => {
   const arquivos = Array.from(entradaPasta.files || []).filter(ehAudio);
