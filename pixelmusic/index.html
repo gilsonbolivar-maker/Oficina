@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>PixelMusic</title>
+<meta name="description" content="Toca as músicas guardadas no celular, com equalizador, grave e controles na notificação.">
+<meta name="theme-color" content="#170f2e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="PixelMusic">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icones/icone-192.png" sizes="192x192">
+<link rel="apple-touch-icon" sizes="180x180" href="icones/icone-180.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header class="topo">
+  <h1>PixelMusic <small class="versao-app" data-versao></small></h1>
+  <p class="estado" id="estado" role="status" aria-live="polite">Nenhuma pasta escolhida</p>
+</header>
+
+<main class="tela">
+  <input type="file" id="entrada-pasta" webkitdirectory multiple accept="audio/*" hidden>
+  <button class="botao principal largo" id="btn-escolher" type="button">📁 Escolher pasta de música</button>
+
+  <p class="vazio" id="vazio">
+    Toque em <b>Escolher pasta de música</b> e selecione a pasta onde ficam suas
+    músicas no celular (por exemplo, <i>Music</i> ou <i>Download</i>). As músicas
+    tocam direto do aparelho — nada é enviado para fora.
+  </p>
+
+  <ul class="faixas" id="lista-faixas" hidden></ul>
+
+  <section class="equalizador" id="painel-eq" hidden>
+    <div class="eq-cabecalho">
+      <h2>Equalizador</h2>
+      <button class="botao" id="btn-eq-resetar" type="button">Redefinir</button>
+    </div>
+    <div class="eq-bandas" id="eq-bandas"></div>
+    <div class="eq-grave">
+      <div class="eq-grave-rotulo">
+        <label for="slider-grave">Reforço de grave</label>
+        <span id="valor-grave">0%</span>
+      </div>
+      <input type="range" id="slider-grave" min="0" max="100" value="0" step="1">
+    </div>
+  </section>
+</main>
+
+<footer class="tocador" id="painel-tocador" hidden>
+  <div class="info">
+    <p class="titulo" id="info-titulo">—</p>
+    <p class="sub" id="info-sub">—</p>
+  </div>
+  <div class="progresso">
+    <span id="tempo-atual">0:00</span>
+    <input type="range" id="barra-progresso" min="0" max="100" value="0" step="0.1">
+    <span id="tempo-total">0:00</span>
+  </div>
+  <div class="controles">
+    <button class="icone" id="btn-aleatorio" type="button" aria-pressed="false" title="Aleatório">🔀</button>
+    <button class="icone" id="btn-anterior" type="button" title="Anterior">⏮</button>
+    <button class="icone grande" id="btn-tocar" type="button" title="Tocar">▶</button>
+    <button class="icone" id="btn-proxima" type="button" title="Próxima">⏭</button>
+    <button class="icone" id="btn-repetir" type="button" aria-pressed="false" title="Repetir">🔁</button>
+  </div>
+  <div class="controles-extra">
+    <button class="icone" id="btn-eq" type="button" aria-pressed="false" title="Equalizador">🎚 Equalizador</button>
+  </div>
+</footer>
+
+<audio id="audio" preload="metadata"></audio>
+
+<script src="app.js"></script>
+</body>
+</html>
