@@ -75,17 +75,20 @@ svg{display:block}
 .cb.flat.on{opacity:1}
 .cb.flat .badge{position:absolute;top:6px;right:4px;font-size:11px;font-weight:700;background:var(--acc);border-radius:8px;padding:1px 4px}
 .cb.play{width:82px;height:82px;background:rgba(255,255,255,.12)}
+.vol{display:flex;align-items:center;gap:12px;width:min(440px,100%);margin-top:26px;color:var(--mut)}
+.vol .range{flex:1}
 
 /* ---------- retrato: player embaixo ---------- */
 @media (orientation:portrait){
   .app{grid-template-columns:1fr;grid-template-rows:1fr auto}
   .left{border-right:0}
-  .player{display:grid;grid-template-columns:120px 1fr;grid-template-areas:"c i" "b b" "k k";column-gap:20px;padding:18px 28px calc(18px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:rgba(0,0,0,.25);justify-items:stretch}
+  .player{display:grid;grid-template-columns:120px 1fr;grid-template-areas:"c i" "b b" "k k" "v v";column-gap:20px;padding:18px 28px calc(18px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:rgba(0,0,0,.25);justify-items:stretch}
   .cover{grid-area:c;width:120px;font-size:44px;border-radius:10px}
   .pinfo{grid-area:i;text-align:left;margin-top:0;align-self:center}
   .ptitle{font-size:22px}.partist,.palbum{font-size:16px}
   .pbar{grid-area:b;width:100%;margin-top:14px}
   .ctrl{grid-area:k;margin-top:10px}
+  .vol{grid-area:v;width:100%;margin-top:12px}
 }
 
 /* ---------- folha de opções ---------- */
@@ -133,6 +136,11 @@ svg{display:block}
       <button class="cb play" id="btnPlay" aria-label="Tocar"><svg id="icPlay" width="34" height="34" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.8v14.4a1 1 0 0 0 1.5.86l11.5-7.2a1 1 0 0 0 0-1.72L8.5 3.94A1 1 0 0 0 7 4.8z"/></svg><svg id="icPause" class="hidden" width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><rect x="5.5" y="4" width="4.5" height="16" rx="1.2"/><rect x="14" y="4" width="4.5" height="16" rx="1.2"/></svg></button>
       <button class="cb" id="btnNext" aria-label="Próxima"><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><rect x="17" y="5" width="3" height="14" rx="1"/><path d="M4 5.5v13a1 1 0 0 0 1.5.86l10-6.16a1.4 1.4 0 0 0 0-2.4l-10-6.16A1 1 0 0 0 4 5.5z"/></svg></button>
       <button class="cb flat" id="btnShuffle" aria-label="Aleatório"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg></button>
+    </div>
+    <div class="vol">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M4 9h3.5L12 5v14l-4.5-4H4z"/></svg>
+      <input type="range" class="range" id="vol" min="0" max="100" value="100" aria-label="Volume">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9h3.5L11 5v14l-4.5-4H3z" fill="currentColor" stroke="none"/><path d="M15 9a4 4 0 0 1 0 6"/><path d="M18 6a8 8 0 0 1 0 12"/></svg>
     </div>
   </section>
 </div>

@@ -1,5 +1,5 @@
 'use strict';
-const VERSAO = '1.0.0';   // precisa casar com a VERSAO do app.js
+const VERSAO = '1.1.0';   // precisa casar com a VERSAO do app.js
 const CACHE = 'player-' + VERSAO;
 const FILES = ['./', './index.html', './app.js', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 

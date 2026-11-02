@@ -1,6 +1,6 @@
 'use strict';
 /* Player — toca offline, no iPad, as músicas guardadas por pastas. */
-const VERSAO = '1.0.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.1.0';   // precisa casar com a VERSAO do sw.js
 
 // Versão sempre à vista: cada [data-versao] da página mostra a deste app.
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
@@ -24,10 +24,10 @@ let folders=[],tracks=[];
 let view={type:'root',folderId:null};
 let query='';
 let queue=[],qi=-1,current=null,audioURL=null;
-let repeat=0,shuffle=false; // repeat: 0 desligado, 1 todas, 2 uma
+let repeat=0,shuffle=false,vol=1; // repeat: 0 desligado, 1 todas, 2 uma
 const coverCache={};
-try{const s=JSON.parse(localStorage.getItem('player-prefs')||'{}');repeat=s.repeat||0;shuffle=!!s.shuffle;}catch(e){}
-function savePrefs(){try{localStorage.setItem('player-prefs',JSON.stringify({repeat,shuffle}));}catch(e){}}
+try{const s=JSON.parse(localStorage.getItem('player-prefs')||'{}');repeat=s.repeat||0;shuffle=!!s.shuffle;if(typeof s.vol==='number')vol=s.vol;}catch(e){}
+function savePrefs(){try{localStorage.setItem('player-prefs',JSON.stringify({repeat,shuffle,vol}));}catch(e){}}
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 
 /* ================= utilidades ================= */
@@ -228,7 +228,29 @@ let unlocked=false;
 function silentURL(){const n=800,b=new ArrayBuffer(44+n),v=new DataView(b),w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
   w(0,'RIFF');v.setUint32(4,36+n,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,8000,true);v.setUint32(28,8000,true);v.setUint16(32,1,true);v.setUint16(34,8,true);w(36,'data');v.setUint32(40,n,true);for(let i=0;i<n;i++)v.setUint8(44+i,128);
   return URL.createObjectURL(new Blob([b],{type:'audio/wav'}));}
-function unlock(){if(unlocked)return;unlocked=true;if(!audio.src){audio.src=silentURL();audio.play().then(()=>audio.pause()).catch(()=>{});}}
+function unlock(){if(unlocked)return;unlocked=true;aplicarVolume();if(!audio.src){audio.src=silentURL();audio.play().then(()=>audio.pause()).catch(()=>{});}}
+
+/* ================= volume ================= */
+// No iPad o Safari ignora audio.volume. Lá o volume passa por um ganho do Web Audio,
+// criado só quando o volume fica abaixo do máximo (no máximo, o áudio segue direto).
+const volNativo=(()=>{try{const a=new Audio();a.volume=.5;return a.volume===.5;}catch(e){return false;}})();
+let actx=null,ganho=null;
+function aplicarVolume(){
+  if(volNativo){audio.volume=vol;return;}
+  if(vol>=0.999&&!ganho)return;
+  if(!actx){
+    const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+    actx=new AC();const fonte=actx.createMediaElementSource(audio);
+    ganho=actx.createGain();fonte.connect(ganho);ganho.connect(actx.destination);
+  }
+  ganho.gain.value=vol;
+  if(actx.state!=='running')actx.resume().catch(()=>{});
+}
+function mostrarVolume(){const v=Math.round(vol*100);$('vol').value=v;$('vol').style.setProperty('--p',v+'%');}
+$('vol').addEventListener('input',e=>{vol=+e.target.value/100;mostrarVolume();aplicarVolume();});
+$('vol').addEventListener('change',savePrefs);
+audio.addEventListener('play',()=>{if(actx&&actx.state!=='running')actx.resume().catch(()=>{});});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&actx&&actx.state!=='running')actx.resume().catch(()=>{});});
 
 /* ================= tocar ================= */
 async function playTrack(id,newQueue){
@@ -326,6 +348,6 @@ if('mediaSession' in navigator){
 (async()=>{
   db=await openDB();
   [folders,tracks]=await Promise.all([dbAll('folders'),dbAll('tracks')]);
-  updateButtons();render();
+  updateButtons();mostrarVolume();if(volNativo)aplicarVolume();render();
   if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 })();
