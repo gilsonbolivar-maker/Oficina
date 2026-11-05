@@ -38,12 +38,35 @@
   #segs{max-height:50vh;overflow:auto}
   .warn{color:var(--warn)}
   label{color:var(--mut);font-size:.95rem}
+  /* teleprompter */
+  #tp{position:fixed;inset:0;background:#000;z-index:50;display:none}
+  #tp.open{display:block}
+  #tpCam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);max-height:none}
+  #tpView{position:absolute;left:0;right:0;top:0;height:42%;overflow:hidden;background:linear-gradient(rgba(0,0,0,.78) 70%,rgba(0,0,0,0));cursor:pointer}
+  #tpText{position:absolute;left:6%;right:6%;top:0;color:#fff;font-weight:700;line-height:1.35;white-space:pre-wrap;will-change:transform}
+  #tpLine{position:absolute;left:0;right:0;top:30%;border-top:2px solid rgba(124,92,255,.7);pointer-events:none}
+  #tpBar{position:absolute;left:0;right:0;bottom:0;padding:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.8) 35%)}
+  #tpBar label{color:#ddd}
+  #tpRec{background:#e5383b;min-width:150px}
+  #tpRec.on{background:#fff;color:#e5383b}
+  #tpCount{position:absolute;inset:0;display:none;place-items:center;font-size:30vmin;font-weight:900;color:#fff;text-shadow:0 0 30px #000;pointer-events:none}
+  #tpTime{position:absolute;top:44%;left:50%;transform:translateX(-50%);color:#fff;background:rgba(229,56,59,.9);padding:4px 10px;border-radius:20px;font-weight:700;display:none;font-variant-numeric:tabular-nums}
+  #tpDone{position:absolute;inset:0;background:rgba(0,0,0,.92);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px}
+  #tpDone video{max-height:55vh;width:auto;max-width:100%;border-radius:10px}
 </style>
 </head>
 <body>
 <main>
   <h1>Legenda Automática</h1>
   <p class="sub">Escolha um vídeo, gere a legenda, corrija o texto e baixe o vídeo legendado. Tudo roda no seu aparelho.</p>
+
+  <section class="card" id="c0">
+    <div class="step"><span class="num">🎬</span> Gravar com teleprompter</div>
+    <div class="msg" style="margin-top:0;margin-bottom:10px">Cole o seu roteiro. Ele rola no topo da tela, perto da câmera, enquanto você grava.</div>
+    <textarea id="tpScript" rows="5" placeholder="Cole ou escreva o roteiro aqui…"></textarea>
+    <div class="row" style="margin-top:10px"><button id="tpOpen">Abrir teleprompter</button></div>
+    <div class="msg" id="m0"></div>
+  </section>
 
   <section class="card" id="c1">
     <div class="step"><span class="num">1</span> Escolha o vídeo</div>
@@ -97,6 +120,28 @@
     <div class="msg" id="m4">O vídeo é gravado em tempo real: um vídeo de 1 minuto leva cerca de 1 minuto.</div>
   </section>
 </main>
+
+<div id="tp">
+  <video id="tpCam" autoplay playsinline muted></video>
+  <div id="tpView"><div id="tpText"></div><div id="tpLine"></div></div>
+  <div id="tpTime">0:00</div>
+  <div id="tpCount"></div>
+  <div id="tpBar">
+    <label>Velocidade <input type="range" id="tpSpeed" min="10" max="120" value="40"></label>
+    <label>Letra <input type="range" id="tpSize" min="20" max="80" value="40"></label>
+    <button id="tpRec">● Gravar</button>
+    <button id="tpBack" class="sec">Voltar ao início do texto</button>
+    <button id="tpClose" class="sec">Fechar</button>
+  </div>
+  <div id="tpDone">
+    <video id="tpPreview" controls playsinline></video>
+    <div class="row" style="justify-content:center">
+      <button id="tpUse">Usar este vídeo para legendar</button>
+      <button id="tpSave" class="sec">Baixar o vídeo</button>
+      <button id="tpAgain" class="sec">Gravar de novo</button>
+    </div>
+  </div>
+</div>
 
 <script>
 const $ = id => document.getElementById(id);
@@ -398,8 +443,100 @@ $('exp').addEventListener('click', async () => {
   }
   btn.disabled = false;
 });
+
+// ---------- teleprompter ----------
+(function(){
+  const tp=$('tp'), cam=$('tpCam'), view=$('tpView'), txt=$('tpText'), recBtn=$('tpRec');
+  const script=$('tpScript');
+  try{ script.value = localStorage.getItem('legendas-roteiro') || ''; }catch(e){}
+  script.addEventListener('input', () => { try{ localStorage.setItem('legendas-roteiro', script.value); }catch(e){} });
+
+  let stream=null, rec=null, parts=[], blob=null, y=0, scrolling=false, last=0, t0=0, timer=null;
+
+  function setSize(){ txt.style.fontSize = $('tpSize').value + 'px'; }
+  $('tpSize').addEventListener('input', setSize);
+  function place(){ txt.style.transform = 'translateY(' + (view.clientHeight*0.3 - y) + 'px)'; }
+  function loop(ts){
+    if(!tp.classList.contains('open')) return;
+    if(scrolling && last){
+      y += (+$('tpSpeed').value) * (ts - last) / 1000;
+      const max = txt.scrollHeight;
+      if(y > max) y = max;
+      place();
+    }
+    last = ts; requestAnimationFrame(loop);
+  }
+  view.addEventListener('click', () => { if(rec && rec.state==='recording') scrolling = !scrolling; });
+  $('tpBack').onclick = () => { y = 0; place(); };
+
+  $('tpOpen').onclick = async () => {
+    if(!script.value.trim()){ $('m0').innerHTML = '<span class="warn">Escreva o roteiro primeiro.</span>'; return; }
+    $('m0').textContent = 'Abrindo a câmera…';
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({
+        video:{facingMode:'user', width:{ideal:1920}, height:{ideal:1080}}, audio:true });
+    }catch(e){ $('m0').innerHTML = '<span class="warn">Não consegui abrir a câmera. Permita o acesso à câmera e ao microfone para este site.</span>'; return; }
+    $('m0').textContent = '';
+    cam.srcObject = stream;
+    txt.textContent = script.value; setSize(); y = 0;
+    $('tpDone').style.display = 'none';
+    tp.classList.add('open'); document.body.style.overflow='hidden';
+    requestAnimationFrame(() => { place(); last = 0; requestAnimationFrame(loop); });
+  };
+
+  function close(){
+    if(rec && rec.state==='recording') rec.stop();
+    if(stream) stream.getTracks().forEach(t => t.stop());
+    stream = null; tp.classList.remove('open'); document.body.style.overflow='';
+    clearInterval(timer); $('tpTime').style.display='none';
+  }
+  $('tpClose').onclick = close;
+
+  async function countdown(){
+    const c = $('tpCount'); c.style.display='grid';
+    for(const n of [3,2,1]){ c.textContent = n; await new Promise(r => setTimeout(r, 800)); }
+    c.style.display='none';
+  }
+
+  recBtn.onclick = async () => {
+    if(rec && rec.state==='recording'){ rec.stop(); return; }
+    if(typeof MediaRecorder === 'undefined'){ alert('Este navegador não grava vídeo.'); return; }
+    recBtn.disabled = true;
+    await countdown();
+    const types = ['video/mp4;codecs=avc1,mp4a','video/mp4','video/webm;codecs=vp9,opus','video/webm'];
+    const mime = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+    rec = new MediaRecorder(stream, mime ? {mimeType:mime, videoBitsPerSecond:8e6} : {});
+    parts = [];
+    rec.ondataavailable = e => e.data.size && parts.push(e.data);
+    rec.onstop = () => {
+      scrolling = false; clearInterval(timer); $('tpTime').style.display='none';
+      recBtn.classList.remove('on'); recBtn.textContent = '● Gravar';
+      blob = new Blob(parts, {type: rec.mimeType || mime || 'video/mp4'});
+      $('tpPreview').src = URL.createObjectURL(blob);
+      $('tpDone').style.display = 'flex';
+    };
+    rec.start(1000);
+    scrolling = true; last = 0;
+    t0 = Date.now(); $('tpTime').style.display='block'; $('tpTime').textContent='0:00';
+    timer = setInterval(() => { const s = Math.floor((Date.now()-t0)/1000); $('tpTime').textContent = Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); }, 500);
+    recBtn.classList.add('on'); recBtn.textContent = '■ Parar'; recBtn.disabled = false;
+  };
+
+  function ext(){ return (blob.type||'').includes('mp4') ? 'mp4' : 'webm'; }
+  $('tpSave').onclick = () => download(blob, 'gravacao-teleprompter.' + ext());
+  $('tpAgain').onclick = () => { $('tpDone').style.display='none'; y = 0; place(); };
+  $('tpUse').onclick = () => {
+    const f = new File([blob], 'gravacao-teleprompter.' + ext(), {type: blob.type});
+    close();
+    file = f; if(url) URL.revokeObjectURL(url);
+    url = URL.createObjectURL(f); vid.src = url; $('stage').hidden = false;
+    $('m1').textContent = 'Gravação do teleprompter — ' + (f.size/1048576).toFixed(1) + ' MB';
+    done('c1'); unlock('c2');
+    $('c2').scrollIntoView({behavior:'smooth'});
+  };
+})();
 </script>
 <span data-versao style="position:fixed;right:8px;bottom:6px;z-index:9999;font:500 11px ui-monospace,Menlo,monospace;opacity:.55;pointer-events:none"></span>
-<script>(function(){const VERSAO='1.0.1';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas v"+VERSAO})})();</script>
+<script>(function(){const VERSAO='1.1.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas v"+VERSAO})})();</script>
 </body>
 </html>
