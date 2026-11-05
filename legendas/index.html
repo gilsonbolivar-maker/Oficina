@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Legenda Automática</title>
+<style>
+  :root{--bg:#0f1115;--card:#181b22;--line:#2a2f3a;--txt:#e9ecf2;--mut:#9aa3b2;--acc:#7c5cff;--ok:#2ecc71;--warn:#ffb020}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt)}
+  main{max-width:900px;margin:0 auto;padding:16px}
+  h1{font-size:1.4rem;margin:8px 0 4px}
+  .sub{color:var(--mut);margin:0 0 16px;font-size:.95rem}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+  .step{display:flex;align-items:center;gap:10px;font-weight:700;margin-bottom:10px}
+  .num{background:var(--acc);color:#fff;border-radius:50%;width:28px;height:28px;display:grid;place-items:center;font-size:.9rem;flex:none}
+  .done .num{background:var(--ok)}
+  .locked{opacity:.45;pointer-events:none}
+  button,.filebtn{background:var(--acc);color:#fff;border:0;border-radius:10px;padding:12px 18px;font-size:1rem;font-weight:600;cursor:pointer;display:inline-block}
+  button.sec{background:#2a2f3a}
+  button:disabled{opacity:.5;cursor:default}
+  input[type=file]{display:none}
+  select,input[type=range]{font-size:1rem}
+  select{background:#0f1115;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px}
+  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .stage{position:relative;background:#000;border-radius:10px;overflow:hidden;margin-top:12px}
+  video{width:100%;display:block;max-height:60vh}
+  .cap{position:absolute;left:5%;right:5%;bottom:8%;text-align:center;pointer-events:none}
+  .cap span{display:inline;padding:.15em .4em;line-height:1.5;font-weight:800;box-decoration-break:clone;-webkit-box-decoration-break:clone;border-radius:6px}
+  .bar{height:10px;background:#0f1115;border-radius:6px;overflow:hidden;margin-top:10px;border:1px solid var(--line)}
+  .bar i{display:block;height:100%;width:0;background:var(--acc);transition:width .2s}
+  .msg{color:var(--mut);margin-top:8px;font-size:.95rem;min-height:1.2em}
+  .seg{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:start;padding:8px 0;border-top:1px solid var(--line)}
+  .seg:first-child{border-top:0}
+  .seg.on textarea{border-color:var(--acc)}
+  .t{color:var(--mut);font-variant-numeric:tabular-nums;font-size:.85rem;background:none;padding:6px 4px;border-radius:6px}
+  textarea{width:100%;background:#0f1115;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px;font-size:1rem;font-family:inherit;resize:vertical;min-height:2.6em}
+  #segs{max-height:50vh;overflow:auto}
+  .warn{color:var(--warn)}
+  label{color:var(--mut);font-size:.95rem}
+</style>
+</head>
+<body>
+<main>
+  <h1>Legenda Automática</h1>
+  <p class="sub">Escolha um vídeo, gere a legenda, corrija o texto e baixe o vídeo legendado. Tudo roda no seu aparelho.</p>
+
+  <section class="card" id="c1">
+    <div class="step"><span class="num">1</span> Escolha o vídeo</div>
+    <label class="filebtn" for="file">Escolher vídeo</label>
+    <input type="file" id="file" accept="video/*">
+    <div class="msg" id="m1"></div>
+    <div class="stage" id="stage" hidden>
+      <video id="vid" controls playsinline></video>
+      <div class="cap" id="cap"></div>
+    </div>
+  </section>
+
+  <section class="card locked" id="c2">
+    <div class="step"><span class="num">2</span> Gerar a legenda</div>
+    <div class="row">
+      <label>Qualidade
+        <select id="model">
+          <option value="onnx-community/whisper-base">Rápida (download ~80 MB)</option>
+          <option value="onnx-community/whisper-small">Mais precisa (download ~250 MB)</option>
+        </select>
+      </label>
+      <button id="go">Gerar legenda</button>
+    </div>
+    <div class="bar"><i id="bar"></i></div>
+    <div class="msg" id="m2">Na primeira vez a IA é baixada. Depois fica guardada no navegador.</div>
+  </section>
+
+  <section class="card locked" id="c3">
+    <div class="step"><span class="num">3</span> Corrigir o texto</div>
+    <div class="msg" style="margin-top:0">Toque no horário para pular até aquele trecho.</div>
+    <div id="segs"></div>
+  </section>
+
+  <section class="card locked" id="c4">
+    <div class="step"><span class="num">4</span> Estilo e download</div>
+    <div class="row">
+      <label>Estilo
+        <select id="style">
+          <option value="classic">Branco com fundo escuro</option>
+          <option value="yellow">Amarelo com contorno</option>
+          <option value="box">Preto com fundo branco</option>
+        </select>
+      </label>
+      <label>Tamanho <input type="range" id="size" min="3" max="9" value="5"></label>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button id="exp">Baixar vídeo legendado</button>
+      <button id="srt" class="sec">Baixar só a legenda (.srt)</button>
+    </div>
+    <div class="bar"><i id="bar2"></i></div>
+    <div class="msg" id="m4">O vídeo é gravado em tempo real: um vídeo de 1 minuto leva cerca de 1 minuto.</div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const vid = $('vid'), cap = $('cap');
+let file = null, url = null, segs = [];
+
+const STYLES = {
+  classic:{color:'#ffffff', bg:'rgba(0,0,0,.65)', stroke:null},
+  yellow:{color:'#ffe500', bg:null, stroke:'#000000'},
+  box:{color:'#000000', bg:'#ffffff', stroke:null}
+};
+
+function unlock(id){ $(id).classList.remove('locked'); }
+function done(id){ $(id).classList.add('done'); }
+function fmt(s){ const m=Math.floor(s/60), x=(s%60).toFixed(1).padStart(4,'0'); return m+':'+x; }
+
+// ---------- 1. vídeo ----------
+$('file').addEventListener('change', e => {
+  const f = e.target.files[0]; if(!f) return;
+  file = f; if(url) URL.revokeObjectURL(url);
+  url = URL.createObjectURL(f);
+  vid.src = url; $('stage').hidden = false;
+  $('m1').textContent = f.name + ' — ' + (f.size/1048576).toFixed(1) + ' MB';
+  done('c1'); unlock('c2');
+});
+
+// ---------- legenda sobre o vídeo ----------
+function currentText(t){ const s = segs.find(s => t >= s.start && t <= s.end); return s ? s : null; }
+function paintOverlay(){
+  const s = currentText(vid.currentTime);
+  document.querySelectorAll('.seg').forEach(el => el.classList.toggle('on', s && +el.dataset.i === s.i));
+  if(!s || !s.text.trim()){ cap.innerHTML=''; return; }
+  const st = STYLES[$('style').value];
+  const px = vid.clientHeight * (+$('size').value) / 100;
+  const sp = document.createElement('span');
+  sp.textContent = s.text.trim();
+  sp.style.color = st.color; sp.style.fontSize = px + 'px';
+  sp.style.background = st.bg || 'transparent';
+  if(st.stroke) sp.style.textShadow = `0 0 3px ${st.stroke},0 0 3px ${st.stroke},2px 2px 0 ${st.stroke},-2px -2px 0 ${st.stroke},2px -2px 0 ${st.stroke},-2px 2px 0 ${st.stroke}`;
+  cap.innerHTML=''; cap.appendChild(sp);
+}
+vid.addEventListener('timeupdate', paintOverlay);
+vid.addEventListener('seeked', paintOverlay);
+$('style').addEventListener('change', paintOverlay);
+$('size').addEventListener('input', paintOverlay);
+
+// ---------- 2. transcrição (Whisper no navegador) ----------
+const workerCode = `
+import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.1';
+env.allowLocalModels = false;
+let asr = null, loaded = null;
+async function load(model, device){
+  const opts = { device, progress_callback: p => postMessage({type:'dl', p}) };
+  opts.dtype = device === 'webgpu' ? { encoder_model:'fp32', decoder_model_merged:'q4' } : 'q8';
+  return pipeline('automatic-speech-recognition', model, opts);
+}
+onmessage = async ({data}) => {
+  try{
+    if(!asr || loaded !== data.model){
+      let device = data.webgpu ? 'webgpu' : 'wasm';
+      try { asr = await load(data.model, device); }
+      catch(e){ if(device==='webgpu'){ device='wasm'; asr = await load(data.model, device);} else throw e; }
+      loaded = data.model;
+      postMessage({type:'ready', device});
+    }
+    const out = await asr(data.audio, {
+      language:'portuguese', task:'transcribe',
+      chunk_length_s:30, stride_length_s:5, return_timestamps:true
+    });
+    postMessage({type:'result', out});
+  }catch(e){ postMessage({type:'error', msg: String(e && e.message || e)}); }
+};`;
+let worker = null;
+function getWorker(){
+  if(!worker) worker = new Worker(URL.createObjectURL(new Blob([workerCode],{type:'text/javascript'})), {type:'module'});
+  return worker;
+}
+
+async function decodeAudio(f){
+  const buf = await f.arrayBuffer();
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  const ctx = new Ctx({sampleRate:16000});
+  const ab = await ctx.decodeAudioData(buf);
+  let data;
+  if(ab.numberOfChannels > 1){
+    const a = ab.getChannelData(0), b = ab.getChannelData(1);
+    data = new Float32Array(a.length);
+    for(let i=0;i<a.length;i++) data[i] = (a[i]+b[i])/2;
+  } else data = ab.getChannelData(0);
+  ctx.close();
+  return data;
+}
+
+$('go').addEventListener('click', async () => {
+  if(!file) return;
+  const btn = $('go'), m = $('m2'), bar = $('bar');
+  btn.disabled = true; bar.style.width = '2%';
+  try{
+    m.textContent = 'Lendo o áudio do vídeo…';
+    const audio = await decodeAudio(file);
+    const secs = audio.length / 16000;
+    m.textContent = 'Preparando a IA…';
+    const w = getWorker();
+    const files = {};
+    let timer = null;
+    const result = await new Promise((res, rej) => {
+      w.onmessage = ({data}) => {
+        if(data.type === 'dl'){
+          const p = data.p;
+          if(p.status === 'progress' && p.total){
+            files[p.file] = [p.loaded, p.total];
+            let l=0,t=0; for(const k in files){ l+=files[k][0]; t+=files[k][1]; }
+            bar.style.width = Math.round(l/t*50) + '%';
+            m.textContent = 'Baixando a IA… ' + (l/1048576).toFixed(0) + ' de ' + (t/1048576).toFixed(0) + ' MB';
+          }
+        } else if(data.type === 'ready'){
+          m.textContent = 'Transcrevendo ' + Math.round(secs) + ' segundos de áudio' + (data.device==='webgpu' ? ' (modo rápido)…' : '… isso pode demorar alguns minutos.');
+          let pct = 50; const step = 45 / Math.max(10, secs * (data.device==='webgpu'?0.3:1.5));
+          timer = setInterval(()=>{ pct = Math.min(95, pct + step); bar.style.width = pct + '%'; }, 1000);
+        } else if(data.type === 'result'){ res(data.out); }
+        else if(data.type === 'error'){ rej(new Error(data.msg)); }
+      };
+      w.postMessage({audio, model: $('model').value, webgpu: !!navigator.gpu}, [audio.buffer]);
+    });
+    clearInterval(timer);
+    bar.style.width = '100%';
+    const chunks = (result.chunks || []).filter(c => c.text && c.text.trim());
+    segs = chunks.map((c,i) => ({
+      i, text: c.text.trim(),
+      start: c.timestamp[0] ?? 0,
+      end: c.timestamp[1] ?? Math.min(secs, (c.timestamp[0] ?? 0) + 4)
+    }));
+    if(!segs.length){ m.innerHTML = '<span class="warn">Não encontrei fala nesse vídeo.</span>'; btn.disabled=false; return; }
+    m.textContent = 'Pronto: ' + segs.length + ' trechos de legenda.';
+    renderSegs(); done('c2'); unlock('c3'); unlock('c4'); paintOverlay();
+  }catch(e){
+    console.error(e);
+    m.innerHTML = '<span class="warn">Deu erro: ' + e.message + '</span>';
+    bar.style.width = '0';
+  }
+  btn.disabled = false;
+});
+
+// ---------- 3. edição ----------
+function renderSegs(){
+  const box = $('segs'); box.innerHTML = '';
+  segs.forEach(s => {
+    const row = document.createElement('div'); row.className='seg'; row.dataset.i = s.i;
+    const t = document.createElement('button'); t.className='t'; t.textContent = fmt(s.start);
+    t.onclick = () => { vid.currentTime = s.start + 0.01; vid.play().catch(()=>{}); };
+    const ta = document.createElement('textarea'); ta.value = s.text; ta.rows = 2;
+    ta.oninput = () => { s.text = ta.value; paintOverlay(); };
+    row.append(t, ta); box.appendChild(row);
+  });
+}
+
+// ---------- 4. exportação ----------
+function srtTime(s){
+  const ms = Math.round(s*1000), h=Math.floor(ms/3600000), m=Math.floor(ms%3600000/60000), x=Math.floor(ms%60000/1000), r=ms%1000;
+  return [h,m,x].map(n=>String(n).padStart(2,'0')).join(':') + ',' + String(r).padStart(3,'0');
+}
+function baseName(){ return (file ? file.name.replace(/\.[^.]+$/,'') : 'video'); }
+function download(blob, name){
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 60000);
+}
+$('srt').addEventListener('click', () => {
+  const txt = segs.filter(s=>s.text.trim()).map((s,k) => `${k+1}\n${srtTime(s.start)} --> ${srtTime(s.end)}\n${s.text.trim()}\n`).join('\n');
+  download(new Blob([txt],{type:'text/plain'}), baseName() + '.srt');
+});
+
+function wrapLines(ctx, text, maxW){
+  const words = text.split(/\s+/); const lines=[]; let line='';
+  for(const w of words){
+    const test = line ? line+' '+w : w;
+    if(ctx.measureText(test).width > maxW && line){ lines.push(line); line = w; } else line = test;
+  }
+  if(line) lines.push(line);
+  return lines;
+}
+function drawCaption(ctx, W, H, text){
+  const st = STYLES[$('style').value];
+  const fs = Math.round(H * (+$('size').value) / 100);
+  ctx.font = `800 ${fs}px system-ui,-apple-system,Segoe UI,Roboto,sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const lines = wrapLines(ctx, text, W*0.88);
+  const lh = fs*1.3; const bottom = H*0.92;
+  lines.forEach((ln, k) => {
+    const y = bottom - (lines.length-1-k)*lh - lh/2;
+    if(st.bg){
+      const w = ctx.measureText(ln).width + fs*0.8;
+      ctx.fillStyle = st.bg;
+      const x = W/2 - w/2, h = lh*0.98, yy = y - h/2, r = fs*0.25;
+      ctx.beginPath(); ctx.moveTo(x+r,yy); ctx.arcTo(x+w,yy,x+w,yy+h,r); ctx.arcTo(x+w,yy+h,x,yy+h,r); ctx.arcTo(x,yy+h,x,yy,r); ctx.arcTo(x,yy,x+w,yy,r); ctx.fill();
+    }
+    if(st.stroke){ ctx.lineWidth = Math.max(3, fs*0.14); ctx.strokeStyle = st.stroke; ctx.lineJoin='round'; ctx.strokeText(ln, W/2, y); }
+    ctx.fillStyle = st.color; ctx.fillText(ln, W/2, y);
+  });
+}
+
+$('exp').addEventListener('click', async () => {
+  const btn = $('exp'), m = $('m4'), bar = $('bar2');
+  if(typeof MediaRecorder === 'undefined'){ m.innerHTML = '<span class="warn">Este navegador não consegue gravar vídeo. Use o botão da legenda .srt.</span>'; return; }
+  btn.disabled = true; vid.pause();
+  try{
+    const v = document.createElement('video');
+    v.src = url; v.playsInline = true; v.muted = false; v.preload = 'auto';
+    await new Promise((r,j)=>{ v.onloadedmetadata = r; v.onerror = () => j(new Error('não consegui abrir o vídeo')); });
+    let W = v.videoWidth, H = v.videoHeight; const k = Math.min(1, 1920/Math.max(W,H));
+    W = Math.round(W*k/2)*2; H = Math.round(H*k/2)*2;
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d');
+    const stream = cv.captureStream(30);
+    try{
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      const ac = new Ctx(); const src = ac.createMediaElementSource(v); const dst = ac.createMediaStreamDestination();
+      src.connect(dst); dst.stream.getAudioTracks().forEach(t => stream.addTrack(t));
+      v._ac = ac;
+    }catch(e){ console.warn('sem áudio', e); }
+    const types = ['video/mp4;codecs=avc1,mp4a','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+    const mime = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+    const rec = new MediaRecorder(stream, mime ? {mimeType:mime, videoBitsPerSecond:6e6} : {});
+    const parts = []; rec.ondataavailable = e => e.data.size && parts.push(e.data);
+    const stopped = new Promise(r => rec.onstop = r);
+    let running = true;
+    const draw = () => {
+      if(!running) return;
+      ctx.drawImage(v, 0, 0, W, H);
+      const s = segs.find(s => v.currentTime >= s.start && v.currentTime <= s.end);
+      if(s && s.text.trim()) drawCaption(ctx, W, H, s.text.trim());
+      bar.style.width = (v.currentTime / v.duration * 100).toFixed(1) + '%';
+      m.textContent = 'Gravando… ' + fmt(v.currentTime) + ' de ' + fmt(v.duration);
+      requestAnimationFrame(draw);
+    };
+    v.onended = () => { running = false; setTimeout(()=>rec.stop(), 200); };
+    if(v._ac && v._ac.state === 'suspended') await v._ac.resume();
+    rec.start(1000);
+    await v.play();
+    draw();
+    await stopped;
+    if(v._ac) v._ac.close();
+    const type = rec.mimeType || mime || 'video/webm';
+    const ext = type.includes('mp4') ? 'mp4' : 'webm';
+    download(new Blob(parts, {type}), baseName() + '-legendado.' + ext);
+    bar.style.width = '100%';
+    m.textContent = 'Pronto! O vídeo legendado foi baixado (' + ext.toUpperCase() + ').';
+  }catch(e){
+    console.error(e);
+    m.innerHTML = '<span class="warn">Deu erro ao gravar: ' + e.message + '</span>';
+  }
+  btn.disabled = false;
+});
+</script>
+<span data-versao style="position:fixed;right:8px;bottom:6px;z-index:9999;font:500 11px ui-monospace,Menlo,monospace;opacity:.55;pointer-events:none"></span>
+<script>(function(){const VERSAO='1.0.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas v"+VERSAO})})();</script>
+</body>
+</html>
