@@ -175,28 +175,76 @@ function getWorker(){
   return worker;
 }
 
-async function decodeAudio(f){
-  const buf = await f.arrayBuffer();
-  const Ctx = window.AudioContext || window.webkitAudioContext;
-  const ctx = new Ctx({sampleRate:16000});
-  const ab = await ctx.decodeAudioData(buf);
-  let data;
-  if(ab.numberOfChannels > 1){
-    const a = ab.getChannelData(0), b = ab.getChannelData(1);
-    data = new Float32Array(a.length);
-    for(let i=0;i<a.length;i++) data[i] = (a[i]+b[i])/2;
-  } else data = ab.getChannelData(0);
-  ctx.close();
-  return data;
+// Converte qualquer AudioBuffer para mono 16 kHz (formato da IA)
+async function to16k(ab){
+  const len = Math.ceil(ab.duration * 16000);
+  const off = new OfflineAudioContext(1, len, 16000);
+  const src = off.createBufferSource(); src.buffer = ab;
+  src.connect(off.destination); src.start();
+  const out = await off.startRendering();
+  return new Float32Array(out.getChannelData(0));
+}
+function decodeWith(ctx, buf){
+  return new Promise((res, rej) => {
+    const p = ctx.decodeAudioData(buf, res, e => rej(e || new Error('Decoding failed')));
+    if(p && p.catch) p.catch(rej);
+  });
+}
+// Plano B: toca o vídeo em silêncio e grava o som que sai dele
+function captureByPlayback(ctx, m){
+  return new Promise((res, rej) => {
+    const v = document.createElement('video');
+    v.src = url; v.playsInline = true; v.preload = 'auto';
+    const parts = [];
+    let src, proc, mute;
+    v.onloadedmetadata = async () => {
+      try{
+        src = ctx.createMediaElementSource(v);
+        proc = ctx.createScriptProcessor(4096, 1, 1);
+        mute = ctx.createGain(); mute.gain.value = 0;
+        proc.onaudioprocess = e => {
+          parts.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+          m.textContent = 'Lendo o áudio… ' + fmt(v.currentTime) + ' de ' + fmt(v.duration);
+        };
+        src.connect(proc); proc.connect(mute); mute.connect(ctx.destination);
+        await v.play();
+      }catch(e){ rej(e); }
+    };
+    v.onended = async () => {
+      try{
+        proc.disconnect(); src.disconnect();
+        let n = 0; parts.forEach(p => n += p.length);
+        const ab = ctx.createBuffer(1, n, ctx.sampleRate);
+        const ch = ab.getChannelData(0); let o = 0;
+        parts.forEach(p => { ch.set(p, o); o += p.length; });
+        res(await to16k(ab));
+      }catch(e){ rej(e); }
+    };
+    v.onerror = () => rej(new Error('não consegui abrir o vídeo'));
+  });
+}
+async function decodeAudio(f, ctx, m){
+  try{
+    const buf = await f.arrayBuffer();
+    const ab = await decodeWith(ctx, buf);
+    return await to16k(ab);
+  }catch(e){
+    console.warn('leitura direta falhou, usando plano B', e);
+    m.textContent = 'Lendo o áudio tocando o vídeo (leva o tempo do vídeo)…';
+    return await captureByPlayback(ctx, m);
+  }
 }
 
 $('go').addEventListener('click', async () => {
   if(!file) return;
   const btn = $('go'), m = $('m2'), bar = $('bar');
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  const actx = new Ctx(); try{ actx.resume(); }catch(e){}
   btn.disabled = true; bar.style.width = '2%';
   try{
     m.textContent = 'Lendo o áudio do vídeo…';
-    const audio = await decodeAudio(file);
+    const audio = await decodeAudio(file, actx, m);
+    try{ actx.close(); }catch(e){}
     const secs = audio.length / 16000;
     m.textContent = 'Preparando a IA…';
     const w = getWorker();
@@ -352,6 +400,6 @@ $('exp').addEventListener('click', async () => {
 });
 </script>
 <span data-versao style="position:fixed;right:8px;bottom:6px;z-index:9999;font:500 11px ui-monospace,Menlo,monospace;opacity:.55;pointer-events:none"></span>
-<script>(function(){const VERSAO='1.0.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas v"+VERSAO})})();</script>
+<script>(function(){const VERSAO='1.0.1';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas v"+VERSAO})})();</script>
 </body>
 </html>
