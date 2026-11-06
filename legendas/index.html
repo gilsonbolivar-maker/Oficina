@@ -28,6 +28,11 @@
   .stage{position:relative;background:#000;border-radius:10px;overflow:hidden;margin-top:12px}
   video{width:100%;display:block;max-height:60vh}
   #capCv{position:absolute;pointer-events:none}
+  .seg{grid-template-columns:auto 1fr auto !important}
+  .pq{display:grid;grid-template-columns:repeat(3,14px);grid-template-rows:repeat(3,18px);gap:2px;padding:3px;border:1px solid var(--line);border-radius:6px;background:#0f1115}
+  .pq b{background:#2a2f3a;border-radius:2px;cursor:pointer}
+  .pq b.sel{background:var(--acc)}
+  .pq.padrao b.mid{background:#4a4f5c}
   .bar{height:10px;background:#0f1115;border-radius:6px;overflow:hidden;margin-top:10px;border:1px solid var(--line)}
   .bar i{display:block;height:100%;width:0;background:var(--acc);transition:width .2s}
   .msg{color:var(--mut);margin-top:8px;font-size:.95rem;min-height:1.2em}
@@ -92,7 +97,7 @@
 
   <section class="card locked" id="c3">
     <div class="step"><span class="num">3</span> Corrigir o texto</div>
-    <div class="msg" style="margin-top:0">Toque no horário para pular até aquele trecho. Corrija só as letras e o tempo de cada palavra fica igual.</div>
+    <div class="msg" style="margin-top:0">Toque no horário para pular até aquele trecho. Corrija só as letras e o tempo de cada palavra fica igual. No quadrinho à direita, escolha onde a legenda aparece na tela; tocar de novo volta ao padrão.</div>
     <div id="segs"></div>
   </section>
 
@@ -188,6 +193,8 @@ function buildGroups(){
     g.i = i;
     g.start = g.words[0].start;
     g.end = g.words[g.words.length-1].end;
+    const pw = g.words.find(w => w.pos != null);
+    g.pos = pw ? pw.pos : null;   // 0..8 no quadro, ou null = padrão
   });
   // segura a legenda na tela até a próxima, se a pausa for curta
   groups.forEach((g, i) => { const n = groups[i+1]; g.show = n ? Math.min(n.start, g.end + 0.4) : g.end + 0.4; });
@@ -209,7 +216,9 @@ function drawCaption(ctx, W, H, t){
     return { w, txt, width: ctx.measureText(txt).width };
   });
   // quebra em linhas
-  const maxW = W * 0.86, lines = []; let line = [], lw = 0;
+  const cell = g.pos;
+  const colX = cell == null ? 0.5 : [0.27, 0.5, 0.73][cell % 3];
+  const maxW = W * (cell == null || cell % 3 === 1 ? 0.86 : 0.46), lines = []; let line = [], lw = 0;
   for(const it of items){
     const add = (line.length ? space : 0) + it.width;
     if(line.length && lw + add > maxW){ lines.push({items:line, width:lw}); line=[]; lw=0; }
@@ -217,12 +226,12 @@ function drawCaption(ctx, W, H, t){
   }
   if(line.length) lines.push({items:line, width:lw});
   const lh = fs * 1.35;
-  const posY = H * (+$('pos').value / 100);
+  const posY = cell == null ? H * (+$('pos').value / 100) : H * [0.16, 0.5, 0.8][Math.floor(cell / 3)];
   const top = posY - (lines.length * lh) / 2;
 
   lines.forEach((ln, li) => {
     const y = top + li*lh + lh/2;
-    let x = W/2 - ln.width/2;
+    let x = W*colX - ln.width/2;
     if(st.lineBg){
       const pad = fs*0.35, r = fs*0.25;
       ctx.fillStyle = st.lineBg; roundRect(ctx, x-pad, y-lh/2+2, ln.width+pad*2, lh-4, r); ctx.fill();
@@ -475,8 +484,30 @@ function renderSegs(){
     const ta = document.createElement('textarea'); ta.rows = 1;
     ta.value = g.words.map(w => w.w).join(' ');
     ta.oninput = () => editGroup(g, ta.value);
-    row.append(t, ta); box.appendChild(row);
+    row.append(t, ta, posGrid(g)); box.appendChild(row);
   });
+}
+// mini quadro da tela: toque numa casa para fixar a legenda ali; toque de novo para voltar ao padrão
+function posGrid(g){
+  const q = document.createElement('div'); q.className = 'pq';
+  q.title = 'Posição desta legenda na tela';
+  const paint = () => {
+    q.classList.toggle('padrao', g.pos == null);
+    [...q.children].forEach((c,k) => c.classList.toggle('sel', g.pos === k));
+  };
+  for(let k=0; k<9; k++){
+    const c = document.createElement('b'); if(k === 7) c.className = 'mid';
+    c.onclick = () => {
+      const val = g.pos === k ? null : k;
+      g.words.forEach(w => { w.pos = val; }); g.pos = val;
+      paint();
+      vid.pause(); vid.currentTime = g.start + Math.min(0.3, (g.end-g.start)/2);
+      paintOverlay();
+    };
+    q.appendChild(c);
+  }
+  paint();
+  return q;
 }
 // corrige o texto mantendo o tempo: mesma quantidade de palavras = mesmo tempo de cada uma
 function editGroup(g, text){
@@ -654,6 +685,6 @@ $('exp').addEventListener('click', async () => {
 })();
 </script>
 <span data-versao style="position:fixed;right:8px;bottom:6px;z-index:9999;font:500 11px ui-monospace,Menlo,monospace;opacity:.55;pointer-events:none"></span>
-<script>(function(){const VERSAO='1.2.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas v"+VERSAO})})();</script>
+<script>(function(){const VERSAO='1.3.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas v"+VERSAO})})();</script>
 </body>
 </html>
