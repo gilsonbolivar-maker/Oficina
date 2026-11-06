@@ -9,9 +9,11 @@
 <style>
   :root{--bg:#1e2a1a;--card:#2a3a24;--line:#43573a;--txt:#ffffff;--mut:#cfd8c3;--acc:#e8782a;--ok:#7fa35a;--warn:#ffb36b;--field:#18221500;--deep:#162013;--sec:#3b4f33}
   *{box-sizing:border-box}
+  [hidden]{display:none !important}
   body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt)}
   main{max-width:900px;margin:0 auto;padding:16px}
   h1{font-size:1.4rem;margin:8px 0 4px}
+  .aviso{margin:4px 0 6px;font-size:1.15rem;font-weight:700;color:var(--warn)}
   .sub{color:var(--mut);margin:0 0 16px;font-size:.95rem}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
   .step{display:flex;align-items:center;gap:10px;font-weight:700;margin-bottom:10px}
@@ -47,6 +49,14 @@
   #segs{max-height:50vh;overflow:auto}
   .warn{color:var(--warn)}
   label{color:var(--mut);font-size:.95rem}
+  label.chk{display:flex;align-items:center;gap:8px;color:#fff;font-weight:600}
+  label.chk input{width:22px;height:22px;accent-color:var(--acc)}
+  .adj{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px 16px;margin-top:12px}
+  .adj label{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .adj input{flex:1;max-width:150px}
+  button.pre{padding:9px 14px;font-size:.9rem}
+  button.pre.sel{background:var(--acc)}
+  #recover{margin-top:10px;background:var(--ok)}
   /* teleprompter */
   #tp{position:fixed;inset:0;background:#000;z-index:50;display:none}
   #tp.open{display:block}
@@ -66,6 +76,7 @@
 </head>
 <body>
 <main>
+  <p class="aviso">Fica com a gente 😞😞😞🙏🙏🙏</p>
   <h1>Legenda Automática</h1>
   <p class="sub">Escolha um vídeo, gere a legenda, corrija o texto e baixe o vídeo legendado. Tudo roda no seu aparelho.</p>
 
@@ -82,6 +93,7 @@
     <label class="filebtn" for="file">Escolher vídeo</label>
     <input type="file" id="file" accept="video/*">
     <div class="msg" id="m1"></div>
+    <button id="recover" hidden>Recuperar a legenda que você já fez neste vídeo</button>
     <div class="stage" id="stage" hidden>
       <video id="vid" controls playsinline></video>
       <canvas id="capCv"></canvas>
@@ -105,7 +117,7 @@
   </section>
 
   <section class="card locked" id="c4">
-    <div class="step"><span class="num">4</span> Estilo e download</div>
+    <div class="step"><span class="num">4</span> Estilo da legenda</div>
     <div class="row">
       <label>Estilo
         <select id="style"></select>
@@ -113,18 +125,61 @@
       <label>Palavras por vez
         <select id="per"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>6</option></select>
       </label>
+      <label>Cor do destaque
+        <select id="accent">
+          <option value="">Do estilo</option><option value="#ffe14d">Amarelo</option><option value="#3ee08f">Verde</option>
+          <option value="#8fd3ff">Azul</option><option value="#ff4d6d">Rosa</option><option value="#e8782a">Laranja</option>
+          <option value="#a98bff">Roxo</option><option value="#ffffff">Branco</option>
+        </select>
+      </label>
     </div>
     <div class="row" style="margin-top:10px">
       <label>Tamanho <input type="range" id="size" min="50" max="200" value="100"></label>
       <label>Altura <input type="range" id="pos" min="10" max="92" value="66"></label>
     </div>
+  </section>
+
+  <section class="card locked" id="c5">
+    <div class="step"><span class="num">5</span> Cortes automáticos</div>
+    <div class="row">
+      <label class="chk"><input type="checkbox" id="cutPause"> Remover pausas</label>
+      <label>Pausas maiores que <b id="cutThrTxt">0,6 s</b> <input type="range" id="cutThr" min="3" max="20" value="6"></label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <label class="chk"><input type="checkbox" id="cutFill"> Cortar vícios de fala (hã, ahn, éé)</label>
+    </div>
+    <div class="msg" id="m5">Os cortes já aparecem na prévia: o vídeo pula os trechos cortados.</div>
+  </section>
+
+  <section class="card locked" id="c6">
+    <div class="step"><span class="num">6</span> Melhorar a imagem</div>
+    <div class="row" id="presets">
+      <button class="sec pre" data-p="natural">Original</button>
+      <button class="sec pre" data-p="auto">Realçar</button>
+      <button class="sec pre" data-p="vivo">Vivo</button>
+      <button class="sec pre" data-p="quente">Quente</button>
+      <button class="sec pre" data-p="pb">Preto e branco</button>
+    </div>
+    <div class="adj">
+      <label>Brilho <input type="range" id="fxB" min="70" max="140" value="100"></label>
+      <label>Contraste <input type="range" id="fxC" min="70" max="150" value="100"></label>
+      <label>Cor <input type="range" id="fxS" min="0" max="180" value="100"></label>
+      <label>Tom quente <input type="range" id="fxW" min="0" max="40" value="0"></label>
+      <label>Nitidez <input type="range" id="fxN" min="0" max="100" value="0"></label>
+    </div>
+    <div class="msg">A nitidez só aparece no vídeo final. O resto já aparece na prévia.</div>
+  </section>
+
+  <section class="card locked" id="c7">
+    <div class="step"><span class="num">7</span> Baixar</div>
+    <div class="msg" id="mDur" style="margin-top:0"></div>
     <div class="row" style="margin-top:12px">
       <button id="exp">Baixar vídeo legendado</button>
       <button id="srt" class="sec">Baixar só a legenda (.srt)</button>
       <button id="saveVid" hidden style="background:var(--ok)">Salvar vídeo no aparelho</button>
     </div>
     <div class="bar"><i id="bar2"></i></div>
-    <div class="msg" id="m4">O vídeo é gravado em tempo real: um vídeo de 1 minuto leva cerca de 1 minuto.</div>
+    <div class="msg" id="m4">O vídeo é gravado em tempo real: um vídeo de 1 minuto leva cerca de 1 minuto. <b>Deixe o Legendas aberto na tela até terminar.</b></div>
   </section>
 </main>
 
@@ -229,8 +284,11 @@ function groupAt(t){ return groups.find(g => t >= g.start - 0.05 && t < g.show) 
 
 // ================= DESENHO (prévia e exportação usam o mesmo) =================
 function drawCaption(ctx, W, H, t){
-  const g = groupAt(t); if(!g) return;
-  const st = STYLES[g.style || $('style').value];
+  const g0 = groupAt(t); if(!g0) return;
+  const g = $('cutFill').checked ? {...g0, words: g0.words.filter(w => !isFiller(w))} : g0;
+  if(!g.words.length) return;
+  const base = STYLES[g.style || $('style').value], acc = $('accent').value;
+  const st = acc && base.mode !== 'gibi' ? {...base, active: acc, glow: base.glow ? acc : base.glow} : base;
   const fs = Math.round(H * st.size * (+$("size").value) / 10000);
   ctx.save();
   const fam = st.font === 'system-ui' ? 'system-ui,-apple-system,sans-serif' : `"${st.font}",system-ui,sans-serif`;
@@ -424,6 +482,160 @@ function roundRect(ctx, x, y, w, h, r){
   ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
 }
 
+// ================= CORTES AUTOMÁTICOS =================
+const FILLER = /^(é{2,}|eh+|ehm+|ah+|ahn+|ahm+|hã+|hum+|hm+|ã+|uh+|uhm+|mmm+)[.,!?…]*$/i;
+function isFiller(w){ return FILLER.test(w.w.trim()); }
+// lista de trechos [início, fim] que somem do vídeo
+function getCuts(){
+  if(!words.length) return [];
+  const dur = vid.duration || words[words.length-1].end + 1;
+  const cuts = [], pad = 0.15;
+  if($('cutPause').checked){
+    const thr = +$('cutThr').value / 10;
+    const spoken = $('cutFill').checked ? words.filter(w => !isFiller(w)) : words;
+    if(spoken.length){
+      if(spoken[0].start > thr) cuts.push([0, spoken[0].start - pad]);
+      for(let i=1; i<spoken.length; i++){
+        const a = spoken[i-1].end, b = spoken[i].start;
+        if(b - a > thr) cuts.push([a + pad, b - pad]);
+      }
+      const last = spoken[spoken.length-1].end;
+      if(dur - last > thr) cuts.push([last + pad, dur + 1]);
+    }
+  }
+  if($('cutFill').checked) words.filter(isFiller).forEach(w => cuts.push([w.start, w.end]));
+  cuts.sort((x,y) => x[0]-y[0]);
+  const out = [];
+  cuts.forEach(c => { const l = out[out.length-1]; if(l && c[0] <= l[1] + 0.05) l[1] = Math.max(l[1], c[1]); else out.push([...c]); });
+  return out.filter(c => c[1] - c[0] > 0.05);
+}
+let cuts = [];
+function cutAt(t){ return cuts.find(c => t >= c[0] && t < c[1]) || null; }
+function refreshCuts(){
+  cuts = getCuts();
+  const dur = vid.duration || 0;
+  const cutTotal = cuts.reduce((a,c) => a + Math.max(0, Math.min(c[1], dur) - c[0]), 0);
+  $('cutThrTxt').textContent = ($('cutThr').value/10).toFixed(1).replace('.', ',') + ' s';
+  const txt = cuts.length
+    ? `${cuts.length} cortes, ${fmtS(cutTotal)} a menos. O vídeo final fica com ${fmtS(Math.max(0, dur - cutTotal))}.`
+    : 'Sem cortes: o vídeo final fica com ' + fmtS(dur) + '.';
+  $('m5').textContent = cuts.length ? txt : 'Os cortes aparecem na prévia: o vídeo pula os trechos cortados.';
+  $('mDur').textContent = txt;
+  saveProject();
+}
+function fmtS(s){ s = Math.round(s); return s < 60 ? s + ' s' : Math.floor(s/60) + ' min ' + String(s%60).padStart(2,'0') + ' s'; }
+['cutPause','cutFill','cutThr'].forEach(id => $(id).addEventListener('input', () => { refreshCuts(); paintOverlay(); }));
+
+// ================= MELHORAR A IMAGEM =================
+const PRESETS = {
+  natural:{B:100,C:100,S:100,W:0,N:0}, auto:{B:104,C:110,S:115,W:4,N:35},
+  vivo:{B:103,C:118,S:145,W:0,N:40}, quente:{B:104,C:106,S:110,W:22,N:25}, pb:{B:104,C:125,S:0,W:0,N:30}
+};
+function fx(){ return { B:+$('fxB').value/100, C:+$('fxC').value/100, S:+$('fxS').value/100, W:+$('fxW').value/100, N:+$('fxN').value/100 }; }
+function fxIsPlain(f){ return f.B===1 && f.C===1 && f.S===1 && f.W===0 && f.N===0; }
+function applyPreviewFx(){
+  const f = fx();
+  vid.style.filter = fxIsPlain(f) ? '' : `brightness(${f.B}) contrast(${f.C}) saturate(${f.S}) sepia(${f.W})`;
+  document.querySelectorAll('.pre').forEach(b => { const p = PRESETS[b.dataset.p];
+    b.classList.toggle('sel', ['B','C','S','W','N'].every(k => Math.abs(p[k] - Math.round(f[k]*100)) < 1)); });
+}
+['fxB','fxC','fxS','fxW','fxN'].forEach(id => $(id).addEventListener('input', () => { applyPreviewFx(); saveProject(); }));
+document.querySelectorAll('.pre').forEach(b => b.onclick = () => {
+  const p = PRESETS[b.dataset.p]; for(const k in p) $('fx'+k).value = p[k];
+  applyPreviewFx(); saveProject();
+});
+
+// Filtro do vídeo final, pela placa de vídeo (WebGL). Mesma conta dos filtros da prévia, mais a nitidez.
+function makeFxRenderer(W, H){
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const gl = cv.getContext('webgl', {premultipliedAlpha:false, preserveDrawingBuffer:true});
+  if(!gl) return null;
+  const vs = 'attribute vec2 p;varying vec2 uv;void main(){uv=vec2(p.x*.5+.5,.5-p.y*.5);gl_Position=vec4(p,0.,1.);}';
+  const fs = `precision mediump float;varying vec2 uv;uniform sampler2D tx;uniform vec2 px;uniform float B,C,S,Wm,N;
+  void main(){
+    vec3 c=texture2D(tx,uv).rgb;
+    if(N>0.){ vec3 n=texture2D(tx,uv+vec2(px.x,0.)).rgb+texture2D(tx,uv-vec2(px.x,0.)).rgb+texture2D(tx,uv+vec2(0.,px.y)).rgb+texture2D(tx,uv-vec2(0.,px.y)).rgb;
+      c=clamp(c+N*(4.*c-n)*.6,0.,1.); }
+    c=clamp(c*B,0.,1.);
+    c=clamp((c-.5)*C+.5,0.,1.);
+    mat3 sm=mat3(.213+.787*S,.213-.213*S,.213-.213*S, .715-.715*S,.715+.285*S,.715-.715*S, .072-.072*S,.072-.072*S,.072+.928*S);
+    c=clamp(sm*c,0.,1.);
+    float a=1.-Wm;
+    mat3 se=mat3(.393+.607*a,.349-.349*a,.272-.272*a, .769-.769*a,.686+.314*a,.534-.534*a, .189-.189*a,.168-.168*a,.131+.869*a);
+    c=clamp(se*c,0.,1.);
+    gl_FragColor=vec4(c,1.);
+  }`;
+  const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+    if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+  try{
+    const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs));
+    gl.linkProgram(pr); gl.useProgram(pr);
+    const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
+    const loc = gl.getAttribLocation(pr, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+    [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T].forEach(p => gl.texParameteri(gl.TEXTURE_2D, p, gl.CLAMP_TO_EDGE));
+    [gl.TEXTURE_MIN_FILTER, gl.TEXTURE_MAG_FILTER].forEach(p => gl.texParameteri(gl.TEXTURE_2D, p, gl.LINEAR));
+    const u = n => gl.getUniformLocation(pr, n);
+    gl.viewport(0, 0, W, H);
+    return {
+      canvas: cv,
+      draw(video, f){
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, video);
+        gl.uniform2f(u('px'), 1/(video.videoWidth||W), 1/(video.videoHeight||H));
+        gl.uniform1f(u('B'), f.B); gl.uniform1f(u('C'), f.C); gl.uniform1f(u('S'), f.S); gl.uniform1f(u('Wm'), f.W); gl.uniform1f(u('N'), f.N);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      }
+    };
+  }catch(e){ console.warn('filtro WebGL falhou', e); return null; }
+}
+
+// ================= IPHONE: TELA ACESA =================
+let wakeLock = null;
+async function keepAwake(on){
+  try{
+    if(on && 'wakeLock' in navigator && !wakeLock){ wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => wakeLock = null); }
+    if(!on && wakeLock){ await wakeLock.release(); wakeLock = null; }
+  }catch(e){}
+}
+let awakeWanted = false;
+document.addEventListener('visibilitychange', () => { if(awakeWanted && document.visibilityState === 'visible') keepAwake(true); });
+
+// ================= SALVAR O TRABALHO =================
+// Se o Safari recarregar a página, a legenda feita neste vídeo volta com um toque.
+function projKey(){ return file ? 'legendas-proj:' + file.name + ':' + file.size : null; }
+const SET_IDS = ['style','per','accent','size','pos','cutThr','fxB','fxC','fxS','fxW','fxN'], CHK_IDS = ['cutPause','cutFill'];
+let saveT = null;
+function saveProject(){
+  const k = projKey(); if(!k || !words.length) return;
+  clearTimeout(saveT);
+  saveT = setTimeout(() => {
+    const set = {}; SET_IDS.forEach(id => set[id] = $(id).value); CHK_IDS.forEach(id => set[id] = $(id).checked);
+    try{ localStorage.setItem(k, JSON.stringify({words, set, at: Date.now()})); }catch(e){ console.warn('não salvou', e); }
+  }, 600);
+}
+function loadProject(){
+  try{ const raw = localStorage.getItem(projKey()); return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
+}
+async function restoreProject(p){
+  words = p.words;
+  SET_IDS.forEach(id => { if(p.set[id] != null) $(id).value = p.set[id]; });
+  CHK_IDS.forEach(id => { if(p.set[id] != null) $(id).checked = p.set[id]; });
+  buildGroups(); renderSegs(); afterCaptions();
+  await loadFonts(20);
+  fitOverlay(); paintOverlay();
+}
+function afterCaptions(){
+  done('c2'); ['c3','c4','c5','c6','c7'].forEach(unlock);
+  applyPreviewFx(); refreshCuts();
+}
+function loadFonts(px){
+  return Promise.all(['300','500','800','900'].map(w => `${w} ${px}px "Montserrat"`).concat([`italic 700 ${px}px "Playfair Display"`, `400 ${px}px "Bangers"`])
+    .map(f => document.fonts.load(f).catch(()=>{})));
+}
+$('recover').addEventListener('click', () => { const p = loadProject(); if(p) restoreProject(p); $('recover').hidden = true; });
+['style','per','accent','size','pos'].forEach(id => $(id).addEventListener('change', saveProject));
+
 // ---------- prévia: canvas exatamente sobre a imagem do vídeo ----------
 function fitOverlay(){
   const vw = vid.videoWidth, vh = vid.videoHeight; if(!vw) return;
@@ -443,7 +655,12 @@ function paintOverlay(){
   document.querySelectorAll('.seg').forEach(el => el.classList.toggle('on', !!g && +el.dataset.i === g.i));
 }
 let painting = false;
-function paintLoop(){ paintOverlay(); if(!vid.paused && !vid.ended) requestAnimationFrame(paintLoop); else painting = false; }
+function paintLoop(){
+  const c = cuts.length && !vid.seeking ? cutAt(vid.currentTime) : null;
+  if(c){ if(c[1] >= vid.duration){ vid.pause(); vid.currentTime = Math.max(0, c[0] - 0.01); } else vid.currentTime = c[1]; }
+  paintOverlay();
+  if(!vid.paused && !vid.ended) requestAnimationFrame(paintLoop); else painting = false;
+}
 vid.addEventListener('play', () => { if(!painting){ painting = true; requestAnimationFrame(paintLoop); } });
 vid.addEventListener('seeked', paintOverlay);
 vid.addEventListener('loadedmetadata', () => { fitOverlay(); paintOverlay(); });
@@ -451,6 +668,8 @@ window.addEventListener('resize', () => { fitOverlay(); paintOverlay(); });
 ['style','size','pos'].forEach(id => $(id).addEventListener('input', paintOverlay));
 $('style').addEventListener('change', () => { $('pos').value = Math.round(STYLES[$('style').value].pos*100); paintOverlay(); });
 $('per').addEventListener('change', () => { if(words.length){ buildGroups(); renderSegs(); paintOverlay(); } });
+$('accent').addEventListener('change', paintOverlay);
+vid.addEventListener('loadedmetadata', () => { if(words.length) refreshCuts(); });
 $('pos').value = Math.round(STYLES[$('style').value].pos*100);
 
 // ================= 1. VÍDEO =================
@@ -461,7 +680,13 @@ $('file').addEventListener('change', e => {
   vid.src = url; $('stage').hidden = false;
   $('m1').textContent = f.name + ' — ' + (f.size/1048576).toFixed(1) + ' MB';
   done('c1'); unlock('c2');
+  offerRecover();
 });
+function offerRecover(){
+  const p = loadProject();
+  $('recover').hidden = !p;
+  if(p) $('m1').textContent += ' — você já legendou este vídeo antes.';
+}
 
 // ================= 2. TRANSCRIÇÃO =================
 const workerCode = `
@@ -592,6 +817,7 @@ $('go').addEventListener('click', async () => {
   const actx = new Ctx(); try{ actx.resume(); }catch(e){}
   btn.disabled = true; bar.style.width = '2%';
   let timer = null;
+  awakeWanted = true; keepAwake(true);
   try{
     m.textContent = 'Lendo o áudio do vídeo…';
     const audio = await decodeAudio(file, actx, m);
@@ -624,14 +850,15 @@ $('go').addEventListener('click', async () => {
     if(!words.length){ m.innerHTML = '<span class="warn">Não encontrei fala nesse vídeo.</span>'; btn.disabled=false; return; }
     buildGroups();
     m.textContent = 'Pronto: ' + words.length + ' palavras' + (result.mode === 'word' ? ', cada uma com seu tempo exato.' : '. O tempo de cada palavra foi estimado.');
-    renderSegs(); done('c2'); unlock('c3'); unlock('c4');
-    await Promise.all(['300 20px "Montserrat"','500 20px "Montserrat"','900 20px "Montserrat"','italic 700 20px "Playfair Display"','400 20px "Bangers"'].map(f => document.fonts.load(f).catch(()=>{})));
+    renderSegs(); afterCaptions(); $('recover').hidden = true;
+    await loadFonts(20);
     fitOverlay(); paintOverlay();
   }catch(e){
     console.error(e); clearInterval(timer);
     m.innerHTML = '<span class="warn">Deu erro: ' + e.message + '</span>';
     bar.style.width = '0';
   }
+  awakeWanted = false; keepAwake(false);
   btn.disabled = false;
 });
 
@@ -661,7 +888,7 @@ function styleSel(g){
     g.words.forEach(w => { w.style = val; }); g.style = val;
     sel.classList.toggle('own', !!val);
     vid.pause(); vid.currentTime = g.start + Math.min(0.3, (g.end-g.start)/2);
-    paintOverlay();
+    paintOverlay(); saveProject();
   };
   sel.classList.toggle('own', !!g.style);
   return sel;
@@ -681,7 +908,7 @@ function posGrid(g){
       g.words.forEach(w => { w.pos = val; }); g.pos = val;
       paint();
       vid.pause(); vid.currentTime = g.start + Math.min(0.3, (g.end-g.start)/2);
-      paintOverlay();
+      paintOverlay(); saveProject();
     };
     q.appendChild(c);
   }
@@ -698,7 +925,7 @@ function editGroup(g, text){
   const first = words.indexOf(g.words[0]);
   if(first >= 0) words.splice(first, g.words.length, ...nw);
   if(nw.length){ g.words = nw; } else { g.words = []; }
-  paintOverlay();
+  paintOverlay(); refreshCuts();
 }
 
 // ================= 4. EXPORTAÇÃO =================
@@ -729,9 +956,13 @@ $('saveVid').addEventListener('click', async () => {
   const r = await saveVideo(lastVideo.blob, lastVideo.name);
   if(r === 'download') $('m4').textContent = 'O vídeo foi baixado. No iPhone, ele fica no app Arquivos, na pasta Downloads.';
 });
+// tempo no vídeo final, descontando os cortes
+function outT(t){ let d = 0; for(const c of cuts){ if(c[1] <= t) d += c[1]-c[0]; else if(c[0] < t) d += t-c[0]; } return Math.max(0, t-d); }
 $('srt').addEventListener('click', () => {
-  const txt = groups.filter(g => g.words.length).map((g,k) =>
-    `${k+1}\n${srtTime(g.start)} --> ${srtTime(g.show)}\n${g.words.map(w=>w.w).join(' ')}\n`).join('\n');
+  const fill = $('cutFill').checked;
+  const list = groups.map(g => ({g, txt: g.words.filter(w => !(fill && isFiller(w))).map(w => w.w).join(' ')}))
+    .filter(x => x.txt && outT(x.g.show) - outT(x.g.start) > 0.05);
+  const txt = list.map((x,k) => `${k+1}\n${srtTime(outT(x.g.start))} --> ${srtTime(outT(x.g.show))}\n${x.txt}\n`).join('\n');
   download(new Blob([txt],{type:'text/plain'}), baseName() + '.srt');
 });
 
@@ -739,8 +970,11 @@ $('exp').addEventListener('click', async () => {
   const btn = $('exp'), m = $('m4'), bar = $('bar2');
   if(typeof MediaRecorder === 'undefined'){ m.innerHTML = '<span class="warn">Este navegador não consegue gravar vídeo. Use o botão da legenda .srt.</span>'; return; }
   btn.disabled = true; vid.pause();
+  awakeWanted = true; keepAwake(true);
+  let onVis = null;
   try{
-    await Promise.all(['300 40px "Montserrat"','500 40px "Montserrat"','800 40px "Montserrat"','900 40px "Montserrat"','italic 700 40px "Playfair Display"','400 20px "Bangers"'].map(f => document.fonts.load(f).catch(()=>{})));
+    await loadFonts(40);
+    refreshCuts();
     const v = document.createElement('video');
     v.src = url; v.playsInline = true; v.preload = 'auto';
     await new Promise((r,j)=>{ v.onloadedmetadata = r; v.onerror = () => j(new Error('não consegui abrir o vídeo')); });
@@ -748,6 +982,9 @@ $('exp').addEventListener('click', async () => {
     W = Math.round(W*k/2)*2; H = Math.round(H*k/2)*2;
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const ctx = cv.getContext('2d');
+    const f = fx(), useFx = !fxIsPlain(f);
+    const glfx = useFx ? makeFxRenderer(W, H) : null;
+    if(useFx && !glfx && 'filter' in ctx) ctx.filter = `brightness(${f.B}) contrast(${f.C}) saturate(${f.S}) sepia(${f.W})`;
     const stream = cv.captureStream(30);
     let ac = null;
     try{
@@ -757,24 +994,66 @@ $('exp').addEventListener('click', async () => {
     }catch(e){ console.warn('sem áudio', e); }
     const types = ['video/mp4;codecs=avc1,mp4a','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
     const mime = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
-    const rec = new MediaRecorder(stream, mime ? {mimeType:mime, videoBitsPerSecond:8e6} : {});
+    const bps = Math.round(Math.min(14e6, Math.max(4e6, W*H*4.5)));
+    const rec = new MediaRecorder(stream, mime ? {mimeType:mime, videoBitsPerSecond:bps} : {});
     const parts = []; rec.ondataavailable = e => e.data.size && parts.push(e.data);
     const stopped = new Promise(r => rec.onstop = r);
-    let running = true;
+    const finalDur = Math.max(0.1, outT(v.duration));
+    let running = true, jumping = false, away = false;
+    const finish = () => { if(!running) return; running = false; v.pause(); setTimeout(()=>rec.stop(), 200); };
+    const frame = () => {
+      if(glfx){ glfx.draw(v, f); ctx.drawImage(glfx.canvas, 0, 0, W, H); }
+      else ctx.drawImage(v, 0, 0, W, H);
+      if(ctx.filter && ctx.filter !== 'none'){ ctx.save(); ctx.filter = 'none'; drawCaption(ctx, W, H, v.currentTime); ctx.restore(); }
+      else drawCaption(ctx, W, H, v.currentTime);
+    };
+    // pula um trecho cortado: pausa a gravação, avança o vídeo e continua
+    const jump = async to => {
+      jumping = true;
+      try{ rec.pause(); }catch(e){}
+      v.pause();
+      await new Promise(r => { v.onseeked = r; v.currentTime = to; });
+      v.onseeked = null;
+      frame();
+      if(away){ jumping = false; return; }
+      await v.play().catch(()=>{});
+      try{ rec.resume(); }catch(e){}
+      jumping = false;
+    };
     const draw = () => {
       if(!running) return;
-      ctx.drawImage(v, 0, 0, W, H);
-      drawCaption(ctx, W, H, v.currentTime);
-      bar.style.width = (v.currentTime / v.duration * 100).toFixed(1) + '%';
-      m.textContent = 'Gravando… ' + fmt(v.currentTime) + ' de ' + fmt(v.duration);
+      const c = cutAt(v.currentTime);
+      if(c && !jumping && !away){
+        if(c[1] >= v.duration - 0.05) finish(); else jump(c[1]);
+      }
+      if(!jumping) frame();
+      bar.style.width = (outT(v.currentTime) / finalDur * 100).toFixed(1) + '%';
+      if(!away) m.textContent = 'Gravando… ' + fmt(outT(v.currentTime)) + ' de ' + fmt(finalDur) + '. Deixe esta tela aberta.';
       requestAnimationFrame(draw);
     };
-    v.onended = () => { running = false; setTimeout(()=>rec.stop(), 200); };
+    // saiu do app ou bloqueou a tela: pausa tudo e continua quando voltar
+    onVis = async () => {
+      if(!running) return;
+      if(document.visibilityState === 'hidden'){
+        away = true; v.pause(); try{ rec.pause(); }catch(e){}
+      } else if(away){
+        away = false;
+        m.innerHTML = '<b>Continuando a gravação…</b>';
+        if(ac && ac.state !== 'running') await ac.resume().catch(()=>{});
+        if(!jumping){ await v.play().catch(()=>{}); try{ rec.resume(); }catch(e){} }
+      }
+    };
+    document.addEventListener('visibilitychange', onVis);
+    v.onended = finish;
     if(ac && ac.state === 'suspended') await ac.resume();
+    const first = cutAt(0);
+    if(first && first[0] <= 0.01){ await new Promise(r => { v.onseeked = r; v.currentTime = first[1]; }); v.onseeked = null; }
+    frame();
     rec.start(1000);
     await v.play();
     draw();
     await stopped;
+    document.removeEventListener('visibilitychange', onVis); onVis = null;
     if(ac) ac.close();
     const type = rec.mimeType || mime || 'video/webm';
     const ext = type.includes('mp4') ? 'mp4' : 'webm';
@@ -791,6 +1070,8 @@ $('exp').addEventListener('click', async () => {
     console.error(e);
     m.innerHTML = '<span class="warn">Deu erro ao gravar: ' + e.message + '</span>';
   }
+  if(onVis) document.removeEventListener('visibilitychange', onVis);
+  awakeWanted = false; keepAwake(false);
   btn.disabled = false;
 });
 
@@ -900,6 +1181,6 @@ $('exp').addEventListener('click', async () => {
 })();
 </script>
 <span data-versao style="position:fixed;right:8px;bottom:6px;z-index:9999;font:500 11px ui-monospace,Menlo,monospace;opacity:.55;pointer-events:none"></span>
-<script>(function(){const VERSAO='1.8.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas v"+VERSAO})})();</script>
+<script>(function(){const VERSAO='2.0.5';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas v"+VERSAO})})();</script>
 </body>
 </html>
