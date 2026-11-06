@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Legenda Automática</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;800;900&display=swap" rel="stylesheet">
 <style>
   :root{--bg:#0f1115;--card:#181b22;--line:#2a2f3a;--txt:#e9ecf2;--mut:#9aa3b2;--acc:#7c5cff;--ok:#2ecc71;--warn:#ffb020}
   *{box-sizing:border-box}
@@ -25,8 +27,7 @@
   .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
   .stage{position:relative;background:#000;border-radius:10px;overflow:hidden;margin-top:12px}
   video{width:100%;display:block;max-height:60vh}
-  .cap{position:absolute;left:5%;right:5%;bottom:8%;text-align:center;pointer-events:none}
-  .cap span{display:inline;padding:.15em .4em;line-height:1.5;font-weight:800;box-decoration-break:clone;-webkit-box-decoration-break:clone;border-radius:6px}
+  #capCv{position:absolute;pointer-events:none}
   .bar{height:10px;background:#0f1115;border-radius:6px;overflow:hidden;margin-top:10px;border:1px solid var(--line)}
   .bar i{display:block;height:100%;width:0;background:var(--acc);transition:width .2s}
   .msg{color:var(--mut);margin-top:8px;font-size:.95rem;min-height:1.2em}
@@ -75,28 +76,23 @@
     <div class="msg" id="m1"></div>
     <div class="stage" id="stage" hidden>
       <video id="vid" controls playsinline></video>
-      <div class="cap" id="cap"></div>
+      <canvas id="capCv"></canvas>
     </div>
   </section>
 
   <section class="card locked" id="c2">
     <div class="step"><span class="num">2</span> Gerar a legenda</div>
     <div class="row">
-      <label>Qualidade
-        <select id="model">
-          <option value="onnx-community/whisper-base">Rápida (download ~80 MB)</option>
-          <option value="onnx-community/whisper-small">Mais precisa (download ~250 MB)</option>
-        </select>
-      </label>
+      <input type="hidden" id="model" value="onnx-community/whisper-base_timestamped">
       <button id="go">Gerar legenda</button>
     </div>
     <div class="bar"><i id="bar"></i></div>
-    <div class="msg" id="m2">Na primeira vez a IA é baixada. Depois fica guardada no navegador.</div>
+    <div class="msg" id="m2">Na primeira vez a IA é baixada, cerca de 80 MB. Depois fica guardada no navegador.</div>
   </section>
 
   <section class="card locked" id="c3">
     <div class="step"><span class="num">3</span> Corrigir o texto</div>
-    <div class="msg" style="margin-top:0">Toque no horário para pular até aquele trecho.</div>
+    <div class="msg" style="margin-top:0">Toque no horário para pular até aquele trecho. Corrija só as letras e o tempo de cada palavra fica igual.</div>
     <div id="segs"></div>
   </section>
 
@@ -104,13 +100,15 @@
     <div class="step"><span class="num">4</span> Estilo e download</div>
     <div class="row">
       <label>Estilo
-        <select id="style">
-          <option value="classic">Branco com fundo escuro</option>
-          <option value="yellow">Amarelo com contorno</option>
-          <option value="box">Preto com fundo branco</option>
-        </select>
+        <select id="style"></select>
       </label>
-      <label>Tamanho <input type="range" id="size" min="3" max="9" value="5"></label>
+      <label>Palavras por vez
+        <select id="per"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>6</option></select>
+      </label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <label>Tamanho <input type="range" id="size" min="50" max="200" value="100"></label>
+      <label>Altura <input type="range" id="pos" min="10" max="92" value="66"></label>
     </div>
     <div class="row" style="margin-top:12px">
       <button id="exp">Baixar vídeo legendado</button>
@@ -145,20 +143,147 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const vid = $('vid'), cap = $('cap');
-let file = null, url = null, segs = [];
-
-const STYLES = {
-  classic:{color:'#ffffff', bg:'rgba(0,0,0,.65)', stroke:null},
-  yellow:{color:'#ffe500', bg:null, stroke:'#000000'},
-  box:{color:'#000000', bg:'#ffffff', stroke:null}
-};
+const vid = $('vid'), capCv = $('capCv');
+let file = null, url = null;
+let words = [];   // [{w, start, end}] — lista única de palavras com tempo
+let groups = [];  // legendas montadas a partir das palavras
 
 function unlock(id){ $(id).classList.remove('locked'); }
 function done(id){ $(id).classList.add('done'); }
 function fmt(s){ const m=Math.floor(s/60), x=(s%60).toFixed(1).padStart(4,'0'); return m+':'+x; }
 
-// ---------- 1. vídeo ----------
+// ================= ESTILOS =================
+// pos = altura da linha da legenda (0 topo, 1 base)
+const STYLES = {
+  corrida: { name:'Corrida (estilo do vídeo)', font:'Montserrat', weight:500, upper:true, spacing:0.08,
+             color:'#ffffff', active:'#8fd3ff', shadow:'rgba(0,0,0,.55)', pos:0.66, size:3.2 },
+  pop:     { name:'Pop amarelo', font:'Montserrat', weight:900, upper:true, spacing:0,
+             color:'#ffffff', active:'#ffe14d', stroke:'#000000', pop:true, pos:0.70, size:5.2 },
+  neon:    { name:'Neon', font:'Montserrat', weight:800, upper:false, spacing:0.02,
+             color:'rgba(255,255,255,.55)', active:'#ffffff', glow:'#7c5cff', neon:true, pos:0.72, size:4.4 },
+  caixa:   { name:'Caixa na palavra', font:'Montserrat', weight:800, upper:false, spacing:0,
+             color:'#ffffff', active:'#ffffff', activeBg:'#7c5cff', shadow:'rgba(0,0,0,.6)', pos:0.74, size:4.2 },
+  classic: { name:'Clássica (fundo escuro)', font:'system-ui', weight:700, upper:false, spacing:0,
+             color:'#ffffff', active:'#ffffff', lineBg:'rgba(0,0,0,.65)', pos:0.86, size:4.2 }
+};
+(function fillStyles(){
+  const sel = $('style');
+  for(const k in STYLES){ const o=document.createElement('option'); o.value=k; o.textContent=STYLES[k].name; sel.appendChild(o); }
+})();
+
+// ================= MONTAR LEGENDAS =================
+function buildGroups(){
+  const per = +$('per').value;
+  groups = []; let cur = null;
+  words.forEach((w, idx) => {
+    const prev = words[idx-1];
+    const gap = prev ? w.start - prev.end : 0;
+    const endsSentence = prev && /[.!?…]$/.test(prev.w);
+    if(!cur || cur.words.length >= per || gap > 0.7 || endsSentence){
+      cur = { words:[] }; groups.push(cur);
+    }
+    cur.words.push(w);
+  });
+  groups.forEach((g, i) => {
+    g.i = i;
+    g.start = g.words[0].start;
+    g.end = g.words[g.words.length-1].end;
+  });
+  // segura a legenda na tela até a próxima, se a pausa for curta
+  groups.forEach((g, i) => { const n = groups[i+1]; g.show = n ? Math.min(n.start, g.end + 0.4) : g.end + 0.4; });
+}
+function groupAt(t){ return groups.find(g => t >= g.start - 0.05 && t < g.show) || null; }
+
+// ================= DESENHO (prévia e exportação usam o mesmo) =================
+function drawCaption(ctx, W, H, t){
+  const g = groupAt(t); if(!g) return;
+  const st = STYLES[$('style').value];
+  const fs = Math.round(H * st.size * (+$("size").value) / 10000);
+  ctx.save();
+  ctx.font = `${st.weight} ${fs}px ${st.font === 'system-ui' ? 'system-ui,-apple-system,sans-serif' : `"${st.font}",system-ui,sans-serif`}`;
+  if('letterSpacing' in ctx) ctx.letterSpacing = (st.spacing * fs) + 'px';
+  ctx.textBaseline = 'middle';
+  const space = ctx.measureText(' ').width + st.spacing * fs * 1.5;
+  const items = g.words.map(w => {
+    const txt = st.upper ? w.w.toLocaleUpperCase('pt-BR') : w.w;
+    return { w, txt, width: ctx.measureText(txt).width };
+  });
+  // quebra em linhas
+  const maxW = W * 0.86, lines = []; let line = [], lw = 0;
+  for(const it of items){
+    const add = (line.length ? space : 0) + it.width;
+    if(line.length && lw + add > maxW){ lines.push({items:line, width:lw}); line=[]; lw=0; }
+    lw += (line.length ? space : 0) + it.width; line.push(it);
+  }
+  if(line.length) lines.push({items:line, width:lw});
+  const lh = fs * 1.35;
+  const posY = H * (+$('pos').value / 100);
+  const top = posY - (lines.length * lh) / 2;
+
+  lines.forEach((ln, li) => {
+    const y = top + li*lh + lh/2;
+    let x = W/2 - ln.width/2;
+    if(st.lineBg){
+      const pad = fs*0.35, r = fs*0.25;
+      ctx.fillStyle = st.lineBg; roundRect(ctx, x-pad, y-lh/2+2, ln.width+pad*2, lh-4, r); ctx.fill();
+    }
+    ln.items.forEach((it, k) => {
+      const isNow = t >= it.w.start && t < it.w.end + 0.05;
+      const spoken = t >= it.w.start;
+      let scale = 1;
+      if(st.pop && isNow){ const p = Math.min(1, (t - it.w.start)/0.12); scale = 1 + 0.18*Math.sin(p*Math.PI/2); }
+      const cx = x + it.width/2;
+      ctx.save(); ctx.translate(cx, y); ctx.scale(scale, scale);
+      if(st.activeBg && isNow){
+        const pad = fs*0.18; ctx.fillStyle = st.activeBg;
+        roundRect(ctx, -it.width/2-pad, -lh/2+fs*0.12, it.width+pad*2, lh-fs*0.24, fs*0.2); ctx.fill();
+      }
+      ctx.textAlign = 'center';
+      if(st.shadow){ ctx.shadowColor = st.shadow; ctx.shadowBlur = fs*0.25; ctx.shadowOffsetY = fs*0.04; }
+      if(st.glow){ ctx.shadowColor = isNow ? st.glow : 'transparent'; ctx.shadowBlur = isNow ? fs*0.6 : 0; }
+      if(st.stroke){ ctx.lineWidth = Math.max(3, fs*0.16); ctx.strokeStyle = st.stroke; ctx.lineJoin='round'; ctx.strokeText(it.txt, 0, 0); }
+      ctx.fillStyle = isNow ? st.active : (st.neon && spoken ? st.active : st.color);
+      ctx.fillText(it.txt, 0, 0);
+      ctx.restore();
+      x += it.width + space;
+    });
+  });
+  ctx.restore();
+}
+function roundRect(ctx, x, y, w, h, r){
+  ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+}
+
+// ---------- prévia: canvas exatamente sobre a imagem do vídeo ----------
+function fitOverlay(){
+  const vw = vid.videoWidth, vh = vid.videoHeight; if(!vw) return;
+  const bw = vid.clientWidth, bh = vid.clientHeight;
+  const k = Math.min(bw/vw, bh/vh), w = vw*k, h = vh*k;
+  capCv.style.left = (vid.offsetLeft + (bw-w)/2) + 'px';
+  capCv.style.top = (vid.offsetTop + (bh-h)/2) + 'px';
+  capCv.style.width = w + 'px'; capCv.style.height = h + 'px';
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  capCv.width = Math.round(w*dpr); capCv.height = Math.round(h*dpr);
+}
+function paintOverlay(){
+  const ctx = capCv.getContext('2d');
+  ctx.clearRect(0,0,capCv.width,capCv.height);
+  if(groups.length) drawCaption(ctx, capCv.width, capCv.height, vid.currentTime);
+  const g = groupAt(vid.currentTime);
+  document.querySelectorAll('.seg').forEach(el => el.classList.toggle('on', !!g && +el.dataset.i === g.i));
+}
+let painting = false;
+function paintLoop(){ paintOverlay(); if(!vid.paused && !vid.ended) requestAnimationFrame(paintLoop); else painting = false; }
+vid.addEventListener('play', () => { if(!painting){ painting = true; requestAnimationFrame(paintLoop); } });
+vid.addEventListener('seeked', paintOverlay);
+vid.addEventListener('loadedmetadata', () => { fitOverlay(); paintOverlay(); });
+window.addEventListener('resize', () => { fitOverlay(); paintOverlay(); });
+['style','size','pos'].forEach(id => $(id).addEventListener('input', paintOverlay));
+$('style').addEventListener('change', () => { $('pos').value = Math.round(STYLES[$('style').value].pos*100); paintOverlay(); });
+$('per').addEventListener('change', () => { if(words.length){ buildGroups(); renderSegs(); paintOverlay(); } });
+$('pos').value = Math.round(STYLES[$('style').value].pos*100);
+
+// ================= 1. VÍDEO =================
 $('file').addEventListener('change', e => {
   const f = e.target.files[0]; if(!f) return;
   file = f; if(url) URL.revokeObjectURL(url);
@@ -168,50 +293,44 @@ $('file').addEventListener('change', e => {
   done('c1'); unlock('c2');
 });
 
-// ---------- legenda sobre o vídeo ----------
-function currentText(t){ const s = segs.find(s => t >= s.start && t <= s.end); return s ? s : null; }
-function paintOverlay(){
-  const s = currentText(vid.currentTime);
-  document.querySelectorAll('.seg').forEach(el => el.classList.toggle('on', s && +el.dataset.i === s.i));
-  if(!s || !s.text.trim()){ cap.innerHTML=''; return; }
-  const st = STYLES[$('style').value];
-  const px = vid.clientHeight * (+$('size').value) / 100;
-  const sp = document.createElement('span');
-  sp.textContent = s.text.trim();
-  sp.style.color = st.color; sp.style.fontSize = px + 'px';
-  sp.style.background = st.bg || 'transparent';
-  if(st.stroke) sp.style.textShadow = `0 0 3px ${st.stroke},0 0 3px ${st.stroke},2px 2px 0 ${st.stroke},-2px -2px 0 ${st.stroke},2px -2px 0 ${st.stroke},-2px 2px 0 ${st.stroke}`;
-  cap.innerHTML=''; cap.appendChild(sp);
-}
-vid.addEventListener('timeupdate', paintOverlay);
-vid.addEventListener('seeked', paintOverlay);
-$('style').addEventListener('change', paintOverlay);
-$('size').addEventListener('input', paintOverlay);
-
-// ---------- 2. transcrição (Whisper no navegador) ----------
+// ================= 2. TRANSCRIÇÃO =================
 const workerCode = `
 import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.1';
 env.allowLocalModels = false;
-let asr = null, loaded = null;
-async function load(model, device){
-  const opts = { device, progress_callback: p => postMessage({type:'dl', p}) };
-  opts.dtype = device === 'webgpu' ? { encoder_model:'fp32', decoder_model_merged:'q4' } : 'q8';
+let asr = null, key = null, device = null;
+async function load(model, dev){
+  const opts = { device: dev, progress_callback: p => postMessage({type:'dl', p}) };
+  opts.dtype = dev === 'webgpu' ? { encoder_model:'fp32', decoder_model_merged:'q4' } : 'q8';
   return pipeline('automatic-speech-recognition', model, opts);
 }
+async function ensure(model, dev){
+  if(asr && key === model + dev) return;
+  asr = await load(model, dev); key = model + dev; device = dev;
+  postMessage({type:'ready', device: dev});
+}
+function wordsOk(out){
+  const c = out && out.chunks; if(!c || !c.length) return false;
+  const ok = c.filter(x => x.timestamp && x.timestamp[0] != null && x.timestamp[1] != null && x.timestamp[1] >= x.timestamp[0]);
+  if(ok.length < c.length * 0.8) return false;
+  const first = c[0].timestamp[0], allSame = c.every(x => x.timestamp[0] === first);
+  return !(c.length > 3 && allSame);
+}
 onmessage = async ({data}) => {
+  const opt = { language:'portuguese', task:'transcribe', chunk_length_s:30, stride_length_s:5 };
   try{
-    if(!asr || loaded !== data.model){
-      let device = data.webgpu ? 'webgpu' : 'wasm';
-      try { asr = await load(data.model, device); }
-      catch(e){ if(device==='webgpu'){ device='wasm'; asr = await load(data.model, device);} else throw e; }
-      loaded = data.model;
-      postMessage({type:'ready', device});
+    let dev = data.webgpu ? 'webgpu' : 'wasm';
+    try { await ensure(data.model, dev); }
+    catch(e){ if(dev !== 'webgpu') throw e; dev = 'wasm'; await ensure(data.model, dev); }
+    let out;
+    try { out = await asr(data.audio, {...opt, return_timestamps:'word'}); }
+    catch(e){
+      if(dev !== 'webgpu') throw e;
+      dev = 'wasm'; await ensure(data.model, dev);
+      out = await asr(data.audio, {...opt, return_timestamps:'word'});
     }
-    const out = await asr(data.audio, {
-      language:'portuguese', task:'transcribe',
-      chunk_length_s:30, stride_length_s:5, return_timestamps:true
-    });
-    postMessage({type:'result', out});
+    if(wordsOk(out)) return postMessage({type:'result', mode:'word', out});
+    out = await asr(data.audio, {...opt, return_timestamps:true});
+    postMessage({type:'result', mode:'segment', out});
   }catch(e){ postMessage({type:'error', msg: String(e && e.message || e)}); }
 };`;
 let worker = null;
@@ -220,7 +339,7 @@ function getWorker(){
   return worker;
 }
 
-// Converte qualquer AudioBuffer para mono 16 kHz (formato da IA)
+// ---------- leitura do áudio ----------
 async function to16k(ab){
   const len = Math.ceil(ab.duration * 16000);
   const off = new OfflineAudioContext(1, len, 16000);
@@ -235,13 +354,11 @@ function decodeWith(ctx, buf){
     if(p && p.catch) p.catch(rej);
   });
 }
-// Plano B: toca o vídeo em silêncio e grava o som que sai dele
 function captureByPlayback(ctx, m){
   return new Promise((res, rej) => {
     const v = document.createElement('video');
     v.src = url; v.playsInline = true; v.preload = 'auto';
-    const parts = [];
-    let src, proc, mute;
+    const parts = []; let src, proc, mute;
     v.onloadedmetadata = async () => {
       try{
         src = ctx.createMediaElementSource(v);
@@ -271,13 +388,31 @@ function captureByPlayback(ctx, m){
 async function decodeAudio(f, ctx, m){
   try{
     const buf = await f.arrayBuffer();
-    const ab = await decodeWith(ctx, buf);
-    return await to16k(ab);
+    return await to16k(await decodeWith(ctx, buf));
   }catch(e){
     console.warn('leitura direta falhou, usando plano B', e);
     m.textContent = 'Lendo o áudio tocando o vídeo (leva o tempo do vídeo)…';
     return await captureByPlayback(ctx, m);
   }
+}
+
+// ---------- resultado da IA → lista de palavras ----------
+function wordsFromWordMode(out){
+  return (out.chunks || []).map(c => ({ w: c.text.trim(), start: c.timestamp[0], end: c.timestamp[1] }))
+    .filter(x => x.w);
+}
+// plano B: só temos frases com tempo → divide o tempo pelas letras de cada palavra
+function wordsFromSegments(out, secs){
+  const res = [];
+  (out.chunks || []).forEach(c => {
+    const s = c.timestamp[0] ?? 0, e = c.timestamp[1] ?? Math.min(secs, s+4);
+    res.push(...spread(c.text.trim().split(/\s+/).filter(Boolean), s, e));
+  });
+  return res;
+}
+function spread(list, s, e){
+  const total = list.reduce((a,w) => a + w.length + 1, 0) || 1;
+  let t = s; return list.map(w => { const d = (e-s) * (w.length+1)/total; const o = {w, start:t, end:t+d}; t += d; return o; });
 }
 
 $('go').addEventListener('click', async () => {
@@ -286,15 +421,14 @@ $('go').addEventListener('click', async () => {
   const Ctx = window.AudioContext || window.webkitAudioContext;
   const actx = new Ctx(); try{ actx.resume(); }catch(e){}
   btn.disabled = true; bar.style.width = '2%';
+  let timer = null;
   try{
     m.textContent = 'Lendo o áudio do vídeo…';
     const audio = await decodeAudio(file, actx, m);
     try{ actx.close(); }catch(e){}
     const secs = audio.length / 16000;
     m.textContent = 'Preparando a IA…';
-    const w = getWorker();
-    const files = {};
-    let timer = null;
+    const w = getWorker(); const files = {};
     const result = await new Promise((res, rej) => {
       w.onmessage = ({data}) => {
         if(data.type === 'dl'){
@@ -306,47 +440,58 @@ $('go').addEventListener('click', async () => {
             m.textContent = 'Baixando a IA… ' + (l/1048576).toFixed(0) + ' de ' + (t/1048576).toFixed(0) + ' MB';
           }
         } else if(data.type === 'ready'){
+          clearInterval(timer);
           m.textContent = 'Transcrevendo ' + Math.round(secs) + ' segundos de áudio' + (data.device==='webgpu' ? ' (modo rápido)…' : '… isso pode demorar alguns minutos.');
-          let pct = 50; const step = 45 / Math.max(10, secs * (data.device==='webgpu'?0.3:1.5));
+          let pct = 50; const step = 45 / Math.max(10, secs * (data.device==='webgpu'?0.4:1.5));
           timer = setInterval(()=>{ pct = Math.min(95, pct + step); bar.style.width = pct + '%'; }, 1000);
-        } else if(data.type === 'result'){ res(data.out); }
+        } else if(data.type === 'result'){ res(data); }
         else if(data.type === 'error'){ rej(new Error(data.msg)); }
       };
       w.postMessage({audio, model: $('model').value, webgpu: !!navigator.gpu}, [audio.buffer]);
     });
-    clearInterval(timer);
-    bar.style.width = '100%';
-    const chunks = (result.chunks || []).filter(c => c.text && c.text.trim());
-    segs = chunks.map((c,i) => ({
-      i, text: c.text.trim(),
-      start: c.timestamp[0] ?? 0,
-      end: c.timestamp[1] ?? Math.min(secs, (c.timestamp[0] ?? 0) + 4)
-    }));
-    if(!segs.length){ m.innerHTML = '<span class="warn">Não encontrei fala nesse vídeo.</span>'; btn.disabled=false; return; }
-    m.textContent = 'Pronto: ' + segs.length + ' trechos de legenda.';
-    renderSegs(); done('c2'); unlock('c3'); unlock('c4'); paintOverlay();
+    clearInterval(timer); bar.style.width = '100%';
+    words = result.mode === 'word' ? wordsFromWordMode(result.out) : wordsFromSegments(result.out, secs);
+    if(!words.length){ m.innerHTML = '<span class="warn">Não encontrei fala nesse vídeo.</span>'; btn.disabled=false; return; }
+    buildGroups();
+    m.textContent = 'Pronto: ' + words.length + ' palavras' + (result.mode === 'word' ? ', cada uma com seu tempo exato.' : '. O tempo de cada palavra foi estimado.');
+    renderSegs(); done('c2'); unlock('c3'); unlock('c4');
+    await document.fonts.load('500 20px "Montserrat"').catch(()=>{});
+    fitOverlay(); paintOverlay();
   }catch(e){
-    console.error(e);
+    console.error(e); clearInterval(timer);
     m.innerHTML = '<span class="warn">Deu erro: ' + e.message + '</span>';
     bar.style.width = '0';
   }
   btn.disabled = false;
 });
 
-// ---------- 3. edição ----------
+// ================= 3. EDIÇÃO =================
 function renderSegs(){
   const box = $('segs'); box.innerHTML = '';
-  segs.forEach(s => {
-    const row = document.createElement('div'); row.className='seg'; row.dataset.i = s.i;
-    const t = document.createElement('button'); t.className='t'; t.textContent = fmt(s.start);
-    t.onclick = () => { vid.currentTime = s.start + 0.01; vid.play().catch(()=>{}); };
-    const ta = document.createElement('textarea'); ta.value = s.text; ta.rows = 2;
-    ta.oninput = () => { s.text = ta.value; paintOverlay(); };
+  groups.forEach(g => {
+    const row = document.createElement('div'); row.className='seg'; row.dataset.i = g.i;
+    const t = document.createElement('button'); t.className='t'; t.textContent = fmt(g.start);
+    t.onclick = () => { vid.currentTime = g.start + 0.01; vid.play().catch(()=>{}); };
+    const ta = document.createElement('textarea'); ta.rows = 1;
+    ta.value = g.words.map(w => w.w).join(' ');
+    ta.oninput = () => editGroup(g, ta.value);
     row.append(t, ta); box.appendChild(row);
   });
 }
+// corrige o texto mantendo o tempo: mesma quantidade de palavras = mesmo tempo de cada uma
+function editGroup(g, text){
+  const list = text.trim().split(/\s+/).filter(Boolean);
+  let nw;
+  if(list.length === g.words.length) nw = g.words.map((w,k) => ({...w, w:list[k]}));
+  else if(!list.length) nw = [];
+  else nw = spread(list, g.start, g.end);
+  const first = words.indexOf(g.words[0]);
+  if(first >= 0) words.splice(first, g.words.length, ...nw);
+  if(nw.length){ g.words = nw; } else { g.words = []; }
+  paintOverlay();
+}
 
-// ---------- 4. exportação ----------
+// ================= 4. EXPORTAÇÃO =================
 function srtTime(s){
   const ms = Math.round(s*1000), h=Math.floor(ms/3600000), m=Math.floor(ms%3600000/60000), x=Math.floor(ms%60000/1000), r=ms%1000;
   return [h,m,x].map(n=>String(n).padStart(2,'0')).join(':') + ',' + String(r).padStart(3,'0');
@@ -358,80 +503,52 @@ function download(blob, name){
   setTimeout(()=>URL.revokeObjectURL(a.href), 60000);
 }
 $('srt').addEventListener('click', () => {
-  const txt = segs.filter(s=>s.text.trim()).map((s,k) => `${k+1}\n${srtTime(s.start)} --> ${srtTime(s.end)}\n${s.text.trim()}\n`).join('\n');
+  const txt = groups.filter(g => g.words.length).map((g,k) =>
+    `${k+1}\n${srtTime(g.start)} --> ${srtTime(g.show)}\n${g.words.map(w=>w.w).join(' ')}\n`).join('\n');
   download(new Blob([txt],{type:'text/plain'}), baseName() + '.srt');
 });
-
-function wrapLines(ctx, text, maxW){
-  const words = text.split(/\s+/); const lines=[]; let line='';
-  for(const w of words){
-    const test = line ? line+' '+w : w;
-    if(ctx.measureText(test).width > maxW && line){ lines.push(line); line = w; } else line = test;
-  }
-  if(line) lines.push(line);
-  return lines;
-}
-function drawCaption(ctx, W, H, text){
-  const st = STYLES[$('style').value];
-  const fs = Math.round(H * (+$('size').value) / 100);
-  ctx.font = `800 ${fs}px system-ui,-apple-system,Segoe UI,Roboto,sans-serif`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  const lines = wrapLines(ctx, text, W*0.88);
-  const lh = fs*1.3; const bottom = H*0.92;
-  lines.forEach((ln, k) => {
-    const y = bottom - (lines.length-1-k)*lh - lh/2;
-    if(st.bg){
-      const w = ctx.measureText(ln).width + fs*0.8;
-      ctx.fillStyle = st.bg;
-      const x = W/2 - w/2, h = lh*0.98, yy = y - h/2, r = fs*0.25;
-      ctx.beginPath(); ctx.moveTo(x+r,yy); ctx.arcTo(x+w,yy,x+w,yy+h,r); ctx.arcTo(x+w,yy+h,x,yy+h,r); ctx.arcTo(x,yy+h,x,yy,r); ctx.arcTo(x,yy,x+w,yy,r); ctx.fill();
-    }
-    if(st.stroke){ ctx.lineWidth = Math.max(3, fs*0.14); ctx.strokeStyle = st.stroke; ctx.lineJoin='round'; ctx.strokeText(ln, W/2, y); }
-    ctx.fillStyle = st.color; ctx.fillText(ln, W/2, y);
-  });
-}
 
 $('exp').addEventListener('click', async () => {
   const btn = $('exp'), m = $('m4'), bar = $('bar2');
   if(typeof MediaRecorder === 'undefined'){ m.innerHTML = '<span class="warn">Este navegador não consegue gravar vídeo. Use o botão da legenda .srt.</span>'; return; }
   btn.disabled = true; vid.pause();
   try{
+    await document.fonts.load(`${STYLES[$('style').value].weight} 40px "Montserrat"`).catch(()=>{});
     const v = document.createElement('video');
-    v.src = url; v.playsInline = true; v.muted = false; v.preload = 'auto';
+    v.src = url; v.playsInline = true; v.preload = 'auto';
     await new Promise((r,j)=>{ v.onloadedmetadata = r; v.onerror = () => j(new Error('não consegui abrir o vídeo')); });
     let W = v.videoWidth, H = v.videoHeight; const k = Math.min(1, 1920/Math.max(W,H));
     W = Math.round(W*k/2)*2; H = Math.round(H*k/2)*2;
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const ctx = cv.getContext('2d');
     const stream = cv.captureStream(30);
+    let ac = null;
     try{
       const Ctx = window.AudioContext || window.webkitAudioContext;
-      const ac = new Ctx(); const src = ac.createMediaElementSource(v); const dst = ac.createMediaStreamDestination();
+      ac = new Ctx(); const src = ac.createMediaElementSource(v); const dst = ac.createMediaStreamDestination();
       src.connect(dst); dst.stream.getAudioTracks().forEach(t => stream.addTrack(t));
-      v._ac = ac;
     }catch(e){ console.warn('sem áudio', e); }
     const types = ['video/mp4;codecs=avc1,mp4a','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
     const mime = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
-    const rec = new MediaRecorder(stream, mime ? {mimeType:mime, videoBitsPerSecond:6e6} : {});
+    const rec = new MediaRecorder(stream, mime ? {mimeType:mime, videoBitsPerSecond:8e6} : {});
     const parts = []; rec.ondataavailable = e => e.data.size && parts.push(e.data);
     const stopped = new Promise(r => rec.onstop = r);
     let running = true;
     const draw = () => {
       if(!running) return;
       ctx.drawImage(v, 0, 0, W, H);
-      const s = segs.find(s => v.currentTime >= s.start && v.currentTime <= s.end);
-      if(s && s.text.trim()) drawCaption(ctx, W, H, s.text.trim());
+      drawCaption(ctx, W, H, v.currentTime);
       bar.style.width = (v.currentTime / v.duration * 100).toFixed(1) + '%';
       m.textContent = 'Gravando… ' + fmt(v.currentTime) + ' de ' + fmt(v.duration);
       requestAnimationFrame(draw);
     };
     v.onended = () => { running = false; setTimeout(()=>rec.stop(), 200); };
-    if(v._ac && v._ac.state === 'suspended') await v._ac.resume();
+    if(ac && ac.state === 'suspended') await ac.resume();
     rec.start(1000);
     await v.play();
     draw();
     await stopped;
-    if(v._ac) v._ac.close();
+    if(ac) ac.close();
     const type = rec.mimeType || mime || 'video/webm';
     const ext = type.includes('mp4') ? 'mp4' : 'webm';
     download(new Blob(parts, {type}), baseName() + '-legendado.' + ext);
@@ -537,6 +654,6 @@ $('exp').addEventListener('click', async () => {
 })();
 </script>
 <span data-versao style="position:fixed;right:8px;bottom:6px;z-index:9999;font:500 11px ui-monospace,Menlo,monospace;opacity:.55;pointer-events:none"></span>
-<script>(function(){const VERSAO='1.1.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas v"+VERSAO})})();</script>
+<script>(function(){const VERSAO='1.2.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas v"+VERSAO})})();</script>
 </body>
 </html>
