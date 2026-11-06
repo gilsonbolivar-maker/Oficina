@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Legenda Automática</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;500;800;900&family=Playfair+Display:ital,wght@1,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;500;800;900&family=Playfair+Display:ital,wght@1,700&family=Bangers&display=swap" rel="stylesheet">
 <style>
   :root{--bg:#0f1115;--card:#181b22;--line:#2a2f3a;--txt:#e9ecf2;--mut:#9aa3b2;--acc:#7c5cff;--ok:#2ecc71;--warn:#ffb020}
   *{box-sizing:border-box}
@@ -184,7 +184,13 @@ const STYLES = {
   karaoke: { name:'Karaokê (enche de cor)', font:'Montserrat', weight:900, upper:true, spacing:0,
              color:'#ffffff', active:'#3ee08f', stroke:'#000000', neon:true, pos:0.72, size:4.6 },
   elegante:{ name:'Elegante (itálico)', font:'Playfair Display', italic:true, weight:700, upper:false, spacing:0,
-             color:'#ffffff', active:'#f5c26b', shadow:'rgba(0,0,0,.6)', pos:0.74, size:4.6 }
+             color:'#ffffff', active:'#f5c26b', shadow:'rgba(0,0,0,.6)', pos:0.74, size:4.6 },
+  lista:   { name:'Lista numerada', font:'Montserrat', weight:800, upper:false, spacing:0,
+             color:'#ffffff', active:'#8fd3ff', mode:'lista', pos:0.62, size:3.2 },
+  gibi:    { name:'Balão de gibi (POW!)', font:'Bangers', weight:400, upper:true, spacing:0.04,
+             color:'#e3141b', active:'#e3141b', mode:'gibi', pos:0.66, size:4.8 },
+  relogio: { name:'Relógio regressivo', font:'Montserrat', weight:800, upper:true, spacing:0.04,
+             color:'#ffffff', active:'#ff4d6d', mode:'relogio', pos:0.55, size:3.2 }
 };
 (function fillStyles(){
   const sel = $('style');
@@ -226,6 +232,7 @@ function drawCaption(ctx, W, H, t){
   ctx.save();
   const fam = st.font === 'system-ui' ? 'system-ui,-apple-system,sans-serif' : `"${st.font}",system-ui,sans-serif`;
   if(st.impact){ drawImpact(ctx, W, H, t, g, st, fs, fam); ctx.restore(); return; }
+  if(st.mode){ ({lista:drawLista, gibi:drawGibi, relogio:drawRelogio})[st.mode](ctx, W, H, t, g, st, fs, fam); ctx.restore(); return; }
   ctx.font = `${st.italic ? 'italic ' : ''}${st.weight} ${fs}px ${st.font === 'system-ui' ? 'system-ui,-apple-system,sans-serif' : `"${st.font}",system-ui,sans-serif`}`;
   if('letterSpacing' in ctx) ctx.letterSpacing = (st.spacing * fs) + 'px';
   ctx.textBaseline = 'middle';
@@ -304,6 +311,111 @@ function drawImpact(ctx, W, H, t, g, st, fs, fam){
   ctx.globalAlpha = fade(last); ctx.fillStyle = st.active;
   ctx.fillText(big, cx, cy + (top ? fs*0.45 : 0));
   ctx.globalAlpha = 1;
+}
+// ponto central do trecho (quadro de posição ou altura padrão)
+function anchor(W, H, g){
+  return { cx: W * (g.pos == null ? 0.5 : [0.27,0.5,0.73][g.pos % 3]),
+           cy: g.pos == null ? H * (+$('pos').value/100) : H * [0.16,0.5,0.8][Math.floor(g.pos/3)] };
+}
+function popIn(t, start){ const p = Math.max(0, Math.min(1, (t - start)/0.2)); return p < 1 ? 0.6 + 0.55*Math.sin(p*Math.PI*0.75) : 1; }
+
+// Lista numerada: caixa de vidro, uma ou duas palavras por linha, com número à esquerda
+function drawLista(ctx, W, H, t, g, st, fs, fam){
+  const {cx, cy} = anchor(W, H, g);
+  ctx.font = `${st.weight} ${fs}px ${fam}`;
+  const lines = []; let cur = [];
+  g.words.forEach(w => {
+    const test = [...cur, w].map(x => x.w).join(' ');
+    if(cur.length && (cur.length >= 2 || ctx.measureText(test).width > W*0.55)){ lines.push(cur); cur = []; }
+    cur.push(w);
+  });
+  if(cur.length) lines.push(cur);
+  const lh = fs*1.7, numW = fs*1.9, padX = fs*0.8, padY = fs*0.5;
+  let tw = 0; lines.forEach(l => tw = Math.max(tw, ctx.measureText(l.map(x=>x.w).join(' ')).width));
+  const bw = Math.min(W*0.9, numW + tw + padX*2), bh = lines.length*lh + padY*2;
+  const x0 = cx - bw/2, y0 = cy - bh/2;
+  ctx.globalAlpha = Math.min(1, (t - g.start + 0.05)/0.2);
+  ctx.fillStyle = 'rgba(14,18,28,.72)'; roundRect(ctx, x0, y0, bw, bh, fs*0.5); ctx.fill();
+  ctx.lineWidth = Math.max(1, fs*0.05); ctx.strokeStyle = 'rgba(255,255,255,.28)'; ctx.stroke();
+  ctx.textBaseline = 'middle';
+  lines.forEach((l, i) => {
+    const y = y0 + padY + i*lh + lh/2;
+    const now = l.some(w => t >= w.start && t < w.end + 0.05), done = t >= l[0].start;
+    if(i){ ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fillRect(x0 + padX*0.6, y - lh/2, bw - padX*1.2, Math.max(1, fs*0.04)); }
+    if(now){ ctx.fillStyle = 'rgba(143,211,255,.14)'; roundRect(ctx, x0 + padX*0.4, y - lh/2 + fs*0.15, bw - padX*0.8, lh - fs*0.3, fs*0.25); ctx.fill(); }
+    ctx.textAlign = 'left';
+    ctx.font = `500 ${fs*0.75}px ${fam}`; ctx.fillStyle = now ? st.active : 'rgba(255,255,255,.45)';
+    ctx.fillText(String(i+1).padStart(2,'0'), x0 + padX, y);
+    ctx.font = `${st.weight} ${fs}px ${fam}`; ctx.fillStyle = now ? st.active : (done ? st.color : 'rgba(255,255,255,.35)');
+    ctx.fillText(l.map(x => x.w).join(' '), x0 + padX + numW, y);
+  });
+  ctx.globalAlpha = 1;
+}
+
+// Balão de gibi: estrela de pontas amarela, letras de quadrinho vermelhas, entra dando um salto
+function drawGibi(ctx, W, H, t, g, st, fs, fam){
+  const {cx, cy} = anchor(W, H, g);
+  const text = g.words.map(w => w.w).join(' ').toLocaleUpperCase('pt-BR');
+  ctx.font = `400 ${fs}px ${fam}`;
+  if('letterSpacing' in ctx) ctx.letterSpacing = (st.spacing*fs) + 'px';
+  const words = text.split(' '), lines = []; let line = '';
+  words.forEach(w => { const tst = line ? line + ' ' + w : w; if(line && ctx.measureText(tst).width > W*0.7){ lines.push(line); line = w; } else line = tst; });
+  if(line) lines.push(line);
+  const lh = fs*1.05; let tw = 0; lines.forEach(l => tw = Math.max(tw, ctx.measureText(l).width));
+  const rx = tw/2 + fs*1.1, ry = (lines.length*lh)/2 + fs*1.0;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate((g.i % 2 ? 6 : -6) * Math.PI/180);
+  const sc = popIn(t, g.start); ctx.scale(sc, sc);
+  // estrela de pontas (sempre igual para o mesmo trecho)
+  let seed = (g.i + 1) * 9301; const rnd = () => (seed = (seed*9301 + 49297) % 233280) / 233280;
+  const n = 18, pts = [];
+  for(let k=0; k<n*2; k++){
+    const a = k * Math.PI / n, out = k % 2 === 0, j = out ? 1.18 + rnd()*0.22 : 0.92;
+    pts.push([Math.cos(a)*rx*j, Math.sin(a)*ry*j]);
+  }
+  const path = () => { ctx.beginPath(); pts.forEach((p,k) => k ? ctx.lineTo(p[0],p[1]) : ctx.moveTo(p[0],p[1])); ctx.closePath(); };
+  ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = fs*0.4; ctx.shadowOffsetY = fs*0.15;
+  path(); ctx.fillStyle = '#e3141b'; ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.save(); ctx.scale(0.9, 0.86); path(); ctx.fillStyle = '#ffe600'; ctx.fill();
+  ctx.lineWidth = fs*0.08; ctx.strokeStyle = '#000'; ctx.stroke(); ctx.restore();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  lines.forEach((l, k) => {
+    const y = (k - (lines.length-1)/2) * lh + fs*0.05;
+    ctx.lineJoin = 'round'; ctx.lineWidth = fs*0.16; ctx.strokeStyle = '#000'; ctx.strokeText(l, 0, y);
+    ctx.fillStyle = st.color; ctx.fillText(l, 0, y);
+  });
+  ctx.restore();
+}
+
+// Relógio regressivo: conta os segundos que faltam para o trecho acabar, com a frase embaixo
+function drawRelogio(ctx, W, H, t, g, st, fs, fam){
+  const {cx, cy} = anchor(W, H, g);
+  const total = Math.max(0.1, g.show - g.start), left = Math.max(0, g.show - t);
+  const R = fs*2.6, sc = popIn(t, g.start);
+  ctx.save(); ctx.translate(cx, cy - fs*1.2); ctx.scale(sc, sc);
+  ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = fs*0.5;
+  ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI*2); ctx.fillStyle = 'rgba(12,14,20,.78)'; ctx.fill();
+  ctx.shadowColor = 'transparent';
+  for(let k=0; k<12; k++){
+    const a = k*Math.PI/6; ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = Math.max(1, fs*0.06);
+    ctx.beginPath(); ctx.moveTo(Math.sin(a)*R*0.78, -Math.cos(a)*R*0.78); ctx.lineTo(Math.sin(a)*R*0.88, -Math.cos(a)*R*0.88); ctx.stroke();
+  }
+  ctx.lineCap = 'round'; ctx.lineWidth = fs*0.22;
+  ctx.strokeStyle = 'rgba(255,255,255,.12)'; ctx.beginPath(); ctx.arc(0, 0, R*0.97, 0, Math.PI*2); ctx.stroke();
+  ctx.strokeStyle = st.active; ctx.beginPath(); ctx.arc(0, 0, R*0.97, -Math.PI/2, -Math.PI/2 + Math.PI*2*(left/total)); ctx.stroke();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `900 ${fs*2.2}px ${fam}`; ctx.fillStyle = '#fff';
+  ctx.fillText(String(Math.ceil(left - 0.001)), 0, R*0.05);
+  ctx.restore();
+  ctx.font = `${st.weight} ${fs}px ${fam}`; if('letterSpacing' in ctx) ctx.letterSpacing = (st.spacing*fs) + 'px';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = fs*0.25;
+  const txt = g.words.map(w => w.w).join(' ').toLocaleUpperCase('pt-BR');
+  const tws = txt.split(' '), tl = []; let ln = '';
+  tws.forEach(w => { const tt = ln ? ln + ' ' + w : w; if(ln && ctx.measureText(tt).width > W*0.86){ tl.push(ln); ln = w; } else ln = tt; });
+  if(ln) tl.push(ln);
+  ctx.fillStyle = st.color; tl.forEach((l,k) => ctx.fillText(l, cx, cy - fs*1.2 + R + fs*0.9 + k*fs*1.3));
 }
 function roundRect(ctx, x, y, w, h, r){
   ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
@@ -510,7 +622,7 @@ $('go').addEventListener('click', async () => {
     buildGroups();
     m.textContent = 'Pronto: ' + words.length + ' palavras' + (result.mode === 'word' ? ', cada uma com seu tempo exato.' : '. O tempo de cada palavra foi estimado.');
     renderSegs(); done('c2'); unlock('c3'); unlock('c4');
-    await Promise.all(['300 20px "Montserrat"','500 20px "Montserrat"','900 20px "Montserrat"','italic 700 20px "Playfair Display"'].map(f => document.fonts.load(f).catch(()=>{})));
+    await Promise.all(['300 20px "Montserrat"','500 20px "Montserrat"','900 20px "Montserrat"','italic 700 20px "Playfair Display"','400 20px "Bangers"'].map(f => document.fonts.load(f).catch(()=>{})));
     fitOverlay(); paintOverlay();
   }catch(e){
     console.error(e); clearInterval(timer);
@@ -608,7 +720,7 @@ $('exp').addEventListener('click', async () => {
   if(typeof MediaRecorder === 'undefined'){ m.innerHTML = '<span class="warn">Este navegador não consegue gravar vídeo. Use o botão da legenda .srt.</span>'; return; }
   btn.disabled = true; vid.pause();
   try{
-    await Promise.all(['300 40px "Montserrat"','500 40px "Montserrat"','800 40px "Montserrat"','900 40px "Montserrat"','italic 700 40px "Playfair Display"'].map(f => document.fonts.load(f).catch(()=>{})));
+    await Promise.all(['300 40px "Montserrat"','500 40px "Montserrat"','800 40px "Montserrat"','900 40px "Montserrat"','italic 700 40px "Playfair Display"','400 20px "Bangers"'].map(f => document.fonts.load(f).catch(()=>{})));
     const v = document.createElement('video');
     v.src = url; v.playsInline = true; v.preload = 'auto';
     await new Promise((r,j)=>{ v.onloadedmetadata = r; v.onerror = () => j(new Error('não consegui abrir o vídeo')); });
@@ -750,6 +862,6 @@ $('exp').addEventListener('click', async () => {
 })();
 </script>
 <span data-versao style="position:fixed;right:8px;bottom:6px;z-index:9999;font:500 11px ui-monospace,Menlo,monospace;opacity:.55;pointer-events:none"></span>
-<script>(function(){const VERSAO='1.5.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas v"+VERSAO})})();</script>
+<script>(function(){const VERSAO='1.6.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas v"+VERSAO})})();</script>
 </body>
 </html>
