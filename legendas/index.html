@@ -120,6 +120,7 @@
     <div class="row" style="margin-top:12px">
       <button id="exp">Baixar vídeo legendado</button>
       <button id="srt" class="sec">Baixar só a legenda (.srt)</button>
+      <button id="saveVid" hidden style="background:#2ecc71">Salvar vídeo no aparelho</button>
     </div>
     <div class="bar"><i id="bar2"></i></div>
     <div class="msg" id="m4">O vídeo é gravado em tempo real: um vídeo de 1 minuto leva cerca de 1 minuto.</div>
@@ -142,7 +143,7 @@
     <video id="tpPreview" controls playsinline></video>
     <div class="row" style="justify-content:center">
       <button id="tpUse">Usar este vídeo para legendar</button>
-      <button id="tpSave" class="sec">Baixar o vídeo</button>
+      <button id="tpSave" class="sec">Salvar no aparelho</button>
       <button id="tpAgain" class="sec">Gravar de novo</button>
       <button id="tpExit" class="sec">Sair do teleprompter</button>
     </div>
@@ -704,11 +705,28 @@ function srtTime(s){
   return [h,m,x].map(n=>String(n).padStart(2,'0')).join(':') + ',' + String(r).padStart(3,'0');
 }
 function baseName(){ return (file ? file.name.replace(/\.[^.]+$/,'') : 'video'); }
+// Salvar no iPhone/iPad: abre a tela de compartilhar (tem "Salvar Vídeo" → Fotos).
+// Precisa ser chamado direto de um toque. Sem essa tela, cai no download comum.
+async function saveVideo(blob, name){
+  const f = new File([blob], name, {type: blob.type || 'video/mp4'});
+  if(navigator.canShare && navigator.canShare({files:[f]})){
+    try{ await navigator.share({files:[f]}); return 'share'; }
+    catch(e){ if(e && e.name === 'AbortError') return 'cancel'; console.warn('share falhou', e); }
+  }
+  download(blob, name); return 'download';
+}
+const canShareFiles = (() => { try{ return !!(navigator.canShare && navigator.canShare({files:[new File([new Blob(['x'],{type:'video/mp4'})],'x.mp4',{type:'video/mp4'})]})); }catch(e){ return false; } })();
+let lastVideo = null;
 function download(blob, name){
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href), 60000);
 }
+$('saveVid').addEventListener('click', async () => {
+  if(!lastVideo) return;
+  const r = await saveVideo(lastVideo.blob, lastVideo.name);
+  if(r === 'download') $('m4').textContent = 'O vídeo foi baixado. No iPhone, ele fica no app Arquivos, na pasta Downloads.';
+});
 $('srt').addEventListener('click', () => {
   const txt = groups.filter(g => g.words.length).map((g,k) =>
     `${k+1}\n${srtTime(g.start)} --> ${srtTime(g.show)}\n${g.words.map(w=>w.w).join(' ')}\n`).join('\n');
@@ -758,9 +776,15 @@ $('exp').addEventListener('click', async () => {
     if(ac) ac.close();
     const type = rec.mimeType || mime || 'video/webm';
     const ext = type.includes('mp4') ? 'mp4' : 'webm';
-    download(new Blob(parts, {type}), baseName() + '-legendado.' + ext);
+    lastVideo = { blob: new Blob(parts, {type}), name: baseName() + '-legendado.' + ext };
     bar.style.width = '100%';
-    m.textContent = 'Pronto! O vídeo legendado foi baixado (' + ext.toUpperCase() + ').';
+    $('saveVid').hidden = false;
+    if(canShareFiles){
+      m.innerHTML = '<b>Pronto!</b> Toque no botão verde <b>Salvar vídeo no aparelho</b> e escolha <b>Salvar Vídeo</b> para ir para a galeria de Fotos.';
+    } else {
+      download(lastVideo.blob, lastVideo.name);
+      m.textContent = 'Pronto! O vídeo legendado foi baixado (' + ext.toUpperCase() + '). Se não aparecer, toque no botão verde.';
+    }
   }catch(e){
     console.error(e);
     m.innerHTML = '<span class="warn">Deu erro ao gravar: ' + e.message + '</span>';
@@ -847,7 +871,7 @@ $('exp').addEventListener('click', async () => {
   };
 
   function ext(){ return (blob.type||'').includes('mp4') ? 'mp4' : 'webm'; }
-  $('tpSave').onclick = () => download(blob, 'gravacao-teleprompter.' + ext());
+  $('tpSave').onclick = () => saveVideo(blob, 'gravacao-teleprompter.' + ext());
   $('tpExit').onclick = close;
   $('tpAgain').onclick = () => { $('tpDone').style.display='none'; y = 0; place(); };
   $('tpUse').onclick = () => {
@@ -862,6 +886,6 @@ $('exp').addEventListener('click', async () => {
 })();
 </script>
 <span data-versao style="position:fixed;right:8px;bottom:6px;z-index:9999;font:500 11px ui-monospace,Menlo,monospace;opacity:.55;pointer-events:none"></span>
-<script>(function(){const VERSAO='1.6.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas v"+VERSAO})})();</script>
+<script>(function(){const VERSAO='1.7.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas v"+VERSAO})})();</script>
 </body>
 </html>
