@@ -141,10 +141,11 @@
     <button id="tpClose" class="sec">Fechar</button>
   </div>
   <div id="tpDone">
+    <div id="tpDoneMsg" style="color:#fff;font-weight:700;text-align:center">Gravação pronta. Salve no celular antes de seguir.</div>
     <video id="tpPreview" controls playsinline></video>
     <div class="row" style="justify-content:center">
+      <button id="tpSave" style="background:var(--ok);font-size:1.1rem;padding:14px 22px">Salvar no celular</button>
       <button id="tpUse">Usar este vídeo para legendar</button>
-      <button id="tpSave" class="sec">Salvar no aparelho</button>
       <button id="tpAgain" class="sec">Gravar de novo</button>
       <button id="tpExit" class="sec">Sair do teleprompter</button>
     </div>
@@ -862,7 +863,14 @@ $('exp').addEventListener('click', async () => {
       recBtn.classList.remove('on'); recBtn.textContent = '● Gravar';
       blob = new Blob(parts, {type: rec.mimeType || mime || 'video/mp4'});
       $('tpPreview').src = URL.createObjectURL(blob);
+      $('tpDoneMsg').textContent = 'Gravação pronta. Salve no celular antes de seguir.';
       $('tpDone').style.display = 'flex';
+      // tenta abrir a tela de salvar na hora; se o aparelho não deixar, fica o botão verde
+      if(canShareFiles){
+        const f = new File([blob], 'gravacao-teleprompter.' + ext(), {type: blob.type});
+        navigator.share({files:[f]}).then(() => { $('tpDoneMsg').textContent = 'Pronto! Se escolheu Salvar Vídeo, ele já está na galeria de Fotos.'; })
+          .catch(() => {});
+      }
     };
     rec.start(1000);
     scrolling = true; last = 0;
@@ -872,7 +880,12 @@ $('exp').addEventListener('click', async () => {
   };
 
   function ext(){ return (blob.type||'').includes('mp4') ? 'mp4' : 'webm'; }
-  $('tpSave').onclick = () => saveVideo(blob, 'gravacao-teleprompter.' + ext());
+  $('tpSave').onclick = async () => {
+    const r = await saveVideo(blob, 'gravacao-teleprompter.' + ext());
+    $('tpDoneMsg').textContent = r === 'share' ? 'Pronto! Se escolheu Salvar Vídeo, ele já está na galeria de Fotos.'
+      : r === 'download' ? 'O vídeo foi baixado. No iPhone, ele fica no app Arquivos, na pasta Downloads.'
+      : 'Gravação pronta. Salve no celular antes de seguir.';
+  };
   $('tpExit').onclick = close;
   $('tpAgain').onclick = () => { $('tpDone').style.display='none'; y = 0; place(); };
   $('tpUse').onclick = () => {
@@ -887,6 +900,6 @@ $('exp').addEventListener('click', async () => {
 })();
 </script>
 <span data-versao style="position:fixed;right:8px;bottom:6px;z-index:9999;font:500 11px ui-monospace,Menlo,monospace;opacity:.55;pointer-events:none"></span>
-<script>(function(){const VERSAO='1.7.1';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas v"+VERSAO})})();</script>
+<script>(function(){const VERSAO='1.8.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas v"+VERSAO})})();</script>
 </body>
 </html>
