@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Legenda Automática</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;500;800;900&family=Playfair+Display:ital,wght@1,700&display=swap" rel="stylesheet">
 <style>
   :root{--bg:#0f1115;--card:#181b22;--line:#2a2f3a;--txt:#e9ecf2;--mut:#9aa3b2;--acc:#7c5cff;--ok:#2ecc71;--warn:#ffb020}
   *{box-sizing:border-box}
@@ -172,7 +172,19 @@ const STYLES = {
   caixa:   { name:'Caixa na palavra', font:'Montserrat', weight:800, upper:false, spacing:0,
              color:'#ffffff', active:'#ffffff', activeBg:'#7c5cff', shadow:'rgba(0,0,0,.6)', pos:0.74, size:4.2 },
   classic: { name:'Clássica (fundo escuro)', font:'system-ui', weight:700, upper:false, spacing:0,
-             color:'#ffffff', active:'#ffffff', lineBg:'rgba(0,0,0,.65)', pos:0.86, size:4.2 }
+             color:'#ffffff', active:'#ffffff', lineBg:'rgba(0,0,0,.65)', pos:0.86, size:4.2 },
+  impacto: { name:'Impacto (título em duas linhas)', font:'Montserrat', weight:300, upper:true, spacing:0.04,
+             color:'#ffffff', active:'#ffffff', shadow:'rgba(0,0,0,.5)', impact:true, pos:0.55, size:6 },
+  etiqueta:{ name:'Etiqueta de vidro', font:'Montserrat', weight:500, upper:false, spacing:0.01,
+             color:'rgba(255,255,255,.75)', active:'#8fd3ff', lineBg:'rgba(20,24,34,.55)', pill:true, pos:0.60, size:2.6 },
+  sublinhado:{ name:'Sublinhado', font:'Montserrat', weight:800, upper:true, spacing:0.03,
+             color:'#ffffff', active:'#ffffff', underline:'#ff4d6d', shadow:'rgba(0,0,0,.55)', pos:0.72, size:3.8 },
+  maquina: { name:'Máquina de escrever', font:'Montserrat', weight:800, upper:false, spacing:0,
+             color:'#ffffff', active:'#ffffff', typewriter:true, shadow:'rgba(0,0,0,.6)', pos:0.74, size:4.2 },
+  karaoke: { name:'Karaokê (enche de cor)', font:'Montserrat', weight:900, upper:true, spacing:0,
+             color:'#ffffff', active:'#3ee08f', stroke:'#000000', neon:true, pos:0.72, size:4.6 },
+  elegante:{ name:'Elegante (itálico)', font:'Playfair Display', italic:true, weight:700, upper:false, spacing:0,
+             color:'#ffffff', active:'#f5c26b', shadow:'rgba(0,0,0,.6)', pos:0.74, size:4.6 }
 };
 (function fillStyles(){
   const sel = $('style');
@@ -212,10 +224,12 @@ function drawCaption(ctx, W, H, t){
   const st = STYLES[g.style || $('style').value];
   const fs = Math.round(H * st.size * (+$("size").value) / 10000);
   ctx.save();
-  ctx.font = `${st.weight} ${fs}px ${st.font === 'system-ui' ? 'system-ui,-apple-system,sans-serif' : `"${st.font}",system-ui,sans-serif`}`;
+  const fam = st.font === 'system-ui' ? 'system-ui,-apple-system,sans-serif' : `"${st.font}",system-ui,sans-serif`;
+  if(st.impact){ drawImpact(ctx, W, H, t, g, st, fs, fam); ctx.restore(); return; }
+  ctx.font = `${st.italic ? 'italic ' : ''}${st.weight} ${fs}px ${st.font === 'system-ui' ? 'system-ui,-apple-system,sans-serif' : `"${st.font}",system-ui,sans-serif`}`;
   if('letterSpacing' in ctx) ctx.letterSpacing = (st.spacing * fs) + 'px';
   ctx.textBaseline = 'middle';
-  const space = ctx.measureText(' ').width + st.spacing * fs * 1.5;
+  const space = ctx.measureText(' ').width + st.spacing * fs * 1.5 + (st.stroke ? fs*0.22 : 0) + (st.pop ? fs*0.12 : 0);
   const items = g.words.map(w => {
     const txt = st.upper ? w.w.toLocaleUpperCase('pt-BR') : w.w;
     return { w, txt, width: ctx.measureText(txt).width };
@@ -238,8 +252,9 @@ function drawCaption(ctx, W, H, t){
     const y = top + li*lh + lh/2;
     let x = W*colX - ln.width/2;
     if(st.lineBg){
-      const pad = fs*0.35, r = fs*0.25;
+      const pad = st.pill ? fs*0.9 : fs*0.35, r = st.pill ? (lh-4)/2 : fs*0.25;
       ctx.fillStyle = st.lineBg; roundRect(ctx, x-pad, y-lh/2+2, ln.width+pad*2, lh-4, r); ctx.fill();
+      if(st.pill){ ctx.lineWidth = Math.max(1, fs*0.06); ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.stroke(); }
     }
     ln.items.forEach((it, k) => {
       const isNow = t >= it.w.start && t < it.w.end + 0.05;
@@ -247,6 +262,7 @@ function drawCaption(ctx, W, H, t){
       let scale = 1;
       if(st.pop && isNow){ const p = Math.min(1, (t - it.w.start)/0.12); scale = 1 + 0.18*Math.sin(p*Math.PI/2); }
       const cx = x + it.width/2;
+      if(st.typewriter && !spoken){ x += it.width + space; return; }
       ctx.save(); ctx.translate(cx, y); ctx.scale(scale, scale);
       if(st.activeBg && isNow){
         const pad = fs*0.18; ctx.fillStyle = st.activeBg;
@@ -258,11 +274,36 @@ function drawCaption(ctx, W, H, t){
       if(st.stroke){ ctx.lineWidth = Math.max(3, fs*0.16); ctx.strokeStyle = st.stroke; ctx.lineJoin='round'; ctx.strokeText(it.txt, 0, 0); }
       ctx.fillStyle = isNow ? st.active : (st.neon && spoken ? st.active : st.color);
       ctx.fillText(it.txt, 0, 0);
+      if(st.underline && isNow){ ctx.shadowColor='transparent'; ctx.fillStyle = st.underline; ctx.fillRect(-it.width/2, fs*0.55, it.width, Math.max(3, fs*0.12)); }
       ctx.restore();
       x += it.width + space;
     });
   });
   ctx.restore();
+}
+// Impacto: começo da frase fino em cima, última palavra grossa e maior embaixo
+function drawImpact(ctx, W, H, t, g, st, fs, fam){
+  const up = x => st.upper ? x.toLocaleUpperCase('pt-BR') : x;
+  const list = g.words, last = list[list.length-1];
+  const top = list.slice(0, -1).map(w => up(w.w)).join(' ');
+  const big = up(last.w);
+  const cx = W * (g.pos == null ? 0.5 : [0.27,0.5,0.73][g.pos % 3]);
+  const cy = g.pos == null ? H * (+$('pos').value/100) : H * [0.16,0.5,0.8][Math.floor(g.pos/3)];
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.shadowColor = st.shadow; ctx.shadowBlur = fs*0.3;
+  let bfs = fs * 1.15;
+  ctx.font = `900 ${bfs}px ${fam}`;
+  const bw = ctx.measureText(big).width; if(bw > W*0.9) bfs *= W*0.9/bw;
+  const fade = w => Math.max(0, Math.min(1, (t - w.start + 0.05) / 0.25));
+  if(top){
+    ctx.font = `300 ${fs}px ${fam}`;
+    ctx.globalAlpha = fade(list[0]); ctx.fillStyle = st.color;
+    ctx.fillText(top, cx, cy - bfs*0.62);
+  }
+  ctx.font = `900 ${bfs}px ${fam}`;
+  ctx.globalAlpha = fade(last); ctx.fillStyle = st.active;
+  ctx.fillText(big, cx, cy + (top ? fs*0.45 : 0));
+  ctx.globalAlpha = 1;
 }
 function roundRect(ctx, x, y, w, h, r){
   ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
@@ -469,7 +510,7 @@ $('go').addEventListener('click', async () => {
     buildGroups();
     m.textContent = 'Pronto: ' + words.length + ' palavras' + (result.mode === 'word' ? ', cada uma com seu tempo exato.' : '. O tempo de cada palavra foi estimado.');
     renderSegs(); done('c2'); unlock('c3'); unlock('c4');
-    await document.fonts.load('500 20px "Montserrat"').catch(()=>{});
+    await Promise.all(['300 20px "Montserrat"','500 20px "Montserrat"','900 20px "Montserrat"','italic 700 20px "Playfair Display"'].map(f => document.fonts.load(f).catch(()=>{})));
     fitOverlay(); paintOverlay();
   }catch(e){
     console.error(e); clearInterval(timer);
@@ -567,7 +608,7 @@ $('exp').addEventListener('click', async () => {
   if(typeof MediaRecorder === 'undefined'){ m.innerHTML = '<span class="warn">Este navegador não consegue gravar vídeo. Use o botão da legenda .srt.</span>'; return; }
   btn.disabled = true; vid.pause();
   try{
-    await document.fonts.load(`${STYLES[$('style').value].weight} 40px "Montserrat"`).catch(()=>{});
+    await Promise.all(['300 40px "Montserrat"','500 40px "Montserrat"','800 40px "Montserrat"','900 40px "Montserrat"','italic 700 40px "Playfair Display"'].map(f => document.fonts.load(f).catch(()=>{})));
     const v = document.createElement('video');
     v.src = url; v.playsInline = true; v.preload = 'auto';
     await new Promise((r,j)=>{ v.onloadedmetadata = r; v.onerror = () => j(new Error('não consegui abrir o vídeo')); });
@@ -709,6 +750,6 @@ $('exp').addEventListener('click', async () => {
 })();
 </script>
 <span data-versao style="position:fixed;right:8px;bottom:6px;z-index:9999;font:500 11px ui-monospace,Menlo,monospace;opacity:.55;pointer-events:none"></span>
-<script>(function(){const VERSAO='1.4.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas v"+VERSAO})})();</script>
+<script>(function(){const VERSAO='1.5.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas v"+VERSAO})})();</script>
 </body>
 </html>
