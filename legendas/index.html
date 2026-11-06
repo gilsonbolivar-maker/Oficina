@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;500;800;900&family=Playfair+Display:ital,wght@1,700&family=Bangers&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#0f1115;--card:#181b22;--line:#2a2f3a;--txt:#e9ecf2;--mut:#9aa3b2;--acc:#7c5cff;--ok:#2ecc71;--warn:#ffb020}
+  :root{--bg:#1e2a1a;--card:#2a3a24;--line:#43573a;--txt:#ffffff;--mut:#cfd8c3;--acc:#e8782a;--ok:#7fa35a;--warn:#ffb36b;--field:#18221500;--deep:#162013;--sec:#3b4f33}
   *{box-sizing:border-box}
   body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt)}
   main{max-width:900px;margin:0 auto;padding:16px}
@@ -19,11 +19,12 @@
   .done .num{background:var(--ok)}
   .locked{opacity:.45;pointer-events:none}
   button,.filebtn{background:var(--acc);color:#fff;border:0;border-radius:10px;padding:12px 18px;font-size:1rem;font-weight:600;cursor:pointer;display:inline-block}
-  button.sec{background:#2a2f3a}
+  button.sec{background:var(--sec)}
   button:disabled{opacity:.5;cursor:default}
   input[type=file]{display:none}
   select,input[type=range]{font-size:1rem}
-  select{background:#0f1115;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px}
+  input[type=range]{accent-color:var(--acc)}
+  select{background:var(--deep);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px}
   .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
   .stage{position:relative;background:#000;border-radius:10px;overflow:hidden;margin-top:12px}
   video{width:100%;display:block;max-height:60vh}
@@ -31,18 +32,18 @@
   .seg{grid-template-columns:auto 1fr auto !important}
   .segStyle{margin-top:6px;font-size:.85rem;padding:5px 6px;color:var(--mut)}
   .segStyle.own{color:#fff;border-color:var(--acc)}
-  .pq{display:grid;grid-template-columns:repeat(3,14px);grid-template-rows:repeat(3,18px);gap:2px;padding:3px;border:1px solid var(--line);border-radius:6px;background:#0f1115}
-  .pq b{background:#2a2f3a;border-radius:2px;cursor:pointer}
+  .pq{display:grid;grid-template-columns:repeat(3,14px);grid-template-rows:repeat(3,18px);gap:2px;padding:3px;border:1px solid var(--line);border-radius:6px;background:var(--deep)}
+  .pq b{background:var(--sec);border-radius:2px;cursor:pointer}
   .pq b.sel{background:var(--acc)}
-  .pq.padrao b.mid{background:#4a4f5c}
-  .bar{height:10px;background:#0f1115;border-radius:6px;overflow:hidden;margin-top:10px;border:1px solid var(--line)}
+  .pq.padrao b.mid{background:#5f7652}
+  .bar{height:10px;background:var(--deep);border-radius:6px;overflow:hidden;margin-top:10px;border:1px solid var(--line)}
   .bar i{display:block;height:100%;width:0;background:var(--acc);transition:width .2s}
   .msg{color:var(--mut);margin-top:8px;font-size:.95rem;min-height:1.2em}
   .seg{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:start;padding:8px 0;border-top:1px solid var(--line)}
   .seg:first-child{border-top:0}
   .seg.on textarea{border-color:var(--acc)}
   .t{color:var(--mut);font-variant-numeric:tabular-nums;font-size:.85rem;background:none;padding:6px 4px;border-radius:6px}
-  textarea{width:100%;background:#0f1115;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px;font-size:1rem;font-family:inherit;resize:vertical;min-height:2.6em}
+  textarea{width:100%;background:var(--deep);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px;font-size:1rem;font-family:inherit;resize:vertical;min-height:2.6em}
   #segs{max-height:50vh;overflow:auto}
   .warn{color:var(--warn)}
   label{color:var(--mut);font-size:.95rem}
@@ -52,11 +53,11 @@
   #tpCam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);max-height:none}
   #tpView{position:absolute;left:0;right:0;top:0;height:42%;overflow:hidden;background:linear-gradient(rgba(0,0,0,.78) 70%,rgba(0,0,0,0));cursor:pointer}
   #tpText{position:absolute;left:6%;right:6%;top:0;color:#fff;font-weight:700;line-height:1.35;white-space:pre-wrap;will-change:transform}
-  #tpLine{position:absolute;left:0;right:0;top:30%;border-top:2px solid rgba(124,92,255,.7);pointer-events:none}
+  #tpLine{position:absolute;left:0;right:0;top:30%;border-top:2px solid rgba(232,120,42,.85);pointer-events:none}
   #tpBar{position:absolute;left:0;right:0;bottom:0;padding:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.8) 35%)}
   #tpBar label{color:#ddd}
-  #tpRec{background:#e5383b;min-width:150px}
-  #tpRec.on{background:#fff;color:#e5383b}
+  #tpRec{background:#e8782a;min-width:150px}
+  #tpRec.on{background:#fff;color:#e8782a}
   #tpCount{position:absolute;inset:0;display:none;place-items:center;font-size:30vmin;font-weight:900;color:#fff;text-shadow:0 0 30px #000;pointer-events:none}
   #tpTime{position:absolute;top:44%;left:50%;transform:translateX(-50%);color:#fff;background:rgba(229,56,59,.9);padding:4px 10px;border-radius:20px;font-weight:700;display:none;font-variant-numeric:tabular-nums}
   #tpDone{position:absolute;inset:0;background:rgba(0,0,0,.92);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px}
@@ -120,7 +121,7 @@
     <div class="row" style="margin-top:12px">
       <button id="exp">Baixar vídeo legendado</button>
       <button id="srt" class="sec">Baixar só a legenda (.srt)</button>
-      <button id="saveVid" hidden style="background:#2ecc71">Salvar vídeo no aparelho</button>
+      <button id="saveVid" hidden style="background:var(--ok)">Salvar vídeo no aparelho</button>
     </div>
     <div class="bar"><i id="bar2"></i></div>
     <div class="msg" id="m4">O vídeo é gravado em tempo real: um vídeo de 1 minuto leva cerca de 1 minuto.</div>
@@ -886,6 +887,6 @@ $('exp').addEventListener('click', async () => {
 })();
 </script>
 <span data-versao style="position:fixed;right:8px;bottom:6px;z-index:9999;font:500 11px ui-monospace,Menlo,monospace;opacity:.55;pointer-events:none"></span>
-<script>(function(){const VERSAO='1.7.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas v"+VERSAO})})();</script>
+<script>(function(){const VERSAO='1.7.1';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas v"+VERSAO})})();</script>
 </body>
 </html>
