@@ -27,6 +27,9 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 #guide:before{left:0;border-left-color:var(--ac)}#guide:after{right:0;border-right-color:var(--ac)}
 #prompt.mirror #scroller{transform-origin:center}
 /* top bar */
+#zbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(162px + env(safe-area-inset-bottom,0));z-index:10;width:min(86vw,340px);display:none}
+#zbar input{flex:1;max-width:none}
+#zbar output{min-width:62px;text-align:right}
 #top{position:fixed;left:0;right:0;bottom:calc(118px + env(safe-area-inset-bottom,0));display:flex;justify-content:center;gap:8px;z-index:10;pointer-events:none}
 .pill{pointer-events:auto;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:20px;padding:6px 12px;font-size:13px;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:6px}
 #rec-dot{width:9px;height:9px;border-radius:50%;background:var(--ac);display:none;animation:bl 1s infinite}
@@ -95,6 +98,7 @@ textarea{width:100%;min-height:42vh;background:#111;color:var(--tx);border:1px s
 
 <div id="prompt"><div id="pbg"></div><div id="scroller"><div id="ptext"></div></div><div id="guide"></div></div>
 
+<div id="zbar" class="pill">🔍 <input type="range" id="zoomQ" min="0" max="100" step="1"><output id="zoomQO"></output></div>
 <div id="top">
   <div class="pill"><span id="rec-dot"></span><span id="timer">00:00</span></div>
   <div class="pill" id="spdPill">⚡ <span id="spdLbl">3</span></div>
@@ -175,7 +179,7 @@ textarea{width:100%;min-height:42vh;background:#111;color:var(--tx);border:1px s
       <option value="480">480p</option><option value="720">720p (HD)</option><option value="1080">1080p (Full HD)</option><option value="1440">1440p (2K)</option><option value="2160">2160p (4K)</option></select></div>
     <div class="row"><label>Quadros por segundo</label><div class="seg" id="fps"><button data-v="24">24</button><button data-v="30">30</button><button data-v="60">60</button></div></div>
     <div class="row"><label>Formato do quadro</label><div class="seg" id="aspect"><button data-v="9:16">9:16</button><button data-v="1:1">1:1</button><button data-v="4:5">4:5</button><button data-v="16:9">16:9</button></div></div>
-    <div class="row"><label>Zoom</label><input type="range" id="zoom" min="1" max="3" step="0.05"><output id="zoomO"></output></div>
+    <div class="row"><label>Zoom</label><input type="range" id="zoom" min="0" max="100" step="1"><output id="zoomO"></output></div>
     <div class="row"><label>Espelhar prévia (câmera frontal)</label><span class="sw"><input type="checkbox" id="mirPrev"><span></span></span></div>
     <div class="row"><label>Gravar espelhado</label><span class="sw"><input type="checkbox" id="mirRec"><span></span></span></div>
     <div class="row"><label>Grade (regra dos terços)</label><span class="sw"><input type="checkbox" id="gridOn"><span></span></span></div>
@@ -213,7 +217,7 @@ const $=s=>document.querySelector(s);
 const LS='tpcam.v1';
 const DEF={script:"Olá! Bem-vindo ao teleprompter.\n\nCole aqui o seu roteiro tocando no botão Texto.\n\nO texto rola de baixo pra cima. Mantenha os olhos perto da linha vermelha, que fica próxima da lente da câmera.\n\nUse os botões + e − na lateral pra ajustar a velocidade enquanto lê.\n\nBoa gravação!",
 speed:3,fsize:40,lh:1.35,margin:6,align:"center",area:42,bgop:55,guideP:30,guideOn:true,fg:"#ffffff",bg:"#000000",mirH:false,mirV:false,autoScroll:true,countdown:3,tapPause:true,
-res:"1080",fps:"30",aspect:"9:16",zoom:1,mirPrev:true,mirRec:false,gridOn:false,torch:false,micOn:true,ns:true,ec:true,agc:true,bitrate:"8000000",mime:"",facing:"user",camId:"",micId:""};
+res:"1080",fps:"30",aspect:"9:16",zoomV:0,mirPrev:true,mirRec:false,gridOn:false,torch:false,micOn:true,ns:true,ec:true,agc:true,bitrate:"8000000",mime:"",facing:"user",camId:"",micId:""};
 let S={...DEF};
 try{Object.assign(S,JSON.parse(localStorage.getItem(LS)||"{}"))}catch(e){}
 const save=()=>{try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}};
@@ -282,7 +286,7 @@ async function startCam(){
     catch(e2){camOn=false;$('#nocam').style.display='flex';$('#nocam').innerHTML='Não consegui acessar a câmera.<br><small>'+(e2.message||e2.name)+'</small><br><br>Abra este arquivo no Chrome ou Safari, por <b>https</b> (ex.: GitHub Pages), e permita câmera e microfone.';return}
   }
   vid.srcObject=stream;await vid.play().catch(()=>{});
-  track=stream.getVideoTracks()[0];camOn=true;$('#nocam').style.display='none';
+  track=stream.getVideoTracks()[0];camOn=true;$('#nocam').style.display='none';$('#zbar').style.display='flex';
   const st=track.getSettings();
   const facing=st.facingMode||S.facing;
   $('#camInfo').innerHTML=`Câmera entregou: <b>${st.width}×${st.height} @ ${Math.round(st.frameRate||0)} fps</b>${facing?' · '+(facing==='user'?'frontal':'traseira'):''}.<br>Saída gravada: <b>${outSize().join('×')}</b> (${S.aspect}).`;
@@ -295,21 +299,26 @@ function stopCam(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null
 function applyTrackExtras(){
   if(!track||!track.getCapabilities)return;const c=track.getCapabilities();const adv={};
   if(c.torch)adv.torch=!!S.torch;
-  if(c.zoom){adv.zoom=Math.min(c.zoom.max,Math.max(c.zoom.min,S.zoom));S._hwZoom=true}else S._hwZoom=false;
+  if(c.zoom)adv.zoom=c.zoom.min;
   if(Object.keys(adv).length)track.applyConstraints({advanced:[adv]}).catch(()=>{});
 }
 function sizeCanvas(){const[w,h]=outSize();cv.width=w;cv.height=h;
   const g=$('#grid');const r=cv.getBoundingClientRect();Object.assign(g.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px',display:S.gridOn?'block':'none'})}
+// zoom: 0 = imagem inteira · 33 = preenche o quadro · 100 = 3x
+function zoomScale(W,H,vw,vh){const fit=Math.min(W/vw,H/vh),fill=Math.max(W/vw,H/vh),v=S.zoomV;
+  return v<=33?fit+(fill-fit)*(v/33):fill*(1+(v-33)/67*2)}
+function zoomLabel(v){v=+v;if(v===0)return'Inteiro';if(v===33)return'Preencher';
+  if(!vid.videoWidth)return v+'%';const W=cv.width,H=cv.height,fit=Math.min(W/vid.videoWidth,H/vid.videoHeight);
+  return (zoomScale(W,H,vid.videoWidth,vid.videoHeight)/fit).toFixed(1)+'×'}
+function setZoom(v){S.zoomV=+v;['zoom','zoomQ'].forEach(id=>{$('#'+id).value=S.zoomV;$('#'+id+'O').textContent=zoomLabel(S.zoomV)});save()}
 let previewFlip=false;
 function render(){
   if(camOn&&vid.videoWidth){
     const W=cv.width,H=cv.height,vw=vid.videoWidth,vh=vid.videoHeight;
-    const z=S._hwZoom?1:S.zoom;
-    const ar=W/H;let sw=vw,sh=vw/ar;if(sh>vh){sh=vh;sw=vh*ar}sw/=z;sh/=z;
-    const sx=(vw-sw)/2,sy=(vh-sh)/2;
-    ctx.save();
+    const sc=zoomScale(W,H,vw,vh),dw=vw*sc,dh=vh*sc;
+    ctx.save();ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
     if(S.mirRec){ctx.translate(W,0);ctx.scale(-1,1)}
-    ctx.drawImage(vid,sx,sy,sw,sh,0,0,W,H);ctx.restore();
+    ctx.drawImage(vid,(W-dw)/2,(H-dh)/2,dw,dh);ctx.restore();
   }
   // prévia espelhada só visual (CSS) — não afeta gravação
   const front=(track&&track.getSettings().facingMode==='user')||(!S.camId&&S.facing==='user');
@@ -317,7 +326,7 @@ function render(){
   if(flip!==previewFlip){previewFlip=flip;cv.style.transform=flip?'scaleX(-1)':''}
   if('requestVideoFrameCallback' in vid&&camOn)vid.requestVideoFrameCallback(render);else requestAnimationFrame(render);
 }
-vid.addEventListener('playing',()=>{sizeCanvas();render()},{once:false});
+vid.addEventListener('playing',()=>{sizeCanvas();setZoom(S.zoomV);render()},{once:false});
 
 async function listDevices(){
   try{const d=await navigator.mediaDevices.enumerateDevices();
@@ -399,10 +408,11 @@ ta.value=S.script;ta.oninput=()=>{S.script=ta.value;renderText();stats();save();
 $('#clearTxt').onclick=()=>{ta.value='';ta.oninput();ta.focus()};
 
 // ranges/switches
-const fmtO={speed:v=>v,fsize:v=>v+'px',lh:v=>(+v).toFixed(2),margin:v=>v+'%',area:v=>v+'%',bgop:v=>v+'%',guideP:v=>v+'%',zoom:v=>(+v).toFixed(1)+'×'};
+const fmtO={speed:v=>v,fsize:v=>v+'px',lh:v=>(+v).toFixed(2),margin:v=>v+'%',area:v=>v+'%',bgop:v=>v+'%',guideP:v=>v+'%',zoom:v=>zoomLabel(v)};
 const camKeys=['res','camSel','micSel','micOn','ns','ec','agc'];
-['speed','fsize','lh','margin','area','bgop','guideP','zoom'].forEach(k=>{const el=$('#'+k),o=$('#'+k+'O');el.value=S[k];o.textContent=fmtO[k](S[k]);
-  el.oninput=()=>{S[k]=+el.value;o.textContent=fmtO[k](el.value);save();if(k==='zoom')applyTrackExtras();else applyPrompt()}});
+['speed','fsize','lh','margin','area','bgop','guideP'].forEach(k=>{const el=$('#'+k),o=$('#'+k+'O');el.value=S[k];o.textContent=fmtO[k](S[k]);
+  el.oninput=()=>{S[k]=+el.value;o.textContent=fmtO[k](el.value);save();applyPrompt()}});
+['zoom','zoomQ'].forEach(id=>$('#'+id).oninput=e=>setZoom(e.target.value));setZoom(S.zoomV||0);
 ['guideOn','mirH','mirV','autoScroll','tapPause','mirPrev','mirRec','gridOn','torch','micOn','ns','ec','agc'].forEach(k=>{const el=$('#'+k);el.checked=!!S[k];
   el.onchange=()=>{S[k]=el.checked;save();if(k==='torch')applyTrackExtras();else if(k==='gridOn')sizeCanvas();else applyPrompt()}});
 ['fg','bg'].forEach(k=>{const el=$('#'+k);el.value=S[k];el.oninput=()=>{S[k]=el.value;save();applyPrompt()}});
@@ -436,6 +446,6 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)wake()});d
 })();
 </script>
 <span data-versao style="position:fixed;right:8px;bottom:calc(2px + env(safe-area-inset-bottom,0));z-index:9999;font:500 11px ui-monospace,Menlo,monospace;opacity:.55;pointer-events:none"></span>
-<script>(function(){const VERSAO='1.0.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Teleprompter v"+VERSAO})})();</script>
+<script>(function(){const VERSAO='1.1.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Teleprompter v"+VERSAO})})();</script>
 </body>
 </html>
