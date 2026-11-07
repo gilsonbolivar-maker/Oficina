@@ -6,6 +6,10 @@
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Teleprompter Câmera</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icones/icone-180.png">
+<meta name="apple-mobile-web-app-title" content="Teleprompter">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
 :root{--ac:#ff3b30;--ok:#34c759;--bg:#0b0b0d;--pn:#1a1a1f;--tx:#f2f2f7;--mu:#8e8e93;--ln:#2c2c33}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -91,6 +95,10 @@ textarea{width:100%;min-height:42vh;background:#111;color:var(--tx);border:1px s
   <p><b>Leia o texto olhando pra lente</b> enquanto grava. O texto aparece no topo, perto da câmera.</p>
   <button class="btn" id="go">Ligar câmera</button>
   <button class="btn sec2" id="goNoCam">Usar só o teleprompter</button>
+  <button class="btn sec2" id="instalar" style="display:none">📲 Instalar como app</button>
+  <div id="instIOS" style="display:none;max-width:320px;background:#1a1a1f;border-radius:12px;padding:14px;font-size:14px;line-height:1.5;text-align:left">
+    <b>Pra instalar no iPhone/iPad:</b><br>1. Toque em <b>Compartilhar</b> (quadrado com seta ↑)<br>2. Toque em <b>Adicionar à Tela de Início</b><br>3. Toque em <b>Adicionar</b>
+  </div>
 </div>
 
 <div id="stage"><canvas id="cv"></canvas><div id="grid"></div><div id="nocam">Câmera desligada.<br>O teleprompter funciona normalmente.</div></div>
@@ -443,12 +451,22 @@ window.addEventListener('resize',()=>{applyPrompt();sizeCanvas()});
 renderText();stats();
 $('#go').onclick=async()=>{$('#start').style.display='none';applyPrompt();await startCam();applyPrompt()};
 $('#goNoCam').onclick=()=>{$('#start').style.display='none';$('#nocam').style.display='flex';$('#micPill').style.display='none';applyPrompt()};
+// instalar como app
+const instalado=matchMedia('(display-mode: standalone)').matches||matchMedia('(display-mode: fullscreen)').matches||navigator.standalone;
+let pedido=null;
+if(!instalado){
+  window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();pedido=e;$('#instalar').style.display='block'});
+  if(/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1))$('#instIOS').style.display='block';
+}
+$('#instalar').onclick=async()=>{if(!pedido)return;pedido.prompt();const r=await pedido.userChoice;pedido=null;$('#instalar').style.display='none';if(r.outcome==='accepted')toast('App instalado ✓')};
+window.addEventListener('appinstalled',()=>{$('#instalar').style.display='none';toast('App instalado ✓')});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 // mantém tela ligada
 async function wake(){try{if('wakeLock' in navigator)await navigator.wakeLock.request('screen')}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)wake()});document.addEventListener('click',wake,{once:true});
 })();
 </script>
 <span data-versao style="position:fixed;right:8px;bottom:calc(2px + env(safe-area-inset-bottom,0));z-index:9999;font:500 11px ui-monospace,Menlo,monospace;opacity:.55;pointer-events:none"></span>
-<script>(function(){const VERSAO='1.2.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Teleprompter v"+VERSAO})})();</script>
+<script>(function(){const VERSAO='1.3.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Teleprompter v"+VERSAO})})();</script>
 </body>
 </html>
