@@ -966,6 +966,31 @@ $('srt').addEventListener('click', () => {
   download(new Blob([txt],{type:'text/plain'}), baseName() + '.srt');
 });
 
+// Abre uma segunda cópia do vídeo para gravar. No Android, o endereço do arquivo às vezes
+// deixa de funcionar depois de um tempo; então tenta três jeitos antes de desistir.
+function tryOpen(src){
+  return new Promise((res, rej) => {
+    const v = document.createElement('video');
+    v.muted = false; v.playsInline = true; v.preload = 'auto';
+    v.style.cssText = 'position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none';
+    document.body.appendChild(v);
+    const t = setTimeout(() => { v.remove(); rej(new Error('tempo esgotado')); }, 15000);
+    v.onloadedmetadata = () => { clearTimeout(t); res(v); };
+    v.onerror = () => { clearTimeout(t); const c = v.error ? v.error.code : '?'; v.remove(); rej(new Error('código ' + c)); };
+    v.src = src;
+  });
+}
+async function openVideoCopy(){
+  if(!file) throw new Error('nenhum vídeo escolhido. Toque em Escolher vídeo.');
+  const tries = [() => url, () => URL.createObjectURL(file),
+    async () => URL.createObjectURL(new Blob([await file.arrayBuffer()], {type: file.type || 'video/mp4'}))];
+  let last = null;
+  for(const get of tries){
+    try{ const src = await get(); if(src) return await tryOpen(src); }catch(e){ last = e; console.warn('abrir vídeo falhou', e); }
+  }
+  throw new Error('não consegui ler o vídeo de novo (' + (last ? last.message : '?') + '). Toque em Escolher vídeo, escolha o mesmo vídeo e tente outra vez.');
+}
+
 $('exp').addEventListener('click', async () => {
   const btn = $('exp'), m = $('m4'), bar = $('bar2');
   if(typeof MediaRecorder === 'undefined'){ m.innerHTML = '<span class="warn">Este navegador não consegue gravar vídeo. Use o botão da legenda .srt.</span>'; return; }
@@ -975,9 +1000,8 @@ $('exp').addEventListener('click', async () => {
   try{
     await loadFonts(40);
     refreshCuts();
-    const v = document.createElement('video');
-    v.src = url; v.playsInline = true; v.preload = 'auto';
-    await new Promise((r,j)=>{ v.onloadedmetadata = r; v.onerror = () => j(new Error('não consegui abrir o vídeo')); });
+    m.textContent = 'Preparando o vídeo…';
+    const v = await openVideoCopy();
     let W = v.videoWidth, H = v.videoHeight; const k = Math.min(1, 1920/Math.max(W,H));
     W = Math.round(W*k/2)*2; H = Math.round(H*k/2)*2;
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
@@ -1055,6 +1079,7 @@ $('exp').addEventListener('click', async () => {
     await stopped;
     document.removeEventListener('visibilitychange', onVis); onVis = null;
     if(ac) ac.close();
+    v.remove();
     const type = rec.mimeType || mime || 'video/webm';
     const ext = type.includes('mp4') ? 'mp4' : 'webm';
     lastVideo = { blob: new Blob(parts, {type}), name: baseName() + '-legendado.' + ext };
@@ -1181,6 +1206,6 @@ $('exp').addEventListener('click', async () => {
 })();
 </script>
 <span data-versao style="position:fixed;right:8px;bottom:6px;z-index:9999;font:500 11px ui-monospace,Menlo,monospace;opacity:.55;pointer-events:none"></span>
-<script>(function(){const VERSAO='2.0.5';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas v"+VERSAO})})();</script>
+<script>(function(){const VERSAO='2.0.6';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas v"+VERSAO})})();</script>
 </body>
 </html>
