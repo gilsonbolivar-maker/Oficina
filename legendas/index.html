@@ -689,6 +689,8 @@ $('file').addEventListener('change', e => {
   done('c1'); unlock('c2');
   offerRecover();
 });
+function savedCount(){ let n = 0; try{ for(let i=0;i<localStorage.length;i++) if(localStorage.key(i).startsWith('legendas-proj:')) n++; }catch(e){} return n; }
+if(savedCount()) $('m1').innerHTML = '<b>Sua legenda está salva.</b> Escolha o mesmo vídeo e toque no botão verde <b>Recuperar</b> para continuar de onde parou.';
 function offerRecover(){
   const p = loadProject();
   $('recover').hidden = !p;
@@ -736,6 +738,8 @@ onmessage = async ({data}) => {
   }catch(e){ postMessage({type:'error', msg: String(e && e.message || e)}); }
 };`;
 let worker = null;
+// A IA ocupa muita memória. Depois de transcrever, ela sai da memória; fica guardada no navegador para a próxima vez.
+function freeWorker(){ if(worker){ try{ worker.terminate(); }catch(e){} worker = null; } }
 function getWorker(){
   if(!worker) worker = new Worker(URL.createObjectURL(new Blob([workerCode],{type:'text/javascript'})), {type:'module'});
   return worker;
@@ -853,6 +857,7 @@ $('go').addEventListener('click', async () => {
       w.postMessage({audio, model: $('model').value, webgpu: !!navigator.gpu}, [audio.buffer]);
     });
     clearInterval(timer); bar.style.width = '100%';
+    freeWorker();
     words = result.mode === 'word' ? wordsFromWordMode(result.out) : wordsFromSegments(result.out, secs);
     if(!words.length){ m.innerHTML = '<span class="warn">Não encontrei fala nesse vídeo.</span>'; btn.disabled=false; return; }
     buildGroups();
@@ -861,7 +866,7 @@ $('go').addEventListener('click', async () => {
     await loadFonts(20);
     fitOverlay(); paintOverlay();
   }catch(e){
-    console.error(e); clearInterval(timer);
+    console.error(e); clearInterval(timer); freeWorker();
     m.innerHTML = '<span class="warn">Deu erro: ' + e.message + '</span>';
     bar.style.width = '0';
   }
@@ -990,7 +995,7 @@ function tryOpen(src){
 async function openVideoCopy(){
   if(!file) throw new Error('nenhum vídeo escolhido. Toque em Escolher vídeo.');
   const tries = [() => url, () => URL.createObjectURL(file),
-    async () => URL.createObjectURL(new Blob([await file.arrayBuffer()], {type: file.type || 'video/mp4'}))];
+    async () => file.size < 80*1048576 ? URL.createObjectURL(new Blob([await file.arrayBuffer()], {type: file.type || 'video/mp4'})) : null];
   let last = null;
   for(const get of tries){
     try{ const src = await get(); if(src) return await tryOpen(src); }catch(e){ last = e; console.warn('abrir vídeo falhou', e); }
@@ -1009,7 +1014,9 @@ $('exp').addEventListener('click', async () => {
     refreshCuts();
     m.textContent = 'Preparando o vídeo…';
     const v = await openVideoCopy();
-    let W = v.videoWidth, H = v.videoHeight; const k = Math.min(1, 1920/Math.max(W,H));
+    let W = v.videoWidth, H = v.videoHeight;
+    const maxSide = (navigator.deviceMemory || 8) >= 8 ? 1920 : 1280;
+    const k = Math.min(1, maxSide/Math.max(W,H));
     W = Math.round(W*k/2)*2; H = Math.round(H*k/2)*2;
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const ctx = cv.getContext('2d');
@@ -1213,7 +1220,7 @@ $('exp').addEventListener('click', async () => {
 })();
 </script>
 <span data-versao style="position:fixed;right:8px;bottom:6px;z-index:9999;font:500 11px ui-monospace,Menlo,monospace;opacity:.55;pointer-events:none"></span>
-<script>(function(){const VERSAO='2.1.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas v"+VERSAO})})();
+<script>(function(){const VERSAO='2.1.1';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas v"+VERSAO})})();
 if('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(e => console.warn('sw', e));
 </script>
 </body>

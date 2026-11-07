@@ -1,6 +1,6 @@
 // Legendas: deixa o app instalável e abrindo mesmo sem internet.
 // Busca primeiro na internet (para pegar a versão nova) e guarda uma cópia.
-const VERSAO = '2.1.0';
+const VERSAO = '2.1.1';
 const CACHE = 'legendas-' + VERSAO;
 const ARQUIVOS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => {
