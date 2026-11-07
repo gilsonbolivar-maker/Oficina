@@ -154,6 +154,7 @@ textarea{width:100%;min-height:42vh;background:#111;color:var(--tx);border:1px s
     <div class="row"><label>Altura da área</label><input type="range" id="area" min="20" max="100"><output id="areaO"></output></div>
     <div class="row"><label>Opacidade do fundo</label><input type="range" id="bgop" min="0" max="100"><output id="bgopO"></output></div>
     <div class="row"><label>Linha guia</label><input type="range" id="guideP" min="10" max="80"><output id="guidePO"></output></div>
+    <div class="row"><label>Apagar texto longe da lente</label><span class="sw"><input type="checkbox" id="fade"><span></span></span></div>
     <div class="row"><label>Mostrar linha guia</label><span class="sw"><input type="checkbox" id="guideOn"><span></span></span></div>
     <div class="sec">Cores</div>
     <div class="row"><label>Cor do texto</label><input type="color" id="fg"></div>
@@ -216,10 +217,11 @@ textarea{width:100%;min-height:42vh;background:#111;color:var(--tx);border:1px s
 const $=s=>document.querySelector(s);
 const LS='tpcam.v1';
 const DEF={script:"Olá! Bem-vindo ao teleprompter.\n\nCole aqui o seu roteiro tocando no botão Texto.\n\nO texto rola de baixo pra cima. Mantenha os olhos perto da linha vermelha, que fica próxima da lente da câmera.\n\nUse os botões + e − na lateral pra ajustar a velocidade enquanto lê.\n\nBoa gravação!",
-speed:3,fsize:40,lh:1.35,margin:6,align:"center",area:42,bgop:55,guideP:30,guideOn:true,fg:"#ffffff",bg:"#000000",mirH:false,mirV:false,autoScroll:true,countdown:3,tapPause:true,
+speed:3,fsize:30,lh:1.3,margin:16,align:"center",area:24,bgop:70,guideP:18,fade:true,guideOn:true,fg:"#ffffff",bg:"#000000",mirH:false,mirV:false,autoScroll:true,countdown:3,tapPause:true,
 res:"1080",fps:"30",aspect:"9:16",zoomV:0,mirPrev:true,mirRec:false,gridOn:false,torch:false,micOn:true,ns:true,ec:true,agc:true,bitrate:"8000000",mime:"",facing:"user",camId:"",micId:""};
 let S={...DEF};
 try{Object.assign(S,JSON.parse(localStorage.getItem(LS)||"{}"))}catch(e){}
+if((S.layoutV||0)<2){Object.assign(S,{fsize:30,lh:1.3,margin:16,area:24,bgop:70,guideP:18,fade:true,layoutV:2})}
 const save=()=>{try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}};
 
 const toast=(m,t=2200)=>{const e=$('#toast');e.textContent=m;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),t)};
@@ -233,7 +235,8 @@ function applyPrompt(){
   $('#pbg').style.background=S.bg;$('#pbg').style.opacity=S.bgop/100;
   ptext.style.color=S.fg;ptext.style.fontSize=S.fsize+'px';ptext.style.lineHeight=S.lh;
   ptext.style.padding=`0 ${S.margin}vw`;ptext.style.textAlign=S.align;
-  guide.style.top=S.guideP+'%';guide.style.display=S.guideOn?'block':'none';
+  guide.style.top=S.guideP+'%';
+  const m=S.fade?`linear-gradient(to bottom,#000 0,#000 ${S.guideP+22}%,rgba(0,0,0,.15) 100%)`:'none';prompt.style.webkitMaskImage=prompt.style.maskImage=m;guide.style.display=S.guideOn?'block':'none';
   ptext.style.paddingTop=(prompt.clientHeight*S.guideP/100)+'px';
   ptext.style.paddingBottom=prompt.clientHeight+'px';
   $('#spdLbl').textContent=S.speed;
@@ -413,7 +416,7 @@ const camKeys=['res','camSel','micSel','micOn','ns','ec','agc'];
 ['speed','fsize','lh','margin','area','bgop','guideP'].forEach(k=>{const el=$('#'+k),o=$('#'+k+'O');el.value=S[k];o.textContent=fmtO[k](S[k]);
   el.oninput=()=>{S[k]=+el.value;o.textContent=fmtO[k](el.value);save();applyPrompt()}});
 ['zoom','zoomQ'].forEach(id=>$('#'+id).oninput=e=>setZoom(e.target.value));setZoom(S.zoomV||0);
-['guideOn','mirH','mirV','autoScroll','tapPause','mirPrev','mirRec','gridOn','torch','micOn','ns','ec','agc'].forEach(k=>{const el=$('#'+k);el.checked=!!S[k];
+['guideOn','fade','mirH','mirV','autoScroll','tapPause','mirPrev','mirRec','gridOn','torch','micOn','ns','ec','agc'].forEach(k=>{const el=$('#'+k);el.checked=!!S[k];
   el.onchange=()=>{S[k]=el.checked;save();if(k==='torch')applyTrackExtras();else if(k==='gridOn')sizeCanvas();else applyPrompt()}});
 ['fg','bg'].forEach(k=>{const el=$('#'+k);el.value=S[k];el.oninput=()=>{S[k]=el.value;save();applyPrompt()}});
 [['countdown'],['res'],['bitrate'],['mime']].forEach(([k])=>{const el=$('#'+k);el.value=S[k];el.onchange=()=>{S[k]=el.value;save()}});
@@ -446,6 +449,6 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)wake()});d
 })();
 </script>
 <span data-versao style="position:fixed;right:8px;bottom:calc(2px + env(safe-area-inset-bottom,0));z-index:9999;font:500 11px ui-monospace,Menlo,monospace;opacity:.55;pointer-events:none"></span>
-<script>(function(){const VERSAO='1.1.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Teleprompter v"+VERSAO})})();</script>
+<script>(function(){const VERSAO='1.2.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Teleprompter v"+VERSAO})})();</script>
 </body>
 </html>
