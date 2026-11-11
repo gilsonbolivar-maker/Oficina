@@ -143,11 +143,12 @@
   #tpCam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);max-height:none;filter:blur(18px) brightness(.35);opacity:.9}
   #tp.nomirror #tpCam{transform:none}
   /* o que aparece no quadro é exatamente o que é gravado */
-  #tpStage{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);box-shadow:0 0 0 2px rgba(255,176,32,.9),0 0 0 100vmax rgba(0,0,0,.35)}
+  #tpStage{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);box-shadow:0 0 0 2px rgba(255,176,32,.9),0 0 0 100vmax rgba(0,0,0,.35);touch-action:none}
   #tpOut{position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1);transition:filter .2s}
   #tp.nomirror #tpOut{transform:none}
   #tpSil{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;transition:opacity .3s}
-  #tp.rec #tpSil{opacity:.25}
+  #tpSil{opacity:.7}
+  #tp.rec #tpSil{opacity:.2}
   #tpSil.off{display:none}
   #tpHint{position:absolute;left:50%;bottom:132px;transform:translateX(-50%);background:rgba(0,0,0,.65);color:#fff;font:600 .85rem var(--ui);padding:8px 12px;border-radius:10px;text-align:center;max-width:90%;pointer-events:none}
   #tp.rec #tpHint{display:none}
@@ -335,7 +336,7 @@
   <video id="tpCam" autoplay playsinline muted></video>
   <div id="tpGuides" class=""></div>
   <div id="tpStage"><canvas id="tpOut"></canvas><svg id="tpSil" aria-hidden="true"></svg></div>
-  <div id="tpHint">Encaixe a cabeça e os ombros na marcação. Só o que está dentro do quadro é gravado.</div>
+  <div id="tpHint">Não precisa se mexer: <b>arraste a imagem</b> com um dedo e <b>aproxime com dois dedos</b> até o rosto ficar na marcação. Toque duas vezes para voltar ao início.</div>
   <div id="tpLevel"></div>
   <div id="tpView"><div id="tpText"></div><div id="tpLine"></div></div>
   <div class="hud">
@@ -363,7 +364,7 @@
     </div>
     <div class="sect">Câmera</div>
     <div class="grid2">
-      <label class="ctl"><span class="hd">Aproximar (corta as bordas) <output></output></span><input type="range" id="tpCrop" min="1" max="1.8" step="0.05" value="1" data-u="×"></label>
+      <label class="ctl"><span class="hd">Aproximar (corta as bordas) <output></output></span><input type="range" id="tpCrop" min="1" max="2.5" step="0.05" value="1" data-u="×"></label>
       <label class="ctl" id="tpZoomW" hidden><span class="hd">Zoom <output></output></span><input type="range" id="tpZoom" min="1" max="1" step="0.1" value="1" data-u="×"></label>
       <label class="ctl" id="tpExpW" hidden><span class="hd">Exposição <output></output></span><input type="range" id="tpExp" min="0" max="0" step="0.1" value="0"></label>
       <label class="ctl"><span class="hd">Luz suave (prévia) <output></output></span><input type="range" id="tpBeauty" min="0" max="100" value="0" data-u="%"></label>
@@ -1603,10 +1604,45 @@ $('exp').addEventListener('click', async () => {
     if(vw && vh){
       const A = out.width / out.height, Z = +$('tpCrop').value || 1;
       let cw, ch; if(vw / vh > A){ ch = vh / Z; cw = ch * A; } else { cw = vw / Z; ch = cw / A; }
-      octx.drawImage(cam, (vw - cw) / 2, (vh - ch) / 2, cw, ch, 0, 0, out.width, out.height);
+      lastCrop = [cw, ch];
+      const sx = (vw - cw) / 2 * (1 + pan.x), sy = (vh - ch) / 2 * (1 + pan.y);
+      octx.drawImage(cam, sx, sy, cw, ch, 0, 0, out.width, out.height);
     }
     requestAnimationFrame(drawOut);
   }
+  // ===== mover e aproximar a imagem com os dedos (a pessoa não precisa se ajustar ao quadro) =====
+  let lastCrop = [1, 1];
+  const pan = (() => { try{ return JSON.parse(localStorage.getItem('legendas-pan')) || {x:0, y:0}; }catch(e){ return {x:0, y:0}; } })();
+  try{ const z = localStorage.getItem('legendas-zoom'); if(z) $('tpCrop').value = z; }catch(e){}
+  function keepPan(){
+    pan.x = Math.max(-1, Math.min(1, pan.x)); pan.y = Math.max(-1, Math.min(1, pan.y));
+    try{ localStorage.setItem('legendas-pan', JSON.stringify(pan)); localStorage.setItem('legendas-zoom', $('tpCrop').value); }catch(e){}
+  }
+  const pts = new Map(); let pinch0 = 0, zoom0 = 1, lastTap = 0;
+  stage.addEventListener('pointerdown', e => {
+    stage.setPointerCapture(e.pointerId); pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if(pts.size === 2){ const [a, b] = [...pts.values()]; pinch0 = Math.hypot(a.x-b.x, a.y-b.y); zoom0 = +$('tpCrop').value; }
+    if(pts.size === 1){ const now = Date.now(); if(now - lastTap < 300){ pan.x = 0; pan.y = 0; $('tpCrop').value = 1; keepPan(); window.paintRanges && paintRanges(); } lastTap = now; }
+  });
+  stage.addEventListener('pointermove', e => {
+    const p = pts.get(e.pointerId); if(!p) return;
+    const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
+    if(pts.size >= 2){
+      const [a, b] = [...pts.values()]; const d = Math.hypot(a.x-b.x, a.y-b.y);
+      const z = $('tpCrop'); z.value = Math.max(+z.min, Math.min(+z.max, zoom0 * d / (pinch0 || d)));
+      window.paintRanges && paintRanges(); keepPan(); return;
+    }
+    const vw = cam.videoWidth || 1, vh = cam.videoHeight || 1, [cw, ch] = lastCrop;
+    const k = cw / stage.clientWidth;                        // pixels da tela -> pixels da câmera
+    const mir = !tp.classList.contains('nomirror') ? -1 : 1; // câmera da frente aparece espelhada
+    const slackX = (vw - cw) / 2, slackY = (vh - ch) / 2;
+    if(slackX > 1) pan.x -= mir * dx * k / slackX;
+    if(slackY > 1) pan.y -= dy * k / slackY;
+    keepPan();
+  });
+  const up = e => { pts.delete(e.pointerId); if(pts.size < 2) pinch0 = 0; };
+  stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
+
   // o que vai para o gravador: o quadro recortado + o áudio do microfone
   window.tpOutStream = stream => {
     const v = out.captureStream(30).getVideoTracks();
@@ -1626,7 +1662,7 @@ $('exp').addEventListener('click', async () => {
 })();
 </script>
 
-<script>(function(){const VERSAO='3.1.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas Studio v"+VERSAO})})();
+<script>(function(){const VERSAO='3.2.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas Studio v"+VERSAO})})();
 if('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(e => console.warn('sw', e));
 </script>
 </body>
