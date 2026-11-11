@@ -22,6 +22,7 @@ Oficina de desenvolvimento — Projetos e soluções
 | [`karla-neves/`](karla-neves/) | Site da Karla Neves Estética. |
 | [`lete-diedrichs/`](lete-diedrichs/) | Site da artista Lete Diedrichs. |
 | [`harmonize/`](harmonize/) | Guia do projeto Harmonize Clinical. |
+| [`piano/`](piano/) | Piano de cauda 3D com medidas reais, cotas e exportação .OBJ/.GLTF. Versão compilada do repositório Piano. |
 | [`legendas/`](legendas/) | Legenda automática de vídeos com IA no navegador: transcreve, corrige e grava o vídeo legendado. |
 
 ## Publicação
@@ -49,3 +50,4 @@ preciso configurar nada em Settings.
 - Lete Diedrichs: <https://gilsonbolivar-maker.github.io/Oficina/lete-diedrichs/>
 - Harmonize por Dentro: <https://gilsonbolivar-maker.github.io/Oficina/harmonize/>
 - Legendas: <https://gilsonbolivar-maker.github.io/Oficina/legendas/>
+- Piano 3D: <https://gilsonbolivar-maker.github.io/Oficina/piano/>

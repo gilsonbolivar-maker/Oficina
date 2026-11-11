@@ -28,6 +28,7 @@ Todo app da Oficina mostra o número da versão na tela, sempre.
 | PixelMusic | ao lado do título |
 | Player | ao lado do título, no topo da lista |
 | Teleprompter | canto inferior direito; a `VERSAO` fica no script no fim do `teleprompter/index.html` e no `teleprompter/sw.js`, com o mesmo valor (não tem `app.js`) |
+| Piano 3D | canto inferior direito; é a versão compilada (Vite) do repositório Piano: a `VERSAO` fica no `index.html` de lá — muda lá, compila (`npm run build`) e copia o `dist/` para `piano/` |
 | Páginas de arquivo único (Treino, Mensagem Efêmera, Descubra seu App, Portfólio, DD, Karla Neves, Lete Diedrichs, Harmonize) | canto inferior direito; a `VERSAO` fica no script no fim do `index.html` (não têm `app.js` nem `sw.js`) |
 
 App novo já nasce com `VERSAO = '1.0.0'` e um lugar visível com `data-versao`.
