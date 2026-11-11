@@ -140,12 +140,21 @@
   /* ===== estúdio / teleprompter ===== */
   #tp{position:fixed;inset:0;background:#000;z-index:50;display:none;font-family:var(--ui)}
   #tp.open{display:block}
-  #tpCam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);max-height:none;transition:filter .2s}
+  #tpCam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);max-height:none;filter:blur(18px) brightness(.35);opacity:.9}
   #tp.nomirror #tpCam{transform:none}
+  /* o que aparece no quadro é exatamente o que é gravado */
+  #tpStage{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);box-shadow:0 0 0 2px rgba(255,176,32,.9),0 0 0 100vmax rgba(0,0,0,.35)}
+  #tpOut{position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1);transition:filter .2s}
+  #tp.nomirror #tpOut{transform:none}
+  #tpSil{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;transition:opacity .3s}
+  #tp.rec #tpSil{opacity:.25}
+  #tpSil.off{display:none}
+  #tpHint{position:absolute;left:50%;bottom:132px;transform:translateX(-50%);background:rgba(0,0,0,.65);color:#fff;font:600 .85rem var(--ui);padding:8px 12px;border-radius:10px;text-align:center;max-width:90%;pointer-events:none}
+  #tp.rec #tpHint{display:none}
+  #tp:not(.rec) #tpView{opacity:.45}
   #tp:after{content:"";position:absolute;inset:0;border:0 solid var(--rec);pointer-events:none;transition:border-width .2s}
   #tp.rec:after{border-width:5px;box-shadow:inset 0 0 40px rgba(255,59,59,.4)}
   #tpGuides{position:absolute;inset:0;pointer-events:none}
-  #tpFrame{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:2px solid rgba(255,176,32,.9);box-shadow:0 0 0 100vmax rgba(0,0,0,.45);display:none;pointer-events:none}
   #tpLevel{position:absolute;left:50%;top:62%;width:46%;height:0;border-top:2px solid rgba(255,255,255,.7);transform:translateX(-50%);display:none;pointer-events:none;transition:border-color .2s}
   #tpLevel.ok{border-color:var(--ok);box-shadow:0 0 10px var(--ok)}
   #tpLevel:before{content:"";position:absolute;left:-14px;right:-14px;top:-2px;border-top:2px dashed rgba(255,255,255,.25)}
@@ -325,7 +334,8 @@
 <div id="tp">
   <video id="tpCam" autoplay playsinline muted></video>
   <div id="tpGuides" class=""></div>
-  <div id="tpFrame"></div>
+  <div id="tpStage"><canvas id="tpOut"></canvas><svg id="tpSil" aria-hidden="true"></svg></div>
+  <div id="tpHint">Encaixe a cabeça e os ombros na marcação. Só o que está dentro do quadro é gravado.</div>
   <div id="tpLevel"></div>
   <div id="tpView"><div id="tpText"></div><div id="tpLine"></div></div>
   <div class="hud">
@@ -346,13 +356,14 @@
     </div>
     <div class="sect">Guias de enquadramento</div>
     <div class="row" id="tpAspect">
-      <button class="chip sel" data-a="0">Livre</button><button class="chip" data-a="0.5625">9:16</button><button class="chip" data-a="0.8">4:5</button><button class="chip" data-a="1">1:1</button><button class="chip" data-a="1.7778">16:9</button>
+      <button class="chip" data-a="0">Livre</button><button class="chip sel" data-a="0.5625">9:16</button><button class="chip" data-a="0.8">4:5</button><button class="chip" data-a="1">1:1</button><button class="chip" data-a="1.7778">16:9</button>
     </div>
     <div class="row" style="margin-top:8px">
-      <button class="chip" id="tpGridBtn">Grade 3×3</button><button class="chip" id="tpLevelBtn">Nível</button><button class="chip" id="tpMirrorBtn">Espelho da tela</button>
+      <button class="chip sel" id="tpSilBtn">Marcação da pessoa</button><button class="chip" id="tpGridBtn">Grade 3×3</button><button class="chip" id="tpLevelBtn">Nível</button><button class="chip" id="tpMirrorBtn">Espelho da tela</button>
     </div>
     <div class="sect">Câmera</div>
     <div class="grid2">
+      <label class="ctl"><span class="hd">Aproximar (corta as bordas) <output></output></span><input type="range" id="tpCrop" min="1" max="1.8" step="0.05" value="1" data-u="×"></label>
       <label class="ctl" id="tpZoomW" hidden><span class="hd">Zoom <output></output></span><input type="range" id="tpZoom" min="1" max="1" step="0.1" value="1" data-u="×"></label>
       <label class="ctl" id="tpExpW" hidden><span class="hd">Exposição <output></output></span><input type="range" id="tpExp" min="0" max="0" step="0.1" value="0"></label>
       <label class="ctl"><span class="hd">Luz suave (prévia) <output></output></span><input type="range" id="tpBeauty" min="0" max="100" value="0" data-u="%"></label>
@@ -650,6 +661,12 @@ function drawRelogio(ctx, W, H, t, g, st, fs, fam){
 function roundRect(ctx, x, y, w, h, r){
   ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
 }
+
+// ===== câmera do estúdio: pede a maior qualidade que o aparelho der =====
+function camConstraints(){
+  return { facingMode: window.camFacing || 'user', width: {ideal: 1920}, height: {ideal: 1080}, frameRate: {ideal: 30} };
+}
+function audioConstraints(){ return { echoCancellation: true, noiseSuppression: true, autoGainControl: true }; }
 
 // ================= CORTES AUTOMÁTICOS =================
 const FILLER = /^(é{2,}|eh+|ehm+|ah+|ahn+|ahm+|hã+|hum+|hm+|ã+|uh+|uhm+|mmm+)[.,!?…]*$/i;
@@ -1314,8 +1331,7 @@ $('exp').addEventListener('click', async () => {
     if(!script.value.trim()){ $('m0').innerHTML = '<span class="warn">Escreva o roteiro primeiro.</span>'; return; }
     $('m0').textContent = 'Abrindo a câmera…';
     try{
-      stream = await navigator.mediaDevices.getUserMedia({
-        video:{facingMode:window.camFacing||'user', width:{ideal:1920}, height:{ideal:1080}}, audio:true });
+      stream = await navigator.mediaDevices.getUserMedia({ video: camConstraints(), audio: audioConstraints() });
     }catch(e){ $('m0').innerHTML = '<span class="warn">Não consegui abrir a câmera. Permita o acesso à câmera e ao microfone para este site.</span>'; return; }
     $('m0').textContent = '';
     cam.srcObject = stream; window.studioCam && studioCam(stream);
@@ -1326,7 +1342,7 @@ $('exp').addEventListener('click', async () => {
   };
 
   window.tpSwap = async () => {
-    try{ const ns = await navigator.mediaDevices.getUserMedia({video:{facingMode:window.camFacing, width:{ideal:1920}, height:{ideal:1080}}, audio:true});
+    try{ const ns = await navigator.mediaDevices.getUserMedia({ video: camConstraints(), audio: audioConstraints() });
       if(stream) stream.getTracks().forEach(t => t.stop()); stream = ns; cam.srcObject = stream; window.studioCam && studioCam(stream);
     }catch(e){ console.warn('não virou a câmera', e); }
   };
@@ -1352,12 +1368,14 @@ $('exp').addEventListener('click', async () => {
     await countdown();
     const types = ['video/mp4;codecs=avc1,mp4a','video/mp4','video/webm;codecs=vp9,opus','video/webm'];
     const mime = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
-    rec = new MediaRecorder(stream, mime ? {mimeType:mime, videoBitsPerSecond:8e6} : {});
+    const outStream = window.tpOutStream ? tpOutStream(stream) : stream;
+    const bps = window.tpOutBps ? tpOutBps() : 8e6;
+    rec = new MediaRecorder(outStream, mime ? {mimeType:mime, videoBitsPerSecond:bps, audioBitsPerSecond:160000} : {});
     parts = [];
     rec.ondataavailable = e => e.data.size && parts.push(e.data);
     rec.onstop = () => {
       scrolling = false; clearInterval(timer); $('tpTime').style.display='none';
-      recBtn.classList.remove('on'); recBtn.textContent = '● Gravar';
+      recBtn.classList.remove('on'); recBtn.textContent = '● Gravar'; tp.classList.remove('rec');
       blob = new Blob(parts, {type: rec.mimeType || mime || 'video/mp4'});
       $('tpPreview').src = URL.createObjectURL(blob);
       $('tpDoneMsg').textContent = 'Gravação pronta. Salve no celular antes de seguir.';
@@ -1373,7 +1391,7 @@ $('exp').addEventListener('click', async () => {
     scrolling = true; last = 0;
     t0 = Date.now(); $('tpTime').style.display='block'; $('tpTime').textContent='0:00';
     timer = setInterval(() => { const s = Math.floor((Date.now()-t0)/1000); $('tpTime').textContent = Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); }, 500);
-    recBtn.classList.add('on'); recBtn.textContent = '■ Parar'; recBtn.disabled = false;
+    recBtn.classList.add('on'); recBtn.textContent = '■ Parar'; recBtn.disabled = false; tp.classList.add('rec');
   };
 
   function ext(){ return (blob.type||'').includes('mp4') ? 'mp4' : 'webm'; }
@@ -1495,11 +1513,12 @@ $('exp').addEventListener('click', async () => {
     g.querySelectorAll('.chip').forEach(x => x.classList.remove('sel')); b.classList.add('sel'); fn && fn(b.dataset[attr]); }); }
   window.tpDelay = () => +($('tpDelay').querySelector('.sel') || {dataset:{d:3}}).dataset.d;
   group('tpDelay', 'd');
-  let aspect = 0;
-  function frame(){ const fr = $('tpFrame'); if(!aspect){ fr.style.display='none'; return; }
-    const W = innerWidth*.94, H = innerHeight*.94; let w = W, h = W/aspect; if(h > H){ h = H; w = H*aspect; }
-    fr.style.display='block'; fr.style.width = w+'px'; fr.style.height = h+'px'; }
+  let aspect = 9/16;
+  function frame(){ window.tpLayout && tpLayout(); }
   group('tpAspect', 'a', a => { aspect = +a; frame(); }); addEventListener('resize', frame);
+  window.tpAspectNow = () => aspect;
+  $('tpSilBtn').onclick = function(){ const off = $('tpSil').classList.toggle('off'); this.classList.toggle('sel', !off); };
+  $('tpCrop').addEventListener('input', frame);
   $('tpGridBtn').onclick = function(){ $('tpGuides').classList.toggle('g3'); this.classList.toggle('sel'); };
   $('tpMirrorBtn').onclick = function(){ tp.classList.toggle('nomirror'); this.classList.toggle('sel', tp.classList.contains('nomirror')); };
   // nível
@@ -1513,7 +1532,7 @@ $('exp').addEventListener('click', async () => {
     const a = Math.max(-45, Math.min(45, -ang)); const l = $('tpLevel');
     l.style.transform = 'translateX(-50%) rotate(' + a + 'deg)'; l.classList.toggle('ok', Math.abs(a) < 1.5); });
   // luz suave
-  $('tpBeauty').addEventListener('input', e => { const v = e.target.value/100; cam.style.filter = v ? `brightness(${1+v*.12}) contrast(${1-v*.1}) saturate(${1+v*.08}) blur(${v*.6}px)` : ''; });
+  $('tpBeauty').addEventListener('input', e => { const v = e.target.value/100; $('tpOut').style.filter = v ? `brightness(${1+v*.12}) contrast(${1-v*.1}) saturate(${1+v*.08}) blur(${v*.6}px)` : ''; });
 
   // medidor de áudio
   let ac = null, raf = 0;
@@ -1530,7 +1549,8 @@ $('exp').addEventListener('click', async () => {
   function caps(stream){
     const tr = stream.getVideoTracks()[0]; if(!tr) return;
     const s = tr.getSettings ? tr.getSettings() : {}, c = tr.getCapabilities ? tr.getCapabilities() : {};
-    $('tpRes').textContent = (s.width && s.height ? Math.max(s.width,s.height) >= 1900 ? '1080p' : Math.min(s.width,s.height)+'p' : 'HD') + ' · ' + (s.frameRate ? Math.round(s.frameRate) : 30) + ' FPS';
+    const o = $('tpOut'); $('tpRes').textContent = 'GRAVA ' + (o.width && o.height ? o.width + '×' + o.height : 'HD') + ' · ' + (s.frameRate ? Math.round(s.frameRate) : 30) + ' FPS';
+    setTimeout(() => { const o2 = $('tpOut'); $('tpRes').textContent = 'GRAVA ' + o2.width + '×' + o2.height + ' · ' + (s.frameRate ? Math.round(s.frameRate) : 30) + ' FPS'; }, 800);
     const z = $('tpZoom'); $('tpZoomW').hidden = !c.zoom;
     if(c.zoom){ z.min = c.zoom.min; z.max = Math.min(c.zoom.max, 10); z.step = c.zoom.step || .1; z.value = s.zoom || c.zoom.min;
       z.oninput = () => tr.applyConstraints({advanced:[{zoom:+z.value}]}).catch(()=>{}); }
@@ -1541,7 +1561,60 @@ $('exp').addEventListener('click', async () => {
     t.onclick = () => { on = !on; t.classList.toggle('sel', on); tr.applyConstraints({advanced:[{torch:on}]}).catch(()=>{}); };
     window.paintRanges && paintRanges();
   }
-  window.studioCam = stream => { vu(stream); caps(stream); frame(); };
+  // ===== quadro de gravação: recorta a câmera no formato escolhido e grava só isso =====
+  const out = $('tpOut'), octx = out.getContext('2d'), stage = $('tpStage'), sil = $('tpSil');
+  let drawing = false;
+  function srcSize(){ return [cam.videoWidth || 1280, cam.videoHeight || 720]; }
+  function outAspect(){ const [vw, vh] = srcSize(); return aspect || vw / vh; }
+  // tamanho do vídeo gravado: lado maior 1920 (1280 em aparelho com pouca memória)
+  function outSize(){
+    const A = outAspect(), L = (navigator.deviceMemory || 8) >= 6 ? 1920 : 1280;
+    let w, h; if(A < 1){ h = L; w = Math.round(L * A); } else { w = L; h = Math.round(L / A); }
+    return [w - w % 2, h - h % 2];
+  }
+  window.tpLayout = () => {
+    const [w, h] = outSize(); if(out.width !== w || out.height !== h){ out.width = w; out.height = h; }
+    const A = w / h, W = innerWidth * .96, H = innerHeight * .96;
+    let sw = W, sh = W / A; if(sh > H){ sh = H; sw = H * A; }
+    stage.style.width = sw + 'px'; stage.style.height = sh + 'px';
+    drawSil(A);
+  };
+  // marcação da pessoa: cabeça, ombros e a linha dos olhos (regra dos terços)
+  function drawSil(A){
+    const Wv = 100, Hv = 100 / A, eye = Hv / 3;
+    const hr = Math.min(16, Hv * .1), cy = eye + hr * .15, chin = cy + hr * 1.25, sh = chin + hr * 1.1;
+    sil.setAttribute('viewBox', `0 0 ${Wv} ${Hv}`);
+    sil.innerHTML = `
+      <line x1="0" y1="${eye}" x2="${Wv}" y2="${eye}" stroke="rgba(255,255,255,.35)" stroke-width=".35" stroke-dasharray="1.5 1.5"/>
+      <text x="2" y="${eye - 1.2}" fill="rgba(255,255,255,.75)" font-size="${Math.max(2.6, Hv * .022)}" font-family="sans-serif" font-weight="700">olhos aqui</text>
+      <g fill="rgba(255,176,32,.08)" stroke="#ffb020" stroke-width=".7" stroke-dasharray="2.2 1.4">
+        <ellipse cx="50" cy="${cy}" rx="${hr * .82}" ry="${hr * 1.08}"/>
+        <path d="M ${50 - hr * .38} ${chin} L ${50 - hr * .42} ${sh - hr * .2}
+                 C ${50 - hr * 1.2} ${sh} ${50 - hr * 2.2} ${sh + hr * .1} ${50 - hr * 2.6} ${sh + hr * 1.1}
+                 L ${50 - hr * 2.85} ${Hv}
+                 M ${50 + hr * .38} ${chin} L ${50 + hr * .42} ${sh - hr * .2}
+                 C ${50 + hr * 1.2} ${sh} ${50 + hr * 2.2} ${sh + hr * .1} ${50 + hr * 2.6} ${sh + hr * 1.1}
+                 L ${50 + hr * 2.85} ${Hv}" fill="none"/>
+      </g>`;
+  }
+  function drawOut(){
+    if(!tp.classList.contains('open')){ drawing = false; return; }
+    const vw = cam.videoWidth, vh = cam.videoHeight;
+    if(vw && vh){
+      const A = out.width / out.height, Z = +$('tpCrop').value || 1;
+      let cw, ch; if(vw / vh > A){ ch = vh / Z; cw = ch * A; } else { cw = vw / Z; ch = cw / A; }
+      octx.drawImage(cam, (vw - cw) / 2, (vh - ch) / 2, cw, ch, 0, 0, out.width, out.height);
+    }
+    requestAnimationFrame(drawOut);
+  }
+  // o que vai para o gravador: o quadro recortado + o áudio do microfone
+  window.tpOutStream = stream => {
+    const v = out.captureStream(30).getVideoTracks();
+    return new MediaStream([...v, ...stream.getAudioTracks()]);
+  };
+  window.tpOutBps = () => Math.round(Math.min(14e6, Math.max(6e6, out.width * out.height * 5)));
+  cam.addEventListener('loadedmetadata', () => { tpLayout(); if(!drawing){ drawing = true; requestAnimationFrame(drawOut); } });
+  window.studioCam = stream => { vu(stream); caps(stream); frame(); if(!drawing){ drawing = true; requestAnimationFrame(drawOut); } };
   $('tpFlip').onclick = async () => {
     if($('tpRec').classList.contains('on')) return;
     window.camFacing = window.camFacing === 'user' ? 'environment' : 'user';
@@ -1553,7 +1626,7 @@ $('exp').addEventListener('click', async () => {
 })();
 </script>
 
-<script>(function(){const VERSAO='3.0.1';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas Studio v"+VERSAO})})();
+<script>(function(){const VERSAO='3.1.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas Studio v"+VERSAO})})();
 if('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(e => console.warn('sw', e));
 </script>
 </body>
