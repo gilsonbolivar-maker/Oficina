@@ -664,8 +664,12 @@ function roundRect(ctx, x, y, w, h, r){
 }
 
 // ===== câmera do estúdio: pede a maior qualidade que o aparelho der =====
+// Pede 4K: o vídeo final é vertical e sai de um recorte da câmera (que é deitada).
+// Com 1920×1080, o recorte vertical teria só 608×1080; com 4K tem 1215×2160, nitidez de verdade.
 function camConstraints(){
-  return { facingMode: window.camFacing || 'user', width: {ideal: 1920}, height: {ideal: 1080}, frameRate: {ideal: 30} };
+  const hi = (navigator.deviceMemory || 8) >= 4;
+  return { facingMode: window.camFacing || 'user',
+    width: {ideal: hi ? 3840 : 1920}, height: {ideal: hi ? 2160 : 1080}, frameRate: {ideal: 30} };
 }
 function audioConstraints(){ return { echoCancellation: true, noiseSuppression: true, autoGainControl: true }; }
 
@@ -1606,7 +1610,9 @@ $('exp').addEventListener('click', async () => {
       let cw, ch; if(vw / vh > A){ ch = vh / Z; cw = ch * A; } else { cw = vw / Z; ch = cw / A; }
       lastCrop = [cw, ch];
       const sx = (vw - cw) / 2 * (1 + pan.x), sy = (vh - ch) / 2 * (1 + pan.y);
+      octx.imageSmoothingEnabled = true; octx.imageSmoothingQuality = 'high';
       octx.drawImage(cam, sx, sy, cw, ch, 0, 0, out.width, out.height);
+      hudQuality(vw, vh, cw, ch);
     }
     requestAnimationFrame(drawOut);
   }
@@ -1648,7 +1654,16 @@ $('exp').addEventListener('click', async () => {
     const v = out.captureStream(30).getVideoTracks();
     return new MediaStream([...v, ...stream.getAudioTracks()]);
   };
-  window.tpOutBps = () => Math.round(Math.min(14e6, Math.max(6e6, out.width * out.height * 5)));
+  window.tpOutBps = () => Math.round(Math.min(16e6, Math.max(8e6, out.width * out.height * 7.5)));
+  // mostra no topo a resolução real: o que a câmera entrega e quanto sobra no recorte
+  let hudT = 0;
+  function hudQuality(vw, vh, cw, ch){
+    const now = performance.now(); if(now - hudT < 1000) return; hudT = now;
+    const fps = (cam.srcObject && cam.srcObject.getVideoTracks()[0] && cam.srcObject.getVideoTracks()[0].getSettings().frameRate) || 30;
+    const eff = Math.round(Math.min(cw, ch)), ok = eff >= 1000 ? 'ÓTIMA' : eff >= 700 ? 'BOA' : 'BAIXA';
+    $('tpRes').textContent = 'CÂM ' + Math.max(vw, vh) + 'p · ' + ok + ' · ' + Math.round(fps) + ' FPS';
+    $('tpRes').style.color = eff >= 1000 ? '#3ee08f' : eff >= 700 ? '#ffe14d' : '#ff6b6b';
+  }
   cam.addEventListener('loadedmetadata', () => { tpLayout(); if(!drawing){ drawing = true; requestAnimationFrame(drawOut); } });
   window.studioCam = stream => { vu(stream); caps(stream); frame(); if(!drawing){ drawing = true; requestAnimationFrame(drawOut); } };
   $('tpFlip').onclick = async () => {
@@ -1662,7 +1677,7 @@ $('exp').addEventListener('click', async () => {
 })();
 </script>
 
-<script>(function(){const VERSAO='3.2.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas Studio v"+VERSAO})})();
+<script>(function(){const VERSAO='3.3.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas Studio v"+VERSAO})})();
 if('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(e => console.warn('sw', e));
 </script>
 </body>
