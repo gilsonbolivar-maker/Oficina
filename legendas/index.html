@@ -159,13 +159,15 @@
   #tpQS output{font:700 .85rem var(--mono);color:var(--acc);min-width:52px;text-align:right}
   #tpQS button{width:44px;height:44px;border-radius:50%;padding:0;flex:none;background:rgba(255,255,255,.12);color:#fff;font-size:1.4rem;box-shadow:none;border:1px solid rgba(255,255,255,.18)}
   #tpQS input{flex:1;min-width:0}
-  #tpQR{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
-  #tpQR::-webkit-scrollbar{display:none}
-  #tpQR .chip{flex:none;min-height:44px;background:rgba(14,16,20,.82);backdrop-filter:blur(10px);color:#fff;display:flex;align-items:center;gap:6px}
-  #tpQR .chip i{font-style:normal;color:var(--acc)}
-  #tpQR .chip.sel{background:var(--acc);color:#1a1206}
-  #tpQR .chip.sel i{color:#1a1206}
-  #tpQR .chip[hidden]{display:none}
+  .srail{position:absolute;top:12px;bottom:120px;width:62px;display:flex;flex-direction:column;gap:7px;overflow-y:auto;scrollbar-width:none;padding:2px 0;z-index:2}
+  .srail::-webkit-scrollbar{display:none}
+  #tpRailL{left:8px}#tpRailR{right:8px}
+  .srail .cap{font:700 .6rem var(--mono);letter-spacing:.08em;color:var(--acc);text-align:center;text-shadow:0 1px 3px #000;margin-top:2px}
+  .rb{flex:none;width:62px;min-height:54px;padding:5px 2px;border-radius:14px;background:rgba(14,16,20,.8);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.16);color:#fff;box-shadow:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:700 .64rem var(--mono);letter-spacing:.03em;text-transform:uppercase;line-height:1.1}
+  .rb i{font-style:normal;color:var(--acc);font-size:.78rem}
+  .rb.sel{background:var(--acc);color:#1a1206;border-color:var(--acc)}
+  .rb.sel i{color:#1a1206}
+  .rb[hidden]{display:none}
   #tpHint{position:absolute;left:50%;bottom:236px;transform:translateX(-50%);background:rgba(0,0,0,.65);color:#fff;font:600 .85rem var(--ui);padding:8px 12px;border-radius:10px;text-align:center;max-width:90%;pointer-events:none}
   #tp.rec #tpHint{display:none}
   #tp:has(#tpQS.open) #tpHint{display:none}
@@ -177,12 +179,14 @@
   #tpLevel.ok{border-color:var(--ok);box-shadow:0 0 10px var(--ok)}
   #tpLevel:before{content:"";position:absolute;left:-14px;right:-14px;top:-2px;border-top:2px dashed rgba(255,255,255,.25)}
   #tpView{position:absolute;left:0;right:0;top:0;height:42%;overflow:hidden;background:linear-gradient(rgba(0,0,0,.82) 70%,rgba(0,0,0,0));cursor:pointer}
-  #tpText{position:absolute;left:6%;right:6%;top:0;color:#fff;font-weight:700;line-height:1.35;white-space:pre-wrap;will-change:transform}
+  #tpText{position:absolute;left:78px;right:78px;top:0;color:#fff;font-weight:700;line-height:1.35;white-space:pre-wrap;will-change:transform;text-align:center}
   #tp.tpmirror #tpText{transform-origin:center}
   #tpLine{position:absolute;left:0;right:0;top:30%;border-top:2px solid rgba(255,176,32,.9);pointer-events:none}
   #tpLine:before{content:"";position:absolute;left:0;top:-7px;border:6px solid transparent;border-left:10px solid var(--acc)}
-  .hud{position:absolute;left:10px;right:10px;top:43%;display:flex;justify-content:space-between;align-items:center;pointer-events:none;gap:8px}
+  .hud{position:absolute;left:78px;right:78px;top:43%;display:flex;justify-content:space-between;align-items:center;pointer-events:none;gap:8px}
   .hud .pill{font:700 .72rem var(--mono);background:rgba(0,0,0,.55);backdrop-filter:blur(8px);color:#fff;padding:6px 9px;border-radius:8px;letter-spacing:.06em;display:flex;align-items:center;gap:6px}
+  .hud .pill{white-space:nowrap;font-size:.66rem}
+  .hud{justify-content:center !important;flex-wrap:wrap}
   #tpTime{position:static;transform:none;color:#fff;background:var(--rec);padding:6px 10px;border-radius:8px;font:700 .8rem var(--mono);display:none}
   #tpTime:before{content:"● REC ";animation:blink 1s steps(2) infinite}
   @keyframes blink{50%{opacity:.2}}
@@ -390,22 +394,31 @@
   </div>
   <div id="tpQuick">
     <div id="tpQS"><b id="tpQSName"></b><button id="tpQSMinus" aria-label="Diminuir">−</button><input type="range" id="tpQSRange" aria-label="Ajuste"><button id="tpQSPlus" aria-label="Aumentar">+</button><output id="tpQSVal"></output></div>
-    <div id="tpQR">
-      <button class="chip" data-q="tpCrop">Aproximar <i></i></button>
-      <button class="chip" data-q="tpZoom" hidden>Zoom <i></i></button>
-      <button class="chip" data-q="tpExp" hidden>Exposição <i></i></button>
-      <button class="chip" data-q="tpBeauty">Luz <i></i></button>
-      <button class="chip" data-q="tpSpeed">Velocidade <i></i></button>
-      <button class="chip" data-q="tpSize">Letra <i></i></button>
-      <button class="chip" id="tpQAspect">Formato <i></i></button>
-      <button class="chip sel" id="tpQSil">Marcação</button>
-      <button class="chip" id="tpQTorch" hidden>Lanterna</button>
-    </div>
+  </div>
+  <div class="srail" id="tpRailL">
+    <div class="cap">PROMPTER</div>
+    <button class="rb" data-q="tpSpeed">Veloc.<i></i></button>
+    <button class="rb" data-q="tpSize">Letra<i></i></button>
+    <button class="rb" data-cycle="tpDelay">Contagem<i></i></button>
+    <button class="rb" data-act="tpBack">Texto<i>início</i></button>
+    <button class="rb" data-toggle="tpMirrorBtn">Espelho<i></i></button>
+  </div>
+  <div class="srail" id="tpRailR">
+    <div class="cap">CÂMERA</div>
+    <button class="rb" data-q="tpCrop">Aprox.<i></i></button>
+    <button class="rb" data-q="tpZoom" hidden>Zoom<i></i></button>
+    <button class="rb" data-q="tpExp" hidden>Expos.<i></i></button>
+    <button class="rb" data-q="tpBeauty">Luz<i></i></button>
+    <button class="rb" data-cycle="tpAspect">Formato<i></i></button>
+    <button class="rb" data-toggle="tpSilBtn">Marca<i></i></button>
+    <button class="rb" data-toggle="tpGridBtn">Grade<i></i></button>
+    <button class="rb" data-toggle="tpLevelBtn">Nível<i></i></button>
+    <button class="rb" data-toggle="tpTorch" hidden>Lanterna<i></i></button>
   </div>
   <div id="tpBar">
     <div class="side"><button class="rnd" id="tpClose" title="Fechar">✕</button><button class="rnd" id="tpFlip" title="Virar câmera">⟲</button></div>
     <button id="tpRec">● Gravar</button>
-    <div class="side r"><button class="rnd" id="tpSetBtn" title="Ajustes">⚙</button></div>
+    <div class="side r"><button class="rnd" id="tpSetBtn" title="Ajustes" hidden>⚙</button></div>
   </div>
   <div id="tpDone">
     <div id="tpDoneMsg" style="color:#fff;font-weight:700;text-align:center">Gravação pronta. Salve no celular antes de seguir.</div>
@@ -1698,43 +1711,48 @@ $('exp').addEventListener('click', async () => {
   cam.addEventListener('loadedmetadata', () => { tpLayout(); if(!drawing){ drawing = true; requestAnimationFrame(drawOut); } });
   window.studioCam = stream => { vu(stream); caps(stream); frame(); if(!drawing){ drawing = true; requestAnimationFrame(drawOut); } };
 
-  // ===== ajustes rápidos: os botões ficam na tela; tocar num deles abre a régua só daquele ajuste =====
-  const QS = $('tpQS'), QR = $('tpQR'), qr = $('tpQSRange'); let qid = null;
+  // ===== ajustes nas laterais: prompter à esquerda, câmera à direita =====
+  const QS = $('tpQS'), qr = $('tpQSRange'), RB = () => tp.querySelectorAll('.rb'); let qid = null;
   function fmtQ(inp){ const v = +inp.value, u = inp.dataset.u || ''; return (Math.abs(v) < 10 && v % 1 ? v.toFixed(1).replace('.', ',') : Math.round(v)) + u; }
   function syncChips(){
-    QR.querySelectorAll('[data-q]').forEach(b => {
-      const inp = $(b.dataset.q), wrap = inp.closest('label');
-      b.hidden = !!(wrap && wrap.hidden); b.querySelector('i').textContent = fmtQ(inp);
-      b.classList.toggle('sel', b.dataset.q === qid);
+    RB().forEach(b => {
+      const i = b.querySelector('i');
+      if(b.dataset.q){ const inp = $(b.dataset.q), wrap = inp.closest('label'); b.hidden = !!(wrap && wrap.hidden); i.textContent = fmtQ(inp); b.classList.toggle('sel', b.dataset.q === qid); }
+      if(b.dataset.cycle){ const c = $(b.dataset.cycle).querySelector('.chip.sel'); i.textContent = c ? c.textContent : ''; }
+      if(b.dataset.toggle){
+        const t = $(b.dataset.toggle);
+        const on = b.dataset.toggle === 'tpSilBtn' ? !$('tpSil').classList.contains('off') : t.classList.contains('sel');
+        if(b.dataset.toggle === 'tpTorch') b.hidden = t.hidden;
+        b.classList.toggle('sel', on); i.textContent = on ? 'sim' : 'não';
+      }
     });
-    const a = $('tpAspect').querySelector('.chip.sel'); $('tpQAspect').querySelector('i').textContent = a ? a.textContent : '';
-    $('tpQSil').classList.toggle('sel', !$('tpSil').classList.contains('off'));
-    $('tpQTorch').hidden = $('tpTorch').hidden; $('tpQTorch').classList.toggle('sel', $('tpTorch').classList.contains('sel'));
     if(qid){ const t = $(qid); qr.value = t.value; $('tpQSVal').textContent = fmtQ(t); }
   }
-  function openQ(id){
+  function openQ(id, name){
     if(qid === id){ qid = null; QS.classList.remove('open'); syncChips(); return; }
     qid = id; const t = $(id);
     qr.min = t.min; qr.max = t.max; qr.step = t.step || 1; qr.value = t.value; qr.dataset.u = t.dataset.u || '';
-    $('tpQSName').textContent = QR.querySelector('[data-q="' + id + '"]').firstChild.textContent.trim();
-    QS.classList.add('open'); syncChips(); window.paintRanges && paintRanges();
+    $('tpQSName').textContent = name; QS.classList.add('open'); syncChips(); window.paintRanges && paintRanges();
   }
   function setQ(v){
     const t = $(qid); if(!t) return;
     t.value = Math.max(+t.min, Math.min(+t.max, v)); t.dispatchEvent(new Event('input', {bubbles:true}));
     syncChips(); window.paintRanges && paintRanges();
   }
-  QR.querySelectorAll('[data-q]').forEach(b => b.onclick = () => openQ(b.dataset.q));
   qr.addEventListener('input', () => setQ(+qr.value));
   const stepQ = d => { const t = $(qid); if(t) setQ(+t.value + d * (+t.step || 1) * (+t.max - +t.min > 20 ? 5 : 1)); };
   $('tpQSMinus').onclick = () => stepQ(-1); $('tpQSPlus').onclick = () => stepQ(1);
-  $('tpQAspect').onclick = () => {
-    if(tp.classList.contains('rec')) return;               // não muda o formato no meio da gravação
-    const cs = [...$('tpAspect').querySelectorAll('.chip')], i = cs.findIndex(c => c.classList.contains('sel'));
-    cs[(i + 1) % cs.length].click(); syncChips();
-  };
-  $('tpQSil').onclick = () => { $('tpSilBtn').click(); syncChips(); };
-  $('tpQTorch').onclick = () => { $('tpTorch').click(); syncChips(); };
+  RB().forEach(b => b.onclick = () => {
+    if(b.dataset.q) return openQ(b.dataset.q, b.firstChild.textContent.trim());
+    if(b.dataset.cycle){
+      if(b.dataset.cycle === 'tpAspect' && tp.classList.contains('rec')) return; // não muda o formato no meio da gravação
+      const cs = [...$(b.dataset.cycle).querySelectorAll('.chip')], i = cs.findIndex(c => c.classList.contains('sel'));
+      cs[(i + 1) % cs.length].click();
+    }
+    if(b.dataset.toggle) $(b.dataset.toggle).click();
+    if(b.dataset.act) $(b.dataset.act).click();
+    syncChips();
+  });
   setInterval(() => { if(tp.classList.contains('open')) syncChips(); }, 600);
   $('tpFlip').onclick = async () => {
     if($('tpRec').classList.contains('on')) return;
@@ -1747,7 +1765,7 @@ $('exp').addEventListener('click', async () => {
 })();
 </script>
 
-<script>(function(){const VERSAO='3.4.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas Studio v"+VERSAO})})();
+<script>(function(){const VERSAO='3.5.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas Studio v"+VERSAO})})();
 if('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(e => console.warn('sw', e));
 </script>
 </body>
