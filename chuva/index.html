@@ -22,7 +22,12 @@
   .info{font-size:12px;color:var(--mut);margin-top:6px;line-height:1.4}
   .leg{display:flex;align-items:center;gap:8px;font-size:12px;margin-top:6px;color:#c9d1d9}
   .bar{flex:1;height:10px;border-radius:5px}
-  .gps{position:fixed;right:10px;bottom:calc(150px + env(safe-area-inset-bottom));z-index:1000;width:48px;height:48px;border-radius:50%;border:1px solid #30363d;background:var(--card);color:var(--txt);font-size:22px;cursor:pointer}
+  .gps{position:fixed;right:10px;bottom:calc(200px + env(safe-area-inset-bottom));z-index:1000;width:48px;height:48px;border-radius:50%;border:1px solid #30363d;background:var(--card);color:var(--txt);font-size:22px;cursor:pointer}
+  .seta{display:flex;flex-direction:column;align-items:center;pointer-events:none}
+  .seta svg{filter:drop-shadow(0 0 2px #000)}
+  .seta b{font:600 10px system-ui;color:#fff;text-shadow:0 0 3px #000,0 0 3px #000;margin-top:-2px}
+  .perto{font-size:14px;margin-top:8px;line-height:1.4;color:#e6edf3}
+  .perto b{color:#ffd166}
   .leaflet-control-attribution{font-size:9px;background:rgba(0,0,0,.5)!important;color:#aaa}
   .leaflet-control-attribution a{color:#ccc}
   .leaflet-control-zoom{display:none}
@@ -34,6 +39,7 @@
 <div class="top">
   <button class="chip on" id="bRadar">🌧️ Radar<small>chuva agora</small></button>
   <button class="chip on" id="bSat">🛰️ Satélite<small>nuvens, a cada 10 min</small></button>
+  <button class="chip on" id="bVento">🧭 Vento<small>setas, km/h</small></button>
   <button class="chip" id="bImerg">💧 Chuva por satélite<small>estimativa NASA, atraso ~6 h</small></button>
 </div>
 
@@ -49,6 +55,7 @@
     <div class="bar" style="background:linear-gradient(90deg,#88ddee,#0099cc,#0077aa,#ffee00,#ffaa00,#ff4400,#c10000,#ff77ff)"></div><span>forte</span></div>
   <div class="leg" id="legSat"><span>Satélite:</span><span>céu limpo</span>
     <div class="bar" style="background:linear-gradient(90deg,#222,#999,#fff,#00c0ff,#00ff40,#ffff00,#ff3000)"></div><span>tempestade</span></div>
+  <div class="perto" id="perto">☔ Toque em 📍 para ver a chuva mais perto de você.</div>
   <div class="info" id="info">Carregando dados…</div>
   <span data-versao style="position:absolute;right:12px;bottom:6px;font:500 10px ui-monospace,Menlo,monospace;opacity:.5;pointer-events:none"></span>
 </div>
@@ -233,6 +240,10 @@ function chip(id, chave, extra) {
 chip('bRadar', 'radar');
 chip('bSat', 'sat');
 chip('bImerg', 'imerg', ligarImerg);
+document.getElementById('bVento').onclick = e => {
+  ventoOn = !ventoOn; e.currentTarget.classList.toggle('on', ventoOn);
+  if (ventoOn) { ventoGrupo.addTo(map); desenharVento(true); } else map.removeLayer(ventoGrupo);
+};
 
 document.getElementById('bPlay').onclick = play;
 document.getElementById('slider').oninput = e => {
@@ -240,25 +251,136 @@ document.getElementById('slider').oninput = e => {
   mostrar(+e.target.value);
 };
 
-let meuPonto = null;
+let meuPonto = null, minhaPos = null;
 document.getElementById('bGps').onclick = () => {
   if (!navigator.geolocation) return;
   navigator.geolocation.getCurrentPosition(p => {
     const ll = [p.coords.latitude, p.coords.longitude];
     if (meuPonto) map.removeLayer(meuPonto);
     meuPonto = L.circleMarker(ll, {radius: 8, color: '#fff', weight: 3, fillColor: '#3fb5ff', fillOpacity: 1, pane: 'rotulos'}).addTo(map);
+    minhaPos = ll;
     map.setView(ll, 7);
+    chuvaPerto(ll[0], ll[1]);
   }, () => { document.getElementById('info').textContent = 'Não consegui pegar sua localização (permissão negada).'; },
   {enableHighAccuracy: false, timeout: 10000});
 };
 
+// ===== Vento e chuva perto de você (Open-Meteo, modelo de previsão, atualiza a cada 15 min) =====
+const OM = 'https://api.open-meteo.com/v1/forecast';
+const RUMOS = ['norte','nordeste','leste','sudeste','sul','sudoeste','oeste','noroeste'];
+const rumo = g => RUMOS[Math.round(((g % 360) + 360) % 360 / 45) % 8];
+let ventoOn = true, ventoGrupo = L.layerGroup().addTo(map), ventoChave = '';
+
+async function openMeteo(pontos, campos) {
+  const lat = pontos.map(p => p[0].toFixed(3)).join(',');
+  const lon = pontos.map(p => p[1].toFixed(3)).join(',');
+  const r = await fetch(`${OM}?latitude=${lat}&longitude=${lon}&current=${campos}&wind_speed_unit=kmh&timezone=auto`);
+  if (!r.ok) throw new Error('Open-Meteo ' + r.status);
+  const j = await r.json();
+  return Array.isArray(j) ? j : [j];
+}
+
+function corVento(v) { return v < 10 ? '#9be7ff' : v < 20 ? '#5ad1ff' : v < 35 ? '#ffe066' : v < 50 ? '#ff9f43' : '#ff4d4d'; }
+
+function iconeSeta(dirDe, vel) {
+  const para = (dirDe + 180) % 360;  // a seta aponta para onde o vento VAI
+  const c = corVento(vel), t = vel < 10 ? 18 : vel < 25 ? 24 : 30;
+  return L.divIcon({className: '', iconSize: [40, 44], iconAnchor: [20, 22], html:
+    `<div class="seta"><svg width="${t}" height="${t}" viewBox="0 0 24 24" style="transform:rotate(${para}deg)">
+      <path d="M12 2 L19 13 L14 12 L14 22 L10 22 L10 12 L5 13 Z" fill="${c}" stroke="#000" stroke-width="1"/></svg>
+      <b>${Math.round(vel)}</b></div>`});
+}
+
+async function desenharVento(forcar) {
+  if (!ventoOn) return;
+  const b = map.getBounds(), z = map.getZoom();
+  const chave = z + ':' + b.getCenter().lat.toFixed(1) + ':' + b.getCenter().lng.toFixed(1);
+  if (!forcar && chave === ventoChave) return;
+  ventoChave = chave;
+  const cols = 6, lins = 8, pts = [];
+  const n = b.getNorth(), s = b.getSouth(), w = b.getWest(), e = b.getEast();
+  for (let i = 0; i < lins; i++) for (let k = 0; k < cols; k++)
+    pts.push([n - (i + 0.5) * (n - s) / lins, w + (k + 0.5) * (e - w) / cols]);
+  try {
+    const dados = await openMeteo(pts.map(p => [Math.max(-85, Math.min(85, p[0])), ((p[1] + 540) % 360) - 180]), 'wind_speed_10m,wind_direction_10m');
+    if (chave !== ventoChave) return;
+    ventoGrupo.clearLayers();
+    dados.forEach((d, i) => {
+      if (!d.current) return;
+      L.marker(pts[i], {icon: iconeSeta(d.current.wind_direction_10m, d.current.wind_speed_10m), interactive: false}).addTo(ventoGrupo);
+    });
+  } catch (e) { console.warn(e); }
+}
+let ventoTimer;
+map.on('moveend', () => { clearTimeout(ventoTimer); ventoTimer = setTimeout(() => desenharVento(false), 600); });
+
+// ponto a "km" quilômetros na direção "graus" (0 = norte)
+function destino(lat, lon, km, graus) {
+  const R = 6371, d = km / R, b = graus * Math.PI / 180, f1 = lat * Math.PI / 180, l1 = lon * Math.PI / 180;
+  const f2 = Math.asin(Math.sin(f1) * Math.cos(d) + Math.cos(f1) * Math.sin(d) * Math.cos(b));
+  const l2 = l1 + Math.atan2(Math.sin(b) * Math.sin(d) * Math.cos(f1), Math.cos(d) - Math.sin(f1) * Math.sin(f2));
+  return [f2 * 180 / Math.PI, l2 * 180 / Math.PI];
+}
+
+function intensidade(mmh) {
+  if (mmh < 2.5) return 'fraca'; if (mmh < 10) return 'moderada';
+  if (mmh < 50) return 'forte'; return 'muito forte';
+}
+
+let linhaChuva = null;
+async function chuvaPerto(lat, lon) {
+  const el = document.getElementById('perto');
+  el.textContent = '☔ Procurando chuva perto de você…';
+  const DIST = [0, 5, 10, 20, 30, 45, 60, 80, 100, 130, 160, 200];
+  const pts = [{km: 0, g: 0, p: [lat, lon]}];
+  DIST.slice(1).forEach(km => { for (let g = 0; g < 360; g += 45) pts.push({km, g, p: destino(lat, lon, km, g)}); });
+  try {
+    const dados = await openMeteo(pts.map(x => x.p), 'precipitation,wind_speed_10m,wind_direction_10m');
+    const aqui = dados[0].current;
+    let melhor = null;
+    dados.forEach((d, i) => {
+      if (!d.current) return;
+      const mmh = d.current.precipitation * 4;   // valor da Open-Meteo = mm nos últimos 15 min
+      if (mmh >= 0.2) {
+        const c = {...pts[i], mmh};
+        if (!melhor || c.km < melhor.km || (c.km === melhor.km && c.mmh > melhor.mmh)) melhor = c;
+      }
+    });
+    if (linhaChuva) { map.removeLayer(linhaChuva); linhaChuva = null; }
+    const vento = `Vento aqui: ${Math.round(aqui.wind_speed_10m)} km/h vindo do ${rumo(aqui.wind_direction_10m)}.`;
+    if (!melhor) {
+      el.innerHTML = `☔ <b>Sem chuva em 200 km.</b> ${vento}`;
+    } else if (melhor.km === 0) {
+      el.innerHTML = `☔ <b>Chovendo onde você está</b>: ${intensidade(melhor.mmh)} (${melhor.mmh.toFixed(1)} mm/h). ${vento}`;
+    } else {
+      // a chuva vem na sua direção se ela está do lado de onde o vento sopra
+      let dif = Math.abs(((melhor.g - aqui.wind_direction_10m) % 360 + 540) % 360 - 180);
+      const vindo = aqui.wind_speed_10m >= 5 && dif <= 45;
+      el.innerHTML = `☔ Chuva mais próxima: <b>${melhor.km} km ao ${rumo(melhor.g)}</b>, ${intensidade(melhor.mmh)} (${melhor.mmh.toFixed(1)} mm/h).` +
+        (vindo ? ' <b>O vento empurra ela na sua direção.</b> ' : ' ') + vento;
+      linhaChuva = L.layerGroup([
+        L.polyline([[lat, lon], melhor.p], {color: '#ffd166', weight: 3, dashArray: '6 6', pane: 'rotulos'}),
+        L.circleMarker(melhor.p, {radius: 10, color: '#ffd166', weight: 3, fillOpacity: 0, pane: 'rotulos'})
+      ]).addTo(map);
+    }
+  } catch (e) {
+    el.textContent = '☔ Não consegui consultar a chuva perto de você agora.';
+    console.warn(e);
+  }
+}
+
 // Atualiza sozinho a cada 5 minutos
 carregar();
+desenharVento(true);
+// se a localização já foi permitida antes, mostra a chuva perto sem precisar tocar
+try { navigator.permissions.query({name: 'geolocation'}).then(r => { if (r.state === 'granted') document.getElementById('bGps').click(); }); } catch (e) {}
 setInterval(() => {
   carregar();
+  desenharVento(true);
+  if (minhaPos) chuvaPerto(minhaPos[0], minhaPos[1]);
   if (ativo.imerg) ligarImerg(true);
 }, 5 * 60000);
 </script>
-<script>(function(){const VERSAO='1.0.1';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Chuva v"+VERSAO})})();</script>
+<script>(function(){const VERSAO='1.1.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Chuva v"+VERSAO})})();</script>
 </body>
 </html>
