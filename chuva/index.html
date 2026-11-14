@@ -43,6 +43,7 @@
   <button class="chip" id="bImerg">💧 Chuva por satélite<small>estimativa NASA, atraso ~6 h</small></button>
 </div>
 
+<button class="gps" id="bFundo" title="Mapa claro ou escuro" style="bottom:calc(260px + env(safe-area-inset-bottom))">🗺️</button>
 <button class="gps" id="bGps" title="Minha localização">📍</button>
 
 <div class="bottom">
@@ -72,11 +73,25 @@ const OP = {radar: 0.85, sat: 0.65, imerg: 0.8};
 let inicio = [-14.5, -51], zoomIni = 4;
 try { const s = JSON.parse(localStorage.getItem('chuva_view')); if (s) { inicio = s.c; zoomIni = s.z; } } catch(e){}
 const map = L.map('map', {center: inicio, zoom: zoomIni, minZoom: 3, maxZoom: 12, worldCopyJump: true});
-L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-  maxNativeZoom: 16, attribution: 'Mapa: Esri, HERE, Garmin, © OpenStreetMap'
-}).addTo(map);
+// Dois mapas de fundo: claro (OpenStreetMap, igual ao app OpenStreets) e escuro (Esri)
+const fundos = {
+  claro: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19, attribution: '© colaboradores do <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}),
+  escuro: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+    maxNativeZoom: 16, attribution: 'Mapa: Esri, HERE, Garmin, © OpenStreetMap'})
+};
+let fundo = 'claro';
+try { if (localStorage.getItem('chuva_fundo') === 'escuro') fundo = 'escuro'; } catch(e){}
+fundos[fundo].addTo(map);
+function trocarFundo() {
+  map.removeLayer(fundos[fundo]);
+  fundo = fundo === 'claro' ? 'escuro' : 'claro';
+  fundos[fundo].addTo(map); fundos[fundo].bringToBack();
+  try { localStorage.setItem('chuva_fundo', fundo); } catch(e){}
+}
 map.createPane('rotulos'); map.getPane('rotulos').style.zIndex = 650; map.getPane('rotulos').style.pointerEvents = 'none';
-L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {maxNativeZoom: 16, pane: 'rotulos'}).addTo(map);
+// nomes de cidades e fronteiras por cima de tudo (letra branca com contorno, lê bem sobre o satélite)
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {maxNativeZoom: 16, pane: 'rotulos'}).addTo(map);
 map.on('moveend', () => { try { localStorage.setItem('chuva_view', JSON.stringify({c: map.getCenter(), z: map.getZoom()})); } catch(e){} });
 map.attributionControl.addAttribution('Radar: <a href="https://www.rainviewer.com/">Rain Viewer</a> · Satélite: NASA GIBS / NOAA GOES-East · IMERG: NASA GPM');
 
@@ -246,6 +261,7 @@ document.getElementById('bVento').onclick = e => {
 };
 
 document.getElementById('bPlay').onclick = play;
+document.getElementById('bFundo').onclick = trocarFundo;
 document.getElementById('slider').oninput = e => {
   if (timer) play();
   mostrar(+e.target.value);
@@ -381,6 +397,6 @@ setInterval(() => {
   if (ativo.imerg) ligarImerg(true);
 }, 5 * 60000);
 </script>
-<script>(function(){const VERSAO='1.1.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Chuva v"+VERSAO})})();</script>
+<script>(function(){const VERSAO='1.2.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Chuva v"+VERSAO})})();</script>
 </body>
 </html>
