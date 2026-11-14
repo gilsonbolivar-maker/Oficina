@@ -89,7 +89,7 @@
     <div class="bar" style="background:linear-gradient(90deg,#222,#999,#fff,#00c0ff,#00ff40,#ffff00,#ff3000)"></div><span>tempestade</span></div>
   <div class="perto" id="perto">☔ Toque em 📍 para ver a chuva mais perto de você.</div>
   <div class="info" id="info">Carregando dados…</div>
-  <span data-versao style="position:absolute;right:12px;bottom:6px;font:500 10px ui-monospace,Menlo,monospace;opacity:.5;pointer-events:none"></span>
+  <button id="bVersao" title="Toque para atualizar" style="position:absolute;right:6px;bottom:0;padding:6px 8px;border:0;background:none;color:#8b949e;font:500 11px ui-monospace,Menlo,monospace;cursor:pointer">⟳ <span data-versao></span></button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -293,6 +293,12 @@ document.getElementById('bVento').onclick = e => {
 
 document.getElementById('bPlay').onclick = play;
 document.getElementById('bFundo').onclick = trocarFundo;
+// Toque no número da versão: baixa a página de novo, sem usar a cópia guardada no aparelho
+document.getElementById('bVersao').onclick = async () => {
+  document.getElementById('bVersao').textContent = 'Atualizando…';
+  try { if (window.caches) { const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } } catch (e) {}
+  location.replace(location.pathname + '?atualizar=' + Date.now());
+};
 document.getElementById('slider').oninput = e => {
   if (timer) play();
   mostrar(+e.target.value);
@@ -444,6 +450,6 @@ setInterval(() => {
   if (ativo.imerg) ligarImerg(true);
 }, 5 * 60000);
 </script>
-<script>(function(){const VERSAO='1.3.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Chuva v"+VERSAO})})();</script>
+<script>(function(){const VERSAO='1.4.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Chuva v"+VERSAO})})();</script>
 </body>
 </html>
