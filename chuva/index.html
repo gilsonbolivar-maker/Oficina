@@ -28,6 +28,10 @@
   .seta b{font:600 10px system-ui;color:#fff;text-shadow:0 0 3px #000,0 0 3px #000;margin-top:-2px}
   .perto{font-size:14px;margin-top:8px;line-height:1.4;color:#e6edf3}
   .perto b{color:#ffd166}
+  .rosa{position:fixed;right:8px;bottom:calc(320px + env(safe-area-inset-bottom));z-index:1000;width:120px;text-align:center;pointer-events:none}
+  .rosa svg{width:120px;height:120px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}
+  .rosa div{font:600 12px system-ui;color:#fff;background:rgba(13,17,23,.8);border-radius:8px;padding:3px 6px;margin-top:2px;line-height:1.3}
+  #agulha{transition:transform .6s ease}
   .leaflet-control-attribution{font-size:9px;background:rgba(0,0,0,.5)!important;color:#aaa}
   .leaflet-control-attribution a{color:#ccc}
   .leaflet-control-zoom{display:none}
@@ -43,6 +47,33 @@
   <button class="chip" id="bImerg">💧 Chuva por satélite<small>estimativa NASA, atraso ~6 h</small></button>
 </div>
 
+<div class="rosa" id="rosa">
+  <svg viewBox="-60 -60 120 120">
+    <circle r="56" fill="rgba(13,17,23,.78)" stroke="#8b949e" stroke-width="1.5"/>
+    <circle r="40" fill="none" stroke="#30363d" stroke-width="1"/>
+    <g fill="#c9d1d9">
+      <polygon points="0,-38 5,-8 0,0 -5,-8"/><polygon points="38,0 8,5 0,0 8,-5"/>
+      <polygon points="0,38 -5,8 0,0 5,8"/><polygon points="-38,0 -8,-5 0,0 -8,5"/>
+    </g>
+    <g fill="#6e7681" transform="rotate(45)">
+      <polygon points="0,-28 4,-6 0,0 -4,-6"/><polygon points="28,0 6,4 0,0 6,-4"/>
+      <polygon points="0,28 -4,6 0,0 4,6"/><polygon points="-28,0 -6,-4 0,0 -6,4"/>
+    </g>
+    <polygon points="0,-38 5,-8 0,0" fill="#ff5c5c"/>
+    <g font-family="system-ui" font-weight="700" text-anchor="middle" dominant-baseline="central">
+      <text y="-48" font-size="11" fill="#ff7b7b">N</text><text x="48" font-size="11" fill="#fff">L</text>
+      <text y="48" font-size="11" fill="#fff">S</text><text x="-48" font-size="11" fill="#fff">O</text>
+      <text x="34" y="-34" font-size="8" fill="#8b949e">NE</text><text x="34" y="34" font-size="8" fill="#8b949e">SE</text>
+      <text x="-34" y="34" font-size="8" fill="#8b949e">SO</text><text x="-34" y="-34" font-size="8" fill="#8b949e">NO</text>
+    </g>
+    <g id="agulha" style="display:none">
+      <line x1="0" y1="30" x2="0" y2="-30" stroke="#3fb5ff" stroke-width="5" stroke-linecap="round"/>
+      <polygon points="0,-44 -10,-26 10,-26" fill="#3fb5ff" stroke="#001018" stroke-width="1"/>
+    </g>
+    <circle r="4" fill="#fff"/>
+  </svg>
+  <div id="rosaTxt">Vento: carregando…</div>
+</div>
 <button class="gps" id="bFundo" title="Mapa claro ou escuro" style="bottom:calc(260px + env(safe-area-inset-bottom))">🗺️</button>
 <button class="gps" id="bGps" title="Minha localização">📍</button>
 
@@ -277,6 +308,7 @@ document.getElementById('bGps').onclick = () => {
     minhaPos = ll;
     map.setView(ll, 7);
     chuvaPerto(ll[0], ll[1]);
+    atualizarRosa();
   }, () => { document.getElementById('info').textContent = 'Não consegui pegar sua localização (permissão negada).'; },
   {enableHighAccuracy: false, timeout: 10000});
 };
@@ -327,8 +359,21 @@ async function desenharVento(forcar) {
     });
   } catch (e) { console.warn(e); }
 }
+// Rosa dos ventos: vento no seu ponto (se o 📍 foi usado) ou no centro do mapa
+async function atualizarRosa() {
+  const alvo = minhaPos || [map.getCenter().lat, map.getCenter().lng];
+  try {
+    const d = (await openMeteo([alvo], 'wind_speed_10m,wind_direction_10m,wind_gusts_10m'))[0].current;
+    const ag = document.getElementById('agulha');
+    ag.style.display = '';
+    ag.setAttribute('transform', `rotate(${(d.wind_direction_10m + 180) % 360})`);
+    ag.style.transform = '';
+    document.getElementById('rosaTxt').innerHTML =
+      `Vento do ${rumo(d.wind_direction_10m)}<br>${Math.round(d.wind_speed_10m)} km/h · rajada ${Math.round(d.wind_gusts_10m)}<br><span style="font-weight:400;opacity:.75">${minhaPos ? 'onde você está' : 'centro do mapa'}</span>`;
+  } catch (e) { document.getElementById('rosaTxt').textContent = 'Vento indisponível'; }
+}
 let ventoTimer;
-map.on('moveend', () => { clearTimeout(ventoTimer); ventoTimer = setTimeout(() => desenharVento(false), 600); });
+map.on('moveend', () => { clearTimeout(ventoTimer); ventoTimer = setTimeout(() => { desenharVento(false); if (!minhaPos) atualizarRosa(); }, 600); });
 
 // ponto a "km" quilômetros na direção "graus" (0 = norte)
 function destino(lat, lon, km, graus) {
@@ -388,15 +433,17 @@ async function chuvaPerto(lat, lon) {
 // Atualiza sozinho a cada 5 minutos
 carregar();
 desenharVento(true);
+atualizarRosa();
 // se a localização já foi permitida antes, mostra a chuva perto sem precisar tocar
 try { navigator.permissions.query({name: 'geolocation'}).then(r => { if (r.state === 'granted') document.getElementById('bGps').click(); }); } catch (e) {}
 setInterval(() => {
   carregar();
   desenharVento(true);
+  atualizarRosa();
   if (minhaPos) chuvaPerto(minhaPos[0], minhaPos[1]);
   if (ativo.imerg) ligarImerg(true);
 }, 5 * 60000);
 </script>
-<script>(function(){const VERSAO='1.2.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Chuva v"+VERSAO})})();</script>
+<script>(function(){const VERSAO='1.3.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Chuva v"+VERSAO})})();</script>
 </body>
 </html>
