@@ -149,7 +149,7 @@
   /* ===== estúdio / teleprompter ===== */
   #tp{position:fixed;inset:0;background:#000;z-index:50;display:none;font-family:var(--ui)}
   #tp.open{display:block}
-  #tpCam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);max-height:none;filter:blur(18px) brightness(.35);opacity:.9}
+  #tpCam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);max-height:none;filter:none;opacity:.18}
   #tp.nomirror #tpCam{transform:none}
   /* o que aparece no quadro é exatamente o que é gravado */
   #tpStage{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);box-shadow:0 0 0 2px rgba(255,176,32,.9),0 0 0 100vmax rgba(0,0,0,.35);touch-action:none}
@@ -419,6 +419,7 @@
   </div>
   <div class="srail" id="tpRailR">
     <div class="cap">CÂMERA</div>
+    <button class="rb" id="tpQual">Qualid.<i></i></button>
     <button class="rb" data-q="tpCrop">Aprox.<i></i></button>
     <button class="rb" data-q="tpZoom" hidden>Zoom<i></i></button>
     <button class="rb" data-q="tpExp" hidden>Expos.<i></i></button>
@@ -724,10 +725,12 @@ function roundRect(ctx, x, y, w, h, r){
 // ===== câmera do estúdio: pede a maior qualidade que o aparelho der =====
 // Pede 4K: o vídeo final é vertical e sai de um recorte da câmera (que é deitada).
 // Com 1920×1080, o recorte vertical teria só 608×1080; com 4K tem 1215×2160, nitidez de verdade.
+// Três níveis: FLUIDA (1080p, mais leve), NÍTIDA (1440p, o equilíbrio) e MÁXIMA (4K, pede aparelho forte).
+const CAM_Q = { fluida: [1920, 1080], nitida: [2560, 1440], maxima: [3840, 2160] };
+window.camQ = (() => { try{ return localStorage.getItem('legendas-camq') || 'nitida'; }catch(e){ return 'nitida'; } })();
 function camConstraints(){
-  const hi = (navigator.deviceMemory || 8) >= 4;
-  return { facingMode: window.camFacing || 'user',
-    width: {ideal: hi ? 3840 : 1920}, height: {ideal: hi ? 2160 : 1080}, frameRate: {ideal: 30} };
+  const [w, h] = CAM_Q[window.camQ] || CAM_Q.nitida;
+  return { facingMode: window.camFacing || 'user', width: {ideal: w}, height: {ideal: h}, frameRate: {ideal: 30} };
 }
 function audioConstraints(){ return { echoCancellation: true, noiseSuppression: true, autoGainControl: true }; }
 
@@ -1660,8 +1663,15 @@ $('exp').addEventListener('click', async () => {
                  L ${50 + hr * 2.85} ${Hv}" fill="none"/>
       </g>`;
   }
+  // Desenha cada quadro novo da câmera (nem repetido, nem pulado) e avisa o gravador na hora.
+  let outTrack = null;
+  const useVFC = 'requestVideoFrameCallback' in HTMLVideoElement.prototype;
   function drawOut(){
     if(!tp.classList.contains('open')){ drawing = false; return; }
+    paintOut();
+    if(useVFC) cam.requestVideoFrameCallback(drawOut); else requestAnimationFrame(drawOut);
+  }
+  function paintOut(){
     const vw = cam.videoWidth, vh = cam.videoHeight;
     if(vw && vh){
       const A = out.width / out.height, Z = +$('tpCrop').value || 1;
@@ -1671,8 +1681,8 @@ $('exp').addEventListener('click', async () => {
       octx.imageSmoothingEnabled = true; octx.imageSmoothingQuality = 'high';
       octx.drawImage(cam, sx, sy, cw, ch, 0, 0, out.width, out.height);
       hudQuality(vw, vh, cw, ch);
+      if(outTrack && outTrack.requestFrame) outTrack.requestFrame();
     }
-    requestAnimationFrame(drawOut);
   }
   // ===== mover e aproximar a imagem com os dedos (a pessoa não precisa se ajustar ao quadro) =====
   let lastCrop = [1, 1];
@@ -1709,7 +1719,9 @@ $('exp').addEventListener('click', async () => {
 
   // o que vai para o gravador: o quadro recortado + o áudio do microfone
   window.tpOutStream = stream => {
-    const v = out.captureStream(30).getVideoTracks();
+    let v = out.captureStream(0).getVideoTracks();
+    if(v[0] && typeof v[0].requestFrame === 'function'){ outTrack = v[0]; }
+    else { v.forEach(t => t.stop()); v = out.captureStream(30).getVideoTracks(); outTrack = null; }
     return new MediaStream([...v, ...stream.getAudioTracks()]);
   };
   window.tpOutBps = () => Math.round(Math.min(16e6, Math.max(8e6, out.width * out.height * 7.5)));
@@ -1722,8 +1734,8 @@ $('exp').addEventListener('click', async () => {
     $('tpRes').textContent = 'CÂM ' + Math.max(vw, vh) + 'p · ' + ok + ' · ' + Math.round(fps) + ' FPS';
     $('tpRes').style.color = eff >= 1000 ? '#3ee08f' : eff >= 700 ? '#ffe14d' : '#ff6b6b';
   }
-  cam.addEventListener('loadedmetadata', () => { tpLayout(); if(!drawing){ drawing = true; requestAnimationFrame(drawOut); } });
-  window.studioCam = stream => { vu(stream); caps(stream); frame(); if(!drawing){ drawing = true; requestAnimationFrame(drawOut); } };
+  cam.addEventListener('loadedmetadata', () => { tpLayout(); if(!drawing){ drawing = true; if(useVFC) cam.requestVideoFrameCallback(drawOut); else requestAnimationFrame(drawOut); } });
+  window.studioCam = stream => { vu(stream); caps(stream); frame(); if(!drawing){ drawing = true; if(useVFC) cam.requestVideoFrameCallback(drawOut); else requestAnimationFrame(drawOut); } };
 
   // ===== ajustes nas laterais: prompter à esquerda, câmera à direita =====
   const QS = $('tpQS'), qr = $('tpQSRange'), RB = () => tp.querySelectorAll('.rb'); let qid = null;
@@ -1741,6 +1753,7 @@ $('exp').addEventListener('click', async () => {
       }
     });
     if(qid){ const t = $(qid); qr.value = t.value; $('tpQSVal').textContent = fmtQ(t); }
+    $('tpQual').querySelector('i').textContent = {fluida:'fluida', nitida:'nítida', maxima:'máxima'}[window.camQ] || 'nítida';
   }
   function openQ(id, name){
     if(qid === id){ qid = null; QS.classList.remove('open'); syncChips(); return; }
@@ -1756,7 +1769,13 @@ $('exp').addEventListener('click', async () => {
   qr.addEventListener('input', () => setQ(+qr.value));
   const stepQ = d => { const t = $(qid); if(t) setQ(+t.value + d * (+t.step || 1) * (+t.max - +t.min > 20 ? 5 : 1)); };
   $('tpQSMinus').onclick = () => stepQ(-1); $('tpQSPlus').onclick = () => stepQ(1);
-  RB().forEach(b => b.onclick = () => {
+  $('tpQual').onclick = async () => {
+    if(tp.classList.contains('rec')) return;          // não troca no meio da gravação
+    const ord = ['fluida', 'nitida', 'maxima']; window.camQ = ord[(ord.indexOf(window.camQ) + 1) % 3];
+    try{ localStorage.setItem('legendas-camq', window.camQ); }catch(e){}
+    syncChips(); await window.tpSwap();
+  };
+  RB().forEach(b => { if(b.id === 'tpQual') return; b.onclick = () => {
     if(b.dataset.q) return openQ(b.dataset.q, b.firstChild.textContent.trim());
     if(b.dataset.cycle){
       if(b.dataset.cycle === 'tpAspect' && tp.classList.contains('rec')) return; // não muda o formato no meio da gravação
@@ -1766,7 +1785,7 @@ $('exp').addEventListener('click', async () => {
     if(b.dataset.toggle) $(b.dataset.toggle).click();
     if(b.dataset.act) $(b.dataset.act).click();
     syncChips();
-  });
+  }; });
   setInterval(() => { if(tp.classList.contains('open')) syncChips(); }, 600);
   $('tpFlip').onclick = async () => {
     if($('tpRec').classList.contains('on')) return;
@@ -1779,7 +1798,7 @@ $('exp').addEventListener('click', async () => {
 })();
 </script>
 
-<script>(function(){const VERSAO='3.6.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas Studio v"+VERSAO})})();
+<script>(function(){const VERSAO='3.7.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas Studio v"+VERSAO})})();
 if('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(e => console.warn('sw', e));
 </script>
 </body>
