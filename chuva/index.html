@@ -29,9 +29,10 @@
   .perto{font-size:14px;margin-top:8px;line-height:1.4;color:#e6edf3}
   .perto b{color:#ffd166}
   .rosa{position:fixed;right:8px;bottom:calc(320px + env(safe-area-inset-bottom));z-index:1000;width:120px;text-align:center;pointer-events:none}
-  .rosa svg{width:120px;height:120px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}
+  .rosa svg{width:120px;height:120px;pointer-events:auto;cursor:pointer;transition:transform .25s linear;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}
   .rosa div{font:600 12px system-ui;color:#fff;background:rgba(13,17,23,.8);border-radius:8px;padding:3px 6px;margin-top:2px;line-height:1.3}
   #agulha{transition:transform .6s ease}
+  .marca{width:0;height:0;margin:0 auto -4px;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:12px solid #ffd166;filter:drop-shadow(0 0 2px #000);visibility:hidden}
   .leaflet-control-attribution{font-size:9px;background:rgba(0,0,0,.5)!important;color:#aaa}
   .leaflet-control-attribution a{color:#ccc}
   .leaflet-control-zoom{display:none}
@@ -48,7 +49,8 @@
 </div>
 
 <div class="rosa" id="rosa">
-  <svg viewBox="-60 -60 120 120">
+  <div class="marca" id="marca"></div>
+  <svg id="rosaSvg" viewBox="-60 -60 120 120">
     <circle r="56" fill="rgba(13,17,23,.78)" stroke="#8b949e" stroke-width="1.5"/>
     <circle r="40" fill="none" stroke="#30363d" stroke-width="1"/>
     <g fill="#c9d1d9">
@@ -73,6 +75,7 @@
     <circle r="4" fill="#fff"/>
   </svg>
   <div id="rosaTxt">Vento: carregando…</div>
+  <div id="bussolaTxt" style="font-weight:400">🧭 Toque na rosa para girar com o celular</div>
 </div>
 <button class="gps" id="bFundo" title="Mapa claro ou escuro" style="bottom:calc(260px + env(safe-area-inset-bottom))">🗺️</button>
 <button class="gps" id="bGps" title="Minha localização">📍</button>
@@ -293,6 +296,7 @@ document.getElementById('bVento').onclick = e => {
 
 document.getElementById('bPlay').onclick = play;
 document.getElementById('bFundo').onclick = trocarFundo;
+document.getElementById('rosaSvg').addEventListener('click', ligarBussola);
 // Toque no número da versão: baixa a página de novo, sem usar a cópia guardada no aparelho
 document.getElementById('bVersao').onclick = async () => {
   document.getElementById('bVersao').textContent = 'Atualizando…';
@@ -378,6 +382,46 @@ async function atualizarRosa() {
       `Vento do ${rumo(d.wind_direction_10m)}<br>${Math.round(d.wind_speed_10m)} km/h · rajada ${Math.round(d.wind_gusts_10m)}<br><span style="font-weight:400;opacity:.75">${minhaPos ? 'onde você está' : 'centro do mapa'}</span>`;
   } catch (e) { document.getElementById('rosaTxt').textContent = 'Vento indisponível'; }
 }
+// ===== Bússola real: a rosa gira conforme o celular gira =====
+let bussolaOn = false, giro = 0;
+function aplicarRumo(rumoCel) {
+  // rumoCel = para onde o topo do celular aponta (0 = norte)
+  const alvo = -rumoCel;
+  giro += ((alvo - giro) % 360 + 540) % 360 - 180;   // gira pelo caminho mais curto
+  document.getElementById('rosaSvg').style.transform = `rotate(${giro}deg)`;
+  const g = Math.round((rumoCel % 360 + 360) % 360);
+  document.getElementById('bussolaTxt').textContent = `🧭 Celular aponta: ${g}° ${rumo(g)}`;
+}
+function anguloTela() { return (screen.orientation && screen.orientation.angle) || window.orientation || 0; }
+function aoGirar(e) {
+  let r = null;
+  if (typeof e.webkitCompassHeading === 'number') r = e.webkitCompassHeading;          // iPhone/iPad
+  else if (e.absolute && typeof e.alpha === 'number') r = 360 - e.alpha;              // Android
+  if (r === null) return;
+  aplicarRumo(r + anguloTela());
+}
+async function ligarBussola() {
+  if (bussolaOn) {
+    bussolaOn = false;
+    window.removeEventListener('deviceorientationabsolute', aoGirar);
+    window.removeEventListener('deviceorientation', aoGirar);
+    giro = 0; document.getElementById('rosaSvg').style.transform = '';
+    document.getElementById('marca').style.visibility = 'hidden';
+    document.getElementById('bussolaTxt').textContent = '🧭 Toque na rosa para girar com o celular';
+    return;
+  }
+  try {
+    if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      const ok = await DeviceOrientationEvent.requestPermission();   // iPhone/iPad pede permissão
+      if (ok !== 'granted') { document.getElementById('bussolaTxt').textContent = '🧭 Permissão negada'; return; }
+    }
+  } catch (e) { document.getElementById('bussolaTxt').textContent = '🧭 Bússola indisponível'; return; }
+  bussolaOn = true;
+  document.getElementById('marca').style.visibility = 'visible';
+  document.getElementById('bussolaTxt').textContent = '🧭 Gire o celular…';
+  if ('ondeviceorientationabsolute' in window) window.addEventListener('deviceorientationabsolute', aoGirar);
+  else window.addEventListener('deviceorientation', aoGirar);
+}
 let ventoTimer;
 map.on('moveend', () => { clearTimeout(ventoTimer); ventoTimer = setTimeout(() => { desenharVento(false); if (!minhaPos) atualizarRosa(); }, 600); });
 
@@ -450,6 +494,6 @@ setInterval(() => {
   if (ativo.imerg) ligarImerg(true);
 }, 5 * 60000);
 </script>
-<script>(function(){const VERSAO='1.4.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Chuva v"+VERSAO})})();</script>
+<script>(function(){const VERSAO='1.5.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Chuva v"+VERSAO})})();</script>
 </body>
 </html>
