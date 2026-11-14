@@ -15,6 +15,15 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;500;800;900&family=Playfair+Display:ital,wght@1,700&family=Bangers&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
+  .pxnexo{display:flex;align-items:center;gap:10px;text-decoration:none;color:#fff;background:#07070d;border:1px solid rgba(0,242,255,.35);border-radius:14px;padding:8px 12px;margin:0 0 12px;box-shadow:0 0 14px rgba(0,242,255,.12)}
+  .pxnexo .px{position:relative;width:36px;height:36px;flex:none;border-radius:9px;background:#000;border:1px solid #00f2ff;box-shadow:0 0 8px rgba(0,242,255,.6);display:flex;align-items:center;justify-content:center;font:800 .72rem ui-monospace,Menlo,monospace;color:#00f2ff}
+  .pxnexo .px i{position:absolute;top:-3px;right:-3px;width:7px;height:7px;border-radius:50%;background:#ff00ff}
+  .pxnexo .nx{display:flex;flex-direction:column;min-width:0}
+  .pxnexo .nx b{font:900 italic 1.15rem/1 system-ui,sans-serif;letter-spacing:-.04em}
+  .pxnexo .nx em{font-style:italic;color:#ff00ff}
+  .pxnexo .nx small{font:600 .62rem ui-monospace,Menlo,monospace;letter-spacing:.12em;text-transform:uppercase;color:#00f2ff;opacity:.85;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pxnexo .go{margin-left:auto;font:700 .7rem ui-monospace,Menlo,monospace;color:#00f2ff;white-space:nowrap}
+  @media (max-width:380px){.pxnexo .go{display:none}}
   :root{
     --bg:#0c0d10;--bg2:#121419;--card:#16181e;--card2:#1c1f27;--line:#2a2e38;--line2:#363b48;
     --txt:#f3f1ec;--mut:#9a9fac;--acc:#ffb020;--acc2:#ff7a1a;--rec:#ff3b3b;--ok:#3ddc97;--warn:#ffc65c;
@@ -214,6 +223,11 @@
 </head>
 <body>
 <main>
+  <a class="pxnexo" href="https://pixelnexo.com.br" target="_blank" rel="noopener" aria-label="Pixel Nexo, abrir o site">
+    <span class="px">PX<i></i></span>
+    <span class="nx"><b>PIXEL<em>NEXO</em></b><small>Sites, apps e PWA</small></span>
+    <span class="go">pixelnexo.com.br ↗</span>
+  </a>
   <header class="appbar">
     <div class="logo"><i></i></div>
     <div class="brand"><b>Legendas</b><small data-versao>Studio</small></div>
@@ -1765,7 +1779,7 @@ $('exp').addEventListener('click', async () => {
 })();
 </script>
 
-<script>(function(){const VERSAO='3.5.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas Studio v"+VERSAO})})();
+<script>(function(){const VERSAO='3.6.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas Studio v"+VERSAO})})();
 if('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(e => console.warn('sw', e));
 </script>
 </body>
