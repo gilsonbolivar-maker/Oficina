@@ -402,6 +402,7 @@
       <label class="ctl"><span class="hd">Aproximar (corta as bordas) <output></output></span><input type="range" id="tpCrop" min="1" max="2.5" step="0.05" value="1" data-u="×"></label>
       <label class="ctl" id="tpZoomW" hidden><span class="hd">Zoom <output></output></span><input type="range" id="tpZoom" min="1" max="1" step="0.1" value="1" data-u="×"></label>
       <label class="ctl" id="tpExpW" hidden><span class="hd">Exposição <output></output></span><input type="range" id="tpExp" min="0" max="0" step="0.1" value="0"></label>
+      <label class="ctl"><span class="hd">Volume do microfone <output></output></span><input type="range" id="tpGain" min="1" max="8" step="0.5" value="3.5" data-u="×"></label>
       <label class="ctl"><span class="hd">Luz suave (prévia) <output></output></span><input type="range" id="tpBeauty" min="0" max="100" value="0" data-u="%"></label>
     </div>
     <div class="row" style="margin-top:8px"><button class="chip" id="tpTorch" hidden>🔦 Lanterna</button><button class="chip" id="tpBack">↺ Texto do início</button></div>
@@ -416,6 +417,7 @@
     <button class="rb" data-cycle="tpDelay">Contagem<i></i></button>
     <button class="rb" data-act="tpBack">Texto<i>início</i></button>
     <button class="rb" data-toggle="tpMirrorBtn">Espelho<i></i></button>
+    <button class="rb" data-q="tpGain">Volume<i></i></button>
   </div>
   <div class="srail" id="tpRailR">
     <div class="cap">CÂMERA</div>
@@ -1608,7 +1610,11 @@ $('exp').addEventListener('click', async () => {
   // medidor de áudio
   // O medidor usa uma CÓPIA do microfone e um AudioContext na mesma frequência dele:
   // no iPhone, frequências diferentes no mesmo microfone que está gravando causam estalos.
-  let ac = null, raf = 0, vuSrc = null, vuTrack = null;
+  let ac = null, raf = 0, vuSrc = null, vuTrack = null, micGain = null, micDest = null;
+  try{ const g = localStorage.getItem('legendas-micgain'); if(g) $('tpGain').value = g; }catch(e){}
+  $('tpGain').addEventListener('input', e => { if(micGain) micGain.gain.value = +e.target.value; try{ localStorage.setItem('legendas-micgain', e.target.value); }catch(_){} });
+  // a gravação usa o som tratado (com volume); se algo falhar, usa o microfone direto
+  window.tpMicTracks = stream => { const t = micDest && micDest.stream.getAudioTracks()[0]; return t && t.readyState === 'live' ? [t] : stream.getAudioTracks(); };
   window.tpVuStop = () => { cancelAnimationFrame(raf); if(vuSrc){ try{ vuSrc.disconnect(); }catch(e){} vuSrc = null; } if(vuTrack){ vuTrack.stop(); vuTrack = null; } };
   function vu(stream){
     cancelAnimationFrame(raf);
@@ -1621,7 +1627,18 @@ $('exp').addEventListener('click', async () => {
       if(ac.state==='suspended') ac.resume();
       if(vuSrc){ try{ vuSrc.disconnect(); }catch(e){} } if(vuTrack) vuTrack.stop();
       vuTrack = at.clone();
-      const an = ac.createAnalyser(); an.fftSize = 512; vuSrc = ac.createMediaStreamSource(new MediaStream([vuTrack])); vuSrc.connect(an);
+      // Volume: o microfone vem limpo (sem ganho automático) e baixo; aqui ele sobe por igual,
+      // e um compressor com limitador segura os picos para não estourar nem estalar.
+      vuSrc = ac.createMediaStreamSource(new MediaStream([vuTrack]));
+      const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 80;      // tira o ronco grave
+      micGain = ac.createGain(); micGain.gain.value = +$('tpGain').value || 3.5;
+      const comp = ac.createDynamicsCompressor();
+      comp.threshold.value = -20; comp.knee.value = 10; comp.ratio.value = 4; comp.attack.value = 0.005; comp.release.value = 0.2;
+      const lim = ac.createDynamicsCompressor();
+      lim.threshold.value = -2; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.05;
+      micDest = ac.createMediaStreamDestination();
+      vuSrc.connect(hp); hp.connect(micGain); micGain.connect(comp); comp.connect(lim); lim.connect(micDest);
+      const an = ac.createAnalyser(); an.fftSize = 512; lim.connect(an);
       const buf = new Uint8Array(an.fftSize), bars = $('tpVu').children;
       (function l(){ an.getByteTimeDomainData(buf); let pk = 0; for(const v of buf) pk = Math.max(pk, Math.abs(v-128)); const lv = Math.min(1, pk/90);
         [...bars].forEach((b,i) => b.style.height = (lv*10 > i ? 100 : 20) + '%'); if(tp.classList.contains('open')) raf = requestAnimationFrame(l); })();
@@ -1738,7 +1755,7 @@ $('exp').addEventListener('click', async () => {
     let v = out.captureStream(0).getVideoTracks();
     if(v[0] && typeof v[0].requestFrame === 'function'){ outTrack = v[0]; }
     else { v.forEach(t => t.stop()); v = out.captureStream(30).getVideoTracks(); outTrack = null; }
-    return new MediaStream([...v, ...stream.getAudioTracks()]);
+    return new MediaStream([...v, ...(window.tpMicTracks ? tpMicTracks(stream) : stream.getAudioTracks())]);
   };
   window.tpOutBps = () => Math.round(Math.min(16e6, Math.max(8e6, out.width * out.height * 7.5)));
   // mostra no topo a resolução real: o que a câmera entrega e quanto sobra no recorte
@@ -1814,7 +1831,7 @@ $('exp').addEventListener('click', async () => {
 })();
 </script>
 
-<script>(function(){const VERSAO='3.7.1';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas Studio v"+VERSAO})})();
+<script>(function(){const VERSAO='3.8.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas Studio v"+VERSAO})})();
 if('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(e => console.warn('sw', e));
 </script>
 </body>
