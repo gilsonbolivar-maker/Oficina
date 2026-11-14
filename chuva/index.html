@@ -45,7 +45,7 @@
   <button class="chip on" id="bRadar">🌧️ Radar<small>chuva agora</small></button>
   <button class="chip on" id="bSat">🛰️ Satélite<small>nuvens, a cada 10 min</small></button>
   <button class="chip on" id="bVento">🧭 Vento<small>setas, km/h</small></button>
-  <button class="chip" id="bAviao">✈️ Aviões<small>tráfego aéreo, 1 min</small></button>
+  <button class="chip" id="bAviao">✈️ Aviões<small>tráfego aéreo ao vivo</small></button>
   <button class="chip" id="bImerg">💧 Chuva por satélite<small>estimativa NASA, atraso ~6 h</small></button>
 </div>
 
@@ -130,7 +130,7 @@ map.createPane('rotulos'); map.getPane('rotulos').style.zIndex = 650; map.getPan
 // nomes de cidades e fronteiras por cima de tudo (letra branca com contorno, lê bem sobre o satélite)
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {maxNativeZoom: 16, pane: 'rotulos'}).addTo(map);
 map.on('moveend', () => { try { localStorage.setItem('chuva_view', JSON.stringify({c: map.getCenter(), z: map.getZoom()})); } catch(e){} });
-map.attributionControl.addAttribution('Radar: <a href="https://www.rainviewer.com/">Rain Viewer</a> · Satélite: NASA GIBS / NOAA GOES-East · IMERG: NASA GPM');
+map.attributionControl.addAttribution('Radar: <a href="https://www.rainviewer.com/">Rain Viewer</a> · Satélite: NASA GIBS / NOAA GOES-East · IMERG: NASA GPM · Aviões: adsb.lol / airplanes.live');
 
 // Ordem das camadas: satélite embaixo, chuva IMERG no meio, radar em cima
 map.createPane('pSat');   map.getPane('pSat').style.zIndex = 300;
@@ -427,7 +427,8 @@ async function ligarBussola() {
   if ('ondeviceorientationabsolute' in window) window.addEventListener('deviceorientationabsolute', aoGirar);
   else window.addEventListener('deviceorientation', aoGirar);
 }
-// ===== Tráfego aéreo (OpenSky Network, grátis, 400 consultas por dia sem conta) =====
+// ===== Tráfego aéreo: redes abertas de ADS-B (adsb.lol / airplanes.live) pela ponte no Supabase =====
+const PONTE_AVIOES = 'https://meprwchojnjtoottbqry.supabase.co/functions/v1/avioes';
 let aviaoOn = false, aviaoTimer = null, aviaoMsg = '';
 const aviaoGrupo = L.layerGroup();
 map.createPane('pAviao'); map.getPane('pAviao').style.zIndex = 640;
@@ -441,32 +442,32 @@ function iconeAviao(rumoG, altM, chao) {
 }
 async function buscarAvioes() {
   if (!aviaoOn) return;
-  if (map.getZoom() < 7) {
+  if (map.getZoom() < 6) {
     aviaoGrupo.clearLayers();
     aviaoMsg = '✈️ aproxime o mapa para ver os aviões';
     atualizarInfo(); return;
   }
-  const b = map.getBounds();
-  const url = `https://opensky-network.org/api/states/all?lamin=${b.getSouth().toFixed(2)}&lomin=${b.getWest().toFixed(2)}&lamax=${b.getNorth().toFixed(2)}&lomax=${b.getEast().toFixed(2)}`;
+  const c = map.getCenter();
+  const raioNm = Math.min(250, Math.ceil(map.distance(c, map.getBounds().getNorthEast()) / 1852));
+  const url = `${PONTE_AVIOES}?lat=${c.lat.toFixed(3)}&lon=${c.lng.toFixed(3)}&dist=${raioNm}`;
   try {
     const r = await fetch(url);
-    if (r.status === 429) { aviaoMsg = '✈️ limite grátis do dia acabou'; atualizarInfo(); return; }
-    if (!r.ok) throw new Error('OpenSky ' + r.status);
+    if (!r.ok) throw new Error('ponte ' + r.status);
     const j = await r.json();
     aviaoGrupo.clearLayers();
-    const lista = (j.states || []).filter(s => s[5] != null && s[6] != null);
-    lista.forEach(s => {
-      const alt = s[13] != null ? s[13] : s[7], chao = s[8];
-      const nome = (s[1] || '').trim() || s[0].toUpperCase();
-      const vel = s[9] != null ? Math.round(s[9] * 3.6) : '?';
-      L.marker([s[6], s[5]], {icon: iconeAviao(s[10], alt, chao), pane: 'pAviao'})
-        .bindPopup(`<b>${nome}</b><br>` +
-          (chao ? 'No solo' : `Altitude: ${alt != null ? Math.round(alt).toLocaleString('pt-BR') + ' m (' + Math.round(alt * 3.281).toLocaleString('pt-BR') + ' pés)' : '?'}`) +
-          `<br>Velocidade: ${vel} km/h<br>Rumo: ${s[10] != null ? Math.round(s[10]) + '° ' + rumo(s[10]) : '?'}<br>País: ${s[2]}` +
-          `<br><a href="https://www.flightradar24.com/${encodeURIComponent(nome)}" target="_blank">ver no Flightradar24</a>`)
+    j.ac.forEach(a => {
+      const chao = a.alt === 'solo';
+      const altM = chao || a.alt == null ? null : a.alt * 0.3048;
+      const nome = a.voo || a.reg || (a.hex || '').toUpperCase();
+      const vel = a.vel != null ? Math.round(a.vel * 1.852) : '?';
+      L.marker([a.lat, a.lon], {icon: iconeAviao(a.rumo, altM, chao), pane: 'pAviao'})
+        .bindPopup(`<b>${nome}</b>${a.tipo ? ' · ' + a.tipo : ''}${a.reg && a.reg !== nome ? '<br>Matrícula: ' + a.reg : ''}<br>` +
+          (chao ? 'No solo' : `Altitude: ${altM != null ? Math.round(altM).toLocaleString('pt-BR') + ' m (' + Math.round(a.alt).toLocaleString('pt-BR') + ' pés)' : '?'}`) +
+          `<br>Velocidade: ${vel} km/h<br>Rumo: ${a.rumo != null ? Math.round(a.rumo) + '° ' + rumo(a.rumo) : '?'}` +
+          `<br><a href="https://globe.adsb.lol/?icao=${a.hex}" target="_blank">ver trajeto</a>`)
         .addTo(aviaoGrupo);
     });
-    aviaoMsg = `✈️ ${lista.length} aviões (${hhmm(Date.now())})`;
+    aviaoMsg = `✈️ ${j.total} aviões (${hhmm(Date.now())})`;
   } catch (e) {
     aviaoMsg = '✈️ não consegui acessar o serviço de aviões';
     console.warn(e);
@@ -478,7 +479,7 @@ function ligarAviao() {
   document.getElementById('bAviao').classList.toggle('on', aviaoOn);
   document.getElementById('legAviao').style.display = aviaoOn ? 'flex' : 'none';
   clearInterval(aviaoTimer);
-  if (aviaoOn) { aviaoGrupo.addTo(map); buscarAvioes(); aviaoTimer = setInterval(buscarAvioes, 60000); }
+  if (aviaoOn) { aviaoGrupo.addTo(map); buscarAvioes(); aviaoTimer = setInterval(buscarAvioes, 20000); }
   else { map.removeLayer(aviaoGrupo); aviaoGrupo.clearLayers(); aviaoMsg = ''; atualizarInfo(); }
 }
 let aviaoMove;
@@ -556,6 +557,6 @@ setInterval(() => {
   if (ativo.imerg) ligarImerg(true);
 }, 5 * 60000);
 </script>
-<script>(function(){const VERSAO='1.6.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Chuva v"+VERSAO})})();</script>
+<script>(function(){const VERSAO='1.6.1';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Chuva v"+VERSAO})})();</script>
 </body>
 </html>
