@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mapa de Chuva ao Vivo</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root{--bg:#0d1117;--card:rgba(13,17,23,.88);--txt:#e6edf3;--mut:#8b949e;--acc:#3fb5ff;--on:#1f6feb}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  #map{position:fixed;inset:0}
+  .top{position:fixed;top:calc(8px + env(safe-area-inset-top));left:8px;right:8px;z-index:1000;display:flex;gap:6px;flex-wrap:wrap;pointer-events:none}
+  .chip{pointer-events:auto;border:1px solid #30363d;background:var(--card);color:var(--txt);padding:9px 12px;border-radius:20px;font-size:14px;cursor:pointer;backdrop-filter:blur(6px)}
+  .chip.on{background:var(--on);border-color:var(--on)}
+  .chip small{display:block;font-size:11px;color:#c9d1d9;opacity:.85}
+  .bottom{position:fixed;padding-bottom:18px!important;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:1000;background:var(--card);border:1px solid #30363d;border-radius:14px;padding:10px 12px;backdrop-filter:blur(6px)}
+  .row{display:flex;align-items:center;gap:10px}
+  .play{width:46px;height:46px;border-radius:50%;border:0;background:var(--acc);color:#001018;font-size:20px;font-weight:700;cursor:pointer;flex:none}
+  input[type=range]{flex:1;accent-color:var(--acc);height:30px}
+  .hora{font-size:20px;font-weight:700;min-width:64px;text-align:right}
+  .info{font-size:12px;color:var(--mut);margin-top:6px;line-height:1.4}
+  .leg{display:flex;align-items:center;gap:8px;font-size:12px;margin-top:6px;color:#c9d1d9}
+  .bar{flex:1;height:10px;border-radius:5px}
+  .gps{position:fixed;right:10px;bottom:calc(150px + env(safe-area-inset-bottom));z-index:1000;width:48px;height:48px;border-radius:50%;border:1px solid #30363d;background:var(--card);color:var(--txt);font-size:22px;cursor:pointer}
+  .leaflet-control-attribution{font-size:9px;background:rgba(0,0,0,.5)!important;color:#aaa}
+  .leaflet-control-attribution a{color:#ccc}
+  .leaflet-control-zoom{display:none}
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div class="top">
+  <button class="chip on" id="bRadar">🌧️ Radar<small>chuva agora</small></button>
+  <button class="chip on" id="bSat">🛰️ Satélite<small>nuvens, a cada 10 min</small></button>
+  <button class="chip" id="bImerg">💧 Chuva por satélite<small>estimativa NASA, atraso ~6 h</small></button>
+</div>
+
+<button class="gps" id="bGps" title="Minha localização">📍</button>
+
+<div class="bottom">
+  <div class="row">
+    <button class="play" id="bPlay">▶</button>
+    <input type="range" id="slider" min="0" max="0" value="0">
+    <div class="hora" id="hora">--:--</div>
+  </div>
+  <div class="leg" id="legRadar"><span>Radar:</span><span>fraca</span>
+    <div class="bar" style="background:linear-gradient(90deg,#88ddee,#0099cc,#0077aa,#ffee00,#ffaa00,#ff4400,#c10000,#ff77ff)"></div><span>forte</span></div>
+  <div class="leg" id="legSat"><span>Satélite:</span><span>céu limpo</span>
+    <div class="bar" style="background:linear-gradient(90deg,#222,#999,#fff,#00c0ff,#00ff40,#ffff00,#ff3000)"></div><span>tempestade</span></div>
+  <div class="info" id="info">Carregando dados…</div>
+  <span data-versao style="position:absolute;right:12px;bottom:6px;font:500 10px ui-monospace,Menlo,monospace;opacity:.5;pointer-events:none"></span>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+// ===== Configuração =====
+const SAT_LAG_MIN = 40;     // satélite GOES-East chega com ~30-40 min de atraso
+const IMERG_LAG_MIN = 390;  // estimativa IMERG chega com ~6 h de atraso
+const GIBS_WMS = 'https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi';
+const OP = {radar: 0.85, sat: 0.65, imerg: 0.8};
+
+// ===== Mapa base =====
+let inicio = [-14.5, -51], zoomIni = 4;
+try { const s = JSON.parse(localStorage.getItem('chuva_view')); if (s) { inicio = s.c; zoomIni = s.z; } } catch(e){}
+const map = L.map('map', {center: inicio, zoom: zoomIni, minZoom: 3, maxZoom: 12, worldCopyJump: true});
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+  subdomains: 'abcd', attribution: '© OpenStreetMap © CARTO'
+}).addTo(map);
+map.createPane('rotulos'); map.getPane('rotulos').style.zIndex = 650; map.getPane('rotulos').style.pointerEvents = 'none';
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {subdomains: 'abcd', pane: 'rotulos'}).addTo(map);
+map.on('moveend', () => { try { localStorage.setItem('chuva_view', JSON.stringify({c: map.getCenter(), z: map.getZoom()})); } catch(e){} });
+map.attributionControl.addAttribution('Radar: <a href="https://www.rainviewer.com/">Rain Viewer</a> · Satélite: NASA GIBS / NOAA GOES-East · IMERG: NASA GPM');
+
+// Ordem das camadas: satélite embaixo, chuva IMERG no meio, radar em cima
+map.createPane('pSat');   map.getPane('pSat').style.zIndex = 300;
+map.createPane('pImerg'); map.getPane('pImerg').style.zIndex = 350;
+map.createPane('pRadar'); map.getPane('pRadar').style.zIndex = 400;
+
+// ===== Utilidades de tempo =====
+const floorMin = (ms, m) => Math.floor(ms / (m * 60000)) * m * 60000;
+const iso = ms => new Date(ms).toISOString().slice(0, 19) + 'Z';
+const hhmm = ms => new Date(ms).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+
+// ===== Estado =====
+const ativo = {radar: true, sat: true, imerg: false};
+const erros = {radar: 0, sat: 0, imerg: 0};
+let frames = [];          // [{t, radarPath}]
+let rvHost = '';
+let idx = 0, timer = null;
+const cache = {radar: new Map(), sat: new Map()};
+let imergLayer = null, imergHora = '';
+
+function gibsLayer(layerName, timeStr, pane, op) {
+  const l = L.tileLayer.wms(GIBS_WMS, {
+    layers: layerName, format: 'image/png', transparent: true, version: '1.1.1',
+    TIME: timeStr, pane, opacity: op, maxZoom: 12
+  });
+  return l;
+}
+
+function camadaRadar(f) {
+  if (!f.radarPath) return null;
+  if (!cache.radar.has(f.radarPath)) {
+    const l = L.tileLayer(rvHost + f.radarPath + '/256/{z}/{x}/{y}/2/1_1.png', {
+      pane: 'pRadar', opacity: 0, maxNativeZoom: 7, maxZoom: 12
+    });
+    l.on('tileerror', () => { erros.radar++; });
+    cache.radar.set(f.radarPath, l);
+  }
+  return cache.radar.get(f.radarPath);
+}
+
+function tempoSat(t) {
+  const ultimo = floorMin(Date.now() - SAT_LAG_MIN * 60000, 10);
+  return iso(Math.min(floorMin(t, 10), ultimo));
+}
+
+function camadaSat(t) {
+  const ts = tempoSat(t);
+  if (!cache.sat.has(ts)) {
+    const l = gibsLayer('GOES-East_ABI_Band13_Clean_Infrared', ts, 'pSat', 0);
+    l.on('tileerror', () => { erros.sat++; });
+    cache.sat.set(ts, l);
+  }
+  return cache.sat.get(ts);
+}
+
+// Mostra um quadro: a camada do momento fica visível, as outras ficam escondidas (pré-carregadas)
+function mostrar(i) {
+  if (!frames.length) return;
+  idx = (i + frames.length) % frames.length;
+  const f = frames[idx];
+  const rAtual = ativo.radar ? camadaRadar(f) : null;
+  const sAtual = ativo.sat ? camadaSat(f.t) : null;
+
+  cache.radar.forEach(l => { if (l !== rAtual) l.setOpacity(0); });
+  cache.sat.forEach(l => { if (l !== sAtual) l.setOpacity(0); });
+  if (rAtual) { if (!map.hasLayer(rAtual)) rAtual.addTo(map); rAtual.setOpacity(OP.radar); }
+  if (sAtual) { if (!map.hasLayer(sAtual)) sAtual.addTo(map); sAtual.setOpacity(OP.sat); }
+
+  // pré-carrega o próximo quadro
+  const prox = frames[(idx + 1) % frames.length];
+  if (ativo.radar) { const r = camadaRadar(prox); if (r && !map.hasLayer(r)) r.addTo(map); }
+  if (ativo.sat)   { const s = camadaSat(prox.t); if (!map.hasLayer(s)) s.addTo(map); }
+
+  document.getElementById('slider').value = idx;
+  document.getElementById('hora').textContent = hhmm(f.t);
+  atualizarInfo();
+}
+
+function atualizarInfo() {
+  const f = frames[idx]; if (!f) return;
+  const partes = [];
+  const minAtras = Math.round((Date.now() - f.t) / 60000);
+  partes.push(minAtras <= 5 ? 'Agora' : `Há ${minAtras} min`);
+  if (ativo.radar) partes.push(f.radarPath ? 'radar ok' : 'radar indisponível');
+  if (ativo.sat) partes.push('satélite ' + hhmm(Date.parse(tempoSat(f.t))));
+  if (ativo.imerg) partes.push('chuva por satélite ' + imergHora);
+  if (erros.radar > 20) partes.push('⚠ radar com falhas');
+  if (erros.sat > 20) partes.push('⚠ satélite com falhas');
+  document.getElementById('info').textContent = partes.join(' · ');
+}
+
+// ===== Chuva estimada por satélite (IMERG) — quadro mais recente =====
+function ligarImerg(on) {
+  if (on) {
+    const t = floorMin(Date.now() - IMERG_LAG_MIN * 60000, 30);
+    imergHora = hhmm(t);
+    if (imergLayer) map.removeLayer(imergLayer);
+    imergLayer = gibsLayer('IMERG_Precipitation_Rate', iso(t), 'pImerg', OP.imerg);
+    imergLayer.on('tileerror', () => { erros.imerg++; });
+    imergLayer.addTo(map);
+  } else if (imergLayer) { map.removeLayer(imergLayer); imergLayer = null; }
+  atualizarInfo();
+}
+
+// ===== Animação =====
+function play() {
+  const b = document.getElementById('bPlay');
+  if (timer) { clearTimeout(timer); timer = null; b.textContent = '▶'; return; }
+  b.textContent = '❚❚';
+  const passo = () => {
+    mostrar(idx + 1);
+    timer = setTimeout(passo, idx === frames.length - 1 ? 2000 : 650);
+  };
+  passo();
+}
+
+// ===== Carregar lista de horários =====
+async function carregar() {
+  let radarFrames = [];
+  try {
+    const r = await fetch('https://api.rainviewer.com/public/weather-maps.json', {cache: 'no-store'});
+    const j = await r.json();
+    rvHost = j.host;
+    radarFrames = (j.radar && j.radar.past) || [];
+  } catch (e) { console.warn('Radar indisponível', e); }
+
+  if (radarFrames.length) {
+    frames = radarFrames.map(p => ({t: p.time * 1000, radarPath: p.path}));
+  } else {
+    // sem radar: linha do tempo só com satélite (últimas 2 h)
+    const fim = floorMin(Date.now() - SAT_LAG_MIN * 60000, 10);
+    frames = [];
+    for (let k = 12; k >= 0; k--) frames.push({t: fim - k * 600000, radarPath: null});
+  }
+  // remove camadas de radar antigas que saíram da lista
+  const validos = new Set(frames.map(f => f.radarPath));
+  cache.radar.forEach((l, k) => { if (!validos.has(k)) { map.removeLayer(l); cache.radar.delete(k); } });
+  if (cache.sat.size > 30) { cache.sat.forEach(l => map.removeLayer(l)); cache.sat.clear(); }
+
+  const s = document.getElementById('slider');
+  s.max = frames.length - 1;
+  mostrar(frames.length - 1);   // sempre abre no quadro mais recente
+}
+
+// ===== Botões =====
+function chip(id, chave, extra) {
+  const b = document.getElementById(id);
+  b.onclick = () => {
+    ativo[chave] = !ativo[chave];
+    b.classList.toggle('on', ativo[chave]);
+    if (extra) extra(ativo[chave]);
+    const leg = document.getElementById(chave === 'radar' ? 'legRadar' : 'legSat');
+    if (chave !== 'imerg') leg.style.display = ativo[chave] ? 'flex' : 'none';
+    if (!ativo.radar) cache.radar.forEach(l => l.setOpacity(0));
+    if (!ativo.sat) cache.sat.forEach(l => l.setOpacity(0));
+    mostrar(idx);
+  };
+}
+chip('bRadar', 'radar');
+chip('bSat', 'sat');
+chip('bImerg', 'imerg', ligarImerg);
+
+document.getElementById('bPlay').onclick = play;
+document.getElementById('slider').oninput = e => {
+  if (timer) play();
+  mostrar(+e.target.value);
+};
+
+let meuPonto = null;
+document.getElementById('bGps').onclick = () => {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(p => {
+    const ll = [p.coords.latitude, p.coords.longitude];
+    if (meuPonto) map.removeLayer(meuPonto);
+    meuPonto = L.circleMarker(ll, {radius: 8, color: '#fff', weight: 3, fillColor: '#3fb5ff', fillOpacity: 1, pane: 'rotulos'}).addTo(map);
+    map.setView(ll, 7);
+  }, () => { document.getElementById('info').textContent = 'Não consegui pegar sua localização (permissão negada).'; },
+  {enableHighAccuracy: false, timeout: 10000});
+};
+
+// Atualiza sozinho a cada 5 minutos
+carregar();
+setInterval(() => {
+  carregar();
+  if (ativo.imerg) ligarImerg(true);
+}, 5 * 60000);
+</script>
+<script>(function(){const VERSAO='1.0.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Chuva v"+VERSAO})})();</script>
+</body>
+</html>
