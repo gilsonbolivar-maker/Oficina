@@ -732,7 +732,11 @@ function camConstraints(){
   const [w, h] = CAM_Q[window.camQ] || CAM_Q.nitida;
   return { facingMode: window.camFacing || 'user', width: {ideal: w}, height: {ideal: h}, frameRate: {ideal: 30} };
 }
-function audioConstraints(){ return { echoCancellation: true, noiseSuppression: true, autoGainControl: true }; }
+// Microfone limpo: sem ganho automático (ele aumenta o chiado do ambiente quando a pessoa para de falar)
+// e sem cancelamento de eco (no iPhone ele troca para o modo "ligação", que gera estalos; aqui não há som tocando).
+function audioConstraints(){
+  return { echoCancellation: false, noiseSuppression: true, autoGainControl: false, channelCount: 1, sampleRate: 48000 };
+}
 
 // ================= CORTES AUTOMÁTICOS =================
 const FILLER = /^(é{2,}|eh+|ehm+|ah+|ahn+|ahm+|hã+|hum+|hm+|ã+|uh+|uhm+|mmm+)[.,!?…]*$/i;
@@ -1413,6 +1417,7 @@ $('exp').addEventListener('click', async () => {
     }catch(e){ console.warn('não virou a câmera', e); }
   };
   function close(){
+    window.tpVuStop && tpVuStop();
     if(rec && rec.state==='recording') rec.stop();
     if(stream) stream.getTracks().forEach(t => t.stop());
     stream = null; tp.classList.remove('open'); document.body.style.overflow='';
@@ -1436,7 +1441,7 @@ $('exp').addEventListener('click', async () => {
     const mime = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
     const outStream = window.tpOutStream ? tpOutStream(stream) : stream;
     const bps = window.tpOutBps ? tpOutBps() : 8e6;
-    rec = new MediaRecorder(outStream, mime ? {mimeType:mime, videoBitsPerSecond:bps, audioBitsPerSecond:160000} : {});
+    rec = new MediaRecorder(outStream, mime ? {mimeType:mime, videoBitsPerSecond:bps, audioBitsPerSecond:128000} : {});
     parts = [];
     rec.ondataavailable = e => e.data.size && parts.push(e.data);
     rec.onstop = () => {
@@ -1601,11 +1606,22 @@ $('exp').addEventListener('click', async () => {
   $('tpBeauty').addEventListener('input', e => { const v = e.target.value/100; $('tpOut').style.filter = v ? `brightness(${1+v*.12}) contrast(${1-v*.1}) saturate(${1+v*.08}) blur(${v*.6}px)` : ''; });
 
   // medidor de áudio
-  let ac = null, raf = 0;
+  // O medidor usa uma CÓPIA do microfone e um AudioContext na mesma frequência dele:
+  // no iPhone, frequências diferentes no mesmo microfone que está gravando causam estalos.
+  let ac = null, raf = 0, vuSrc = null, vuTrack = null;
+  window.tpVuStop = () => { cancelAnimationFrame(raf); if(vuSrc){ try{ vuSrc.disconnect(); }catch(e){} vuSrc = null; } if(vuTrack){ vuTrack.stop(); vuTrack = null; } };
   function vu(stream){
     cancelAnimationFrame(raf);
-    try{ const C = window.AudioContext || window.webkitAudioContext; if(!ac) ac = new C(); if(ac.state==='suspended') ac.resume();
-      const an = ac.createAnalyser(); an.fftSize = 512; ac.createMediaStreamSource(stream).connect(an);
+    try{
+      const at = stream.getAudioTracks()[0]; if(!at) return;
+      const rate = (at.getSettings && at.getSettings().sampleRate) || 48000;
+      const C = window.AudioContext || window.webkitAudioContext;
+      if(ac && ac.sampleRate !== rate){ ac.close().catch(()=>{}); ac = null; }
+      if(!ac){ try{ ac = new C({sampleRate: rate}); }catch(e){ ac = new C(); } }
+      if(ac.state==='suspended') ac.resume();
+      if(vuSrc){ try{ vuSrc.disconnect(); }catch(e){} } if(vuTrack) vuTrack.stop();
+      vuTrack = at.clone();
+      const an = ac.createAnalyser(); an.fftSize = 512; vuSrc = ac.createMediaStreamSource(new MediaStream([vuTrack])); vuSrc.connect(an);
       const buf = new Uint8Array(an.fftSize), bars = $('tpVu').children;
       (function l(){ an.getByteTimeDomainData(buf); let pk = 0; for(const v of buf) pk = Math.max(pk, Math.abs(v-128)); const lv = Math.min(1, pk/90);
         [...bars].forEach((b,i) => b.style.height = (lv*10 > i ? 100 : 20) + '%'); if(tp.classList.contains('open')) raf = requestAnimationFrame(l); })();
@@ -1798,7 +1814,7 @@ $('exp').addEventListener('click', async () => {
 })();
 </script>
 
-<script>(function(){const VERSAO='3.7.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas Studio v"+VERSAO})})();
+<script>(function(){const VERSAO='3.7.1';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Legendas Studio v"+VERSAO})})();
 if('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(e => console.warn('sw', e));
 </script>
 </body>
