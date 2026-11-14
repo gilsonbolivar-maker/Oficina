@@ -45,6 +45,7 @@
   <button class="chip on" id="bRadar">🌧️ Radar<small>chuva agora</small></button>
   <button class="chip on" id="bSat">🛰️ Satélite<small>nuvens, a cada 10 min</small></button>
   <button class="chip on" id="bVento">🧭 Vento<small>setas, km/h</small></button>
+  <button class="chip" id="bAviao">✈️ Aviões<small>tráfego aéreo, 1 min</small></button>
   <button class="chip" id="bImerg">💧 Chuva por satélite<small>estimativa NASA, atraso ~6 h</small></button>
 </div>
 
@@ -90,6 +91,8 @@
     <div class="bar" style="background:linear-gradient(90deg,#88ddee,#0099cc,#0077aa,#ffee00,#ffaa00,#ff4400,#c10000,#ff77ff)"></div><span>forte</span></div>
   <div class="leg" id="legSat"><span>Satélite:</span><span>céu limpo</span>
     <div class="bar" style="background:linear-gradient(90deg,#222,#999,#fff,#00c0ff,#00ff40,#ffff00,#ff3000)"></div><span>tempestade</span></div>
+  <div class="leg" id="legAviao" style="display:none"><span>Aviões:</span>
+    <span style="color:#7CFC00">■ baixo</span><span style="color:#ffe066">■ médio</span><span style="color:#ff9f43">■ alto</span><span style="color:#ff5cf0">■ cruzeiro</span><span style="color:#aaa">■ solo</span></div>
   <div class="perto" id="perto">☔ Toque em 📍 para ver a chuva mais perto de você.</div>
   <div class="info" id="info">Carregando dados…</div>
   <button id="bVersao" title="Toque para atualizar" style="position:absolute;right:6px;bottom:0;padding:6px 8px;border:0;background:none;color:#8b949e;font:500 11px ui-monospace,Menlo,monospace;cursor:pointer">⟳ <span data-versao></span></button>
@@ -214,6 +217,7 @@ function atualizarInfo() {
   if (ativo.radar) partes.push(f.radarPath ? 'radar ok' : 'radar indisponível');
   if (ativo.sat) partes.push('satélite ' + hhmm(Date.parse(tempoSat(f.t))));
   if (ativo.imerg) partes.push('chuva por satélite ' + imergHora);
+  if (typeof aviaoMsg !== 'undefined' && aviaoMsg) partes.push(aviaoMsg);
   if (erros.radar > 20) partes.push('⚠ radar com falhas');
   if (erros.sat > 20) partes.push('⚠ satélite com falhas');
   document.getElementById('info').textContent = partes.join(' · ');
@@ -296,6 +300,7 @@ document.getElementById('bVento').onclick = e => {
 
 document.getElementById('bPlay').onclick = play;
 document.getElementById('bFundo').onclick = trocarFundo;
+document.getElementById('bAviao').onclick = ligarAviao;
 document.getElementById('rosaSvg').addEventListener('click', ligarBussola);
 // Toque no número da versão: baixa a página de novo, sem usar a cópia guardada no aparelho
 document.getElementById('bVersao').onclick = async () => {
@@ -422,6 +427,63 @@ async function ligarBussola() {
   if ('ondeviceorientationabsolute' in window) window.addEventListener('deviceorientationabsolute', aoGirar);
   else window.addEventListener('deviceorientation', aoGirar);
 }
+// ===== Tráfego aéreo (OpenSky Network, grátis, 400 consultas por dia sem conta) =====
+let aviaoOn = false, aviaoTimer = null, aviaoMsg = '';
+const aviaoGrupo = L.layerGroup();
+map.createPane('pAviao'); map.getPane('pAviao').style.zIndex = 640;
+function corAltitude(m) { return m == null ? '#ccc' : m < 1000 ? '#7CFC00' : m < 3000 ? '#ffe066' : m < 7000 ? '#ff9f43' : '#ff5cf0'; }
+function iconeAviao(rumoG, altM, chao) {
+  const c = chao ? '#aaaaaa' : corAltitude(altM);
+  return L.divIcon({className: '', iconSize: [26, 26], iconAnchor: [13, 13], html:
+    `<svg width="26" height="26" viewBox="0 0 24 24" style="transform:rotate(${rumoG || 0}deg);filter:drop-shadow(0 0 2px #000)">
+      <path d="M12 1.5c.8 0 1.4.9 1.4 2v6.2l8.1 4.6v2.2l-8.1-2.4v5.1l2.4 1.8v1.7L12 21.6l-3.8 1.1V21l2.4-1.8v-5.1l-8.1 2.4v-2.2l8.1-4.6V3.5c0-1.1.6-2 1.4-2z"
+        fill="${c}" stroke="#000" stroke-width=".8"/></svg>`});
+}
+async function buscarAvioes() {
+  if (!aviaoOn) return;
+  if (map.getZoom() < 7) {
+    aviaoGrupo.clearLayers();
+    aviaoMsg = '✈️ aproxime o mapa para ver os aviões';
+    atualizarInfo(); return;
+  }
+  const b = map.getBounds();
+  const url = `https://opensky-network.org/api/states/all?lamin=${b.getSouth().toFixed(2)}&lomin=${b.getWest().toFixed(2)}&lamax=${b.getNorth().toFixed(2)}&lomax=${b.getEast().toFixed(2)}`;
+  try {
+    const r = await fetch(url);
+    if (r.status === 429) { aviaoMsg = '✈️ limite grátis do dia acabou'; atualizarInfo(); return; }
+    if (!r.ok) throw new Error('OpenSky ' + r.status);
+    const j = await r.json();
+    aviaoGrupo.clearLayers();
+    const lista = (j.states || []).filter(s => s[5] != null && s[6] != null);
+    lista.forEach(s => {
+      const alt = s[13] != null ? s[13] : s[7], chao = s[8];
+      const nome = (s[1] || '').trim() || s[0].toUpperCase();
+      const vel = s[9] != null ? Math.round(s[9] * 3.6) : '?';
+      L.marker([s[6], s[5]], {icon: iconeAviao(s[10], alt, chao), pane: 'pAviao'})
+        .bindPopup(`<b>${nome}</b><br>` +
+          (chao ? 'No solo' : `Altitude: ${alt != null ? Math.round(alt).toLocaleString('pt-BR') + ' m (' + Math.round(alt * 3.281).toLocaleString('pt-BR') + ' pés)' : '?'}`) +
+          `<br>Velocidade: ${vel} km/h<br>Rumo: ${s[10] != null ? Math.round(s[10]) + '° ' + rumo(s[10]) : '?'}<br>País: ${s[2]}` +
+          `<br><a href="https://www.flightradar24.com/${encodeURIComponent(nome)}" target="_blank">ver no Flightradar24</a>`)
+        .addTo(aviaoGrupo);
+    });
+    aviaoMsg = `✈️ ${lista.length} aviões (${hhmm(Date.now())})`;
+  } catch (e) {
+    aviaoMsg = '✈️ não consegui acessar o serviço de aviões';
+    console.warn(e);
+  }
+  atualizarInfo();
+}
+function ligarAviao() {
+  aviaoOn = !aviaoOn;
+  document.getElementById('bAviao').classList.toggle('on', aviaoOn);
+  document.getElementById('legAviao').style.display = aviaoOn ? 'flex' : 'none';
+  clearInterval(aviaoTimer);
+  if (aviaoOn) { aviaoGrupo.addTo(map); buscarAvioes(); aviaoTimer = setInterval(buscarAvioes, 60000); }
+  else { map.removeLayer(aviaoGrupo); aviaoGrupo.clearLayers(); aviaoMsg = ''; atualizarInfo(); }
+}
+let aviaoMove;
+map.on('moveend', () => { if (aviaoOn) { clearTimeout(aviaoMove); aviaoMove = setTimeout(buscarAvioes, 1500); } });
+
 let ventoTimer;
 map.on('moveend', () => { clearTimeout(ventoTimer); ventoTimer = setTimeout(() => { desenharVento(false); if (!minhaPos) atualizarRosa(); }, 600); });
 
@@ -494,6 +556,6 @@ setInterval(() => {
   if (ativo.imerg) ligarImerg(true);
 }, 5 * 60000);
 </script>
-<script>(function(){const VERSAO='1.5.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Chuva v"+VERSAO})})();</script>
+<script>(function(){const VERSAO='1.6.0';document.querySelectorAll("[data-versao]").forEach(function(e){e.textContent="Chuva v"+VERSAO})})();</script>
 </body>
 </html>
