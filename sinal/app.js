@@ -16,7 +16,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.8.1';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.9.0';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // sem 0, 1, O e I
@@ -694,10 +694,21 @@ function ligarHistorico() {
   d.addEventListener('toggle', () => { histAberto = d.open; });
   const at = $('#atualizar');
   if (at) at.onclick = async () => {
+    // Responde sempre: ou atualiza, ou diz que já está na mais nova.
+    at.disabled = true;
     at.textContent = 'Procurando…';
-    await procurarVersao();
-    // Se veio versão nova, o controllerchange recarrega; se não, recarrega igual.
-    setTimeout(() => location.reload(), 2500);
+    const v = await procurarVersao();
+    const voltar = () => { at.textContent = 'Procurar atualização'; at.disabled = false; };
+    if (v && maisNova(v, VERSAO)) {
+      at.textContent = 'Atualizando para a v' + v + '…';
+      atualizarAgora();
+    } else if (v) {
+      at.textContent = '✓ Você já está na versão mais nova';
+      setTimeout(voltar, 5000);
+    } else {
+      at.textContent = 'Sem internet. Tente de novo.';
+      setTimeout(voltar, 5000);
+    }
   };
   $('#hist-limpar').onclick = () => {
     if (!confirm('Apagar o histórico deste aparelho?')) return;
@@ -1452,9 +1463,54 @@ function recarregarSePuder() {
   recarregar = false;
   location.reload();
 }
-function procurarVersao() {
-  if (!navigator.serviceWorker) return Promise.resolve();
-  return navigator.serviceWorker.getRegistration().then(r => r && r.update()).catch(() => {});
+// Lê a VERSAO publicada no sw.js do servidor (sem cache) e compara com a deste app.
+async function versaoPublicada() {
+  try {
+    const r = await fetch('sw.js?v=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) return null;
+    const m = (await r.text()).match(/const VERSAO = '([\d.]+)'/);
+    return m ? m[1] : null;
+  } catch { return null; }
+}
+function maisNova(a, b) {
+  const pa = a.split('.').map(Number), pb = b.split('.').map(Number);
+  for (let i = 0; i < 3; i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) > (pb[i] || 0);
+  return false;
+}
+// Faixa no topo da tela: avisa a versão nova (com botão) ou confirma a atualização.
+function faixaVersao(html, classe) {
+  let el = $('#nova-versao');
+  if (!el) { el = document.createElement('div'); el.id = 'nova-versao'; app.parentNode.insertBefore(el, app); }
+  el.innerHTML = '<div class="faixa-versao ' + classe + '">' + html + '</div>';
+  el.hidden = false;
+  return el;
+}
+function avisarVersaoNova(v) {
+  faixaVersao('<p><b>Versão nova disponível</b> · v' + esc(v) + '</p>' +
+    '<button class="btn alert" id="atualizar-agora">Atualizar agora</button>', 'nova');
+  $('#atualizar-agora').onclick = atualizarAgora;
+}
+// atualizar.html solta o service worker e apaga só os arquivos do app (pessoas e histórico ficam).
+function atualizarAgora() {
+  const b = $('#atualizar-agora');
+  if (b) { b.textContent = 'Atualizando…'; b.disabled = true; }
+  location.href = 'atualizar.html';
+}
+async function procurarVersao() {
+  const v = await versaoPublicada();
+  if (v && maisNova(v, VERSAO)) avisarVersaoNova(v);
+  if (navigator.serviceWorker) {
+    try { const r = await navigator.serviceWorker.getRegistration(); if (r) await r.update(); } catch {}
+  }
+  return v;
+}
+// Depois de atualizar, confirma por alguns segundos que a versão nova entrou.
+function confirmarAtualizacao() {
+  const antes = read('versao-vista', null);
+  write('versao-vista', VERSAO);
+  if (!antes || antes === VERSAO) return;
+  const el = faixaVersao('<p><b>✓ Atualizado</b> para a v' + VERSAO + '</p>', 'ok');
+  setTimeout(() => { el.hidden = true; }, 6000);
 }
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -1462,6 +1518,8 @@ if ('serviceWorker' in navigator) {
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') procurarVersao(); });
   setInterval(procurarVersao, 30 * 60 * 1000);
 }
+confirmarAtualizacao();
+setTimeout(procurarVersao, 3000);
 preencherVersao();
 faixaInstalar();
 const desenharTela = () => (ROLE === 'painel' ? telaPainel() : telaSinal());
