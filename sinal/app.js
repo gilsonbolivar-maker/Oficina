@@ -16,7 +16,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.9.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.10.0';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // sem 0, 1, O e I
@@ -35,11 +35,12 @@ const T = Object.assign({
   onlineAte: 75000            // sem notícia há mais que isso: fora do ar
 }, window.SINAL_TEMPOS);
 
+// [id, nome, texto do botão, som, vermelho, o que quer dizer (o combinado da equipe)]
 const TONES = [
-  ['urgente', 'É urgente', ['É', 'URGENTE'], 'Sirene', true],
-  ['liga', 'Me liga', ['ME', 'LIGA'], 'Sino', false],
-  ['preciso', 'Compareça', ['COMPAREÇA'], 'Apito', false],
-  ['olha', 'Olha aqui', ['OLHA', 'AQUI'], 'Toque curto', false]
+  ['urgente', 'É urgente', ['É', 'URGENTE'], 'Sirene', true, 'Venha agora. Segurança ou parada.'],
+  ['liga', 'Me liga', ['ME', 'LIGA'], 'Sino', false, 'Ligue assim que puder.'],
+  ['preciso', 'Compareça', ['COMPAREÇA'], 'Apito', false, 'Venha ao local escrito no cartão.'],
+  ['olha', 'Olha aqui', ['OLHA', 'AQUI'], 'Toque curto', false, 'Só um aviso, sem pressa.']
 ];
 
 // Dentro do APK Android, a página ganha window.SinalNativo: escuta com a tela
@@ -1118,7 +1119,8 @@ function showAlarm(data, who) {
   // Mensagem que ficou guardada enquanto o app estava fechado: diz a hora em que foi mandada.
   const criado = data.criado || data.ts;
   const antiga = Date.now() - criado > 2 * 60 * 1000 ? ' · mandada ' + quando(criado) : '';
-  alarmEl.querySelector('.hint').textContent = (note ? tone[1] : 'Toque em Entendi para parar.') + antiga;
+  // Quem recebe vê o que o toque pede: "É urgente: venha agora…".
+  alarmEl.querySelector('.hint').textContent = tone[1] + ': ' + tone[5].charAt(0).toLowerCase() + tone[5].slice(1) + antiga;
   clearInterval(ringing);
   if (nativo) {
     // No APK, quem toca é o alarme do aparelho (se o serviço ainda não tocou).
@@ -1206,7 +1208,7 @@ function field(id, label, opts) {
 function toneButtons() {
   return '<div class="grid">' + TONES.map(t =>
     '<button class="tone' + (t[4] ? ' hot' : '') + '" data-tone="' + t[0] + '"><b>' + t[2].join('<br>') +
-    '</b><small>' + t[3] + '</small></button>').join('') + '</div>';
+    '</b><small>' + t[5] + '</small></button>').join('') + '</div>';
 }
 function cabeca(eye, titulo) {
   return '<p class="eye">' + eye + (nativo ? ' · APP ANDROID' : '') + '</p><h1>' + titulo + ' <small class="versao" data-versao></small></h1>';
