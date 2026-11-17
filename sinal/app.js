@@ -7,7 +7,7 @@
    Quem não tem a chave não lê, não descobre o tópico e não consegue
    mandar alarme falso — o que não abre com a chave é descartado.
 
-     PAINEL ──(chave da Cida)──► servidor A e B ──► SINAL da Cida
+     PAINEL ──(chave da pessoa)──► servidor A e B ──► SINAL da pessoa
             ◄── "chegou ✓" / "viu ✓✓" ─────────────┘
 
    Os dois servidores são usados AO MESMO TEMPO (publica e escuta nos
@@ -16,7 +16,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.10.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.10.1';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // sem 0, 1, O e I
@@ -1269,7 +1269,7 @@ function telaPainel() {
         '<button class="mini" data-convite="' + esc(p.code) + '">Convite</button>' +
         '<button class="erase" data-del="' + esc(p.code) + '">Apagar</button></div>').join('') ||
       '<p class="muted">Ninguém ainda. Adicione abaixo e mande o convite.</p>') + '</div>' +
-    field('pessoa', 'Nova pessoa', { max: 24, ph: 'Cida' }) +
+    field('pessoa', 'Nova pessoa', { max: 24, ph: 'Nome do colega' }) +
     '<button class="btn surface" id="novo">Adicionar e mandar convite</button>' +
     (escolhido
       ? '<h2>Mandar para ' + esc(escolhido.name) + '</h2>' +
@@ -1330,7 +1330,7 @@ function telaSinal() {
   if (!chave) {
     app.innerHTML = '<div class="app">' + cabeca('USUÁRIO', 'SINAL') +
       '<p>Você recebe o que o PAINEL mandar. Sua resposta volta só para o PAINEL.</p>' +
-      field('nome', 'Seu nome', { max: 24, ph: 'Cida' }) +
+      field('nome', 'Seu nome', { max: 24, ph: 'Seu nome' }) +
       field('convite', 'Convite do PAINEL', { max: 400, ph: 'Cole aqui o link ou o código', area: true }) +
       '<p id="hint" class="muted"></p>' +
       '<button class="btn" id="entrar">Entrar</button>' +

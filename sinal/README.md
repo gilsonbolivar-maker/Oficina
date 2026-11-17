@@ -20,7 +20,7 @@ As pastas são separadas (e não uma dentro da outra) para o Android instalar os
 3. Escolha a pessoa, escreva o cartão (opcional) e toque num dos quatro toques.
    Quem recebe pode **responder na própria tela do alarme**: *Estou indo*, *Já ligo*, *Agora não posso*,
    *OK, entendi* ou um texto escrito. A resposta aparece num cartão verde para quem chamou, com um toque
-   curto, e na linha de envio: *Cida respondeu: "Estou indo"*.
+   curto, e na linha de envio: *Fulano respondeu: "Estou indo"*.
    Embaixo aparece **Enviando… → Chegou ✓ → viu ✓✓** — ou **Não chegou**.
 
 ### Recursos
