@@ -59,8 +59,15 @@ public class EscutaService extends Service implements Mqtt.Ouvinte {
     private static final int NOTIF_ALARME = 2;
     private static final int NOTIF_AVISO = 3;
     private static final long VALIDADE_MS = 60 * 60 * 1000L;
-    // A mesma lista da página: hivemq e emqx, aqui pela porta MQTT com TLS.
-    private static final String[][] SERVIDORES = {{"broker.hivemq.com", "8883"}, {"broker.emqx.io", "8883"}};
+    // A mesma lista da página, aqui pela porta MQTT com TLS (8883).
+    // Coreflux é anônimo; o shiftr público pede usuário e senha public/public.
+    // A porta 443 (WebSocket) fica com a página — este serviço fala MQTT cru.
+    private static final String[][] SERVIDORES = {
+            {"broker.hivemq.com", "8883", "", ""},
+            {"broker.emqx.io", "8883", "", ""},
+            {"iot.coreflux.cloud", "8883", "", ""},
+            {"public.cloud.shiftr.io", "8883", "public", "public"}
+    };
 
     static volatile EscutaService atual;
 
@@ -143,7 +150,7 @@ public class EscutaService extends Service implements Mqtt.Ouvinte {
                 JSONObject o = lista.getJSONObject(i);
                 String chave = o.getString("chave");
                 Contato c = new Contato();
-                c.nome = o.optString("nome", painel ? "Alguém" : "PAINEL");
+                c.nome = o.optString("nome", painel ? "Alguém" : "Sinal232");
                 c.aes = Cifra.chave(chave);
                 c.entra = Cifra.topico(painel ? "para-painel" : "para-sinal", chave);
                 c.volta = Cifra.topico(painel ? "para-sinal" : "para-painel", chave);
@@ -156,7 +163,7 @@ public class EscutaService extends Service implements Mqtt.Ouvinte {
         }
         List<String> topicos = new ArrayList<>(porTopico.keySet());
         for (String[] s : SERVIDORES) {
-            Mqtt m = new Mqtt(s[0], Integer.parseInt(s[1]), topicos, this);
+            Mqtt m = new Mqtt(s[0], Integer.parseInt(s[1]), s[2], s[3], topicos, this);
             conexoes.add(m);
             m.iniciar();
         }

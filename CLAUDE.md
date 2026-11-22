@@ -23,7 +23,7 @@ Todo app da Oficina mostra o número da versão na tela, sempre.
 | Caderno Pencil | no meio do topo, embaixo do estado |
 | Câmera Negativo | embaixo do estado, no topo (`#versao-topo`) |
 | Câmera Medida | ao lado do nome, no topo; e no fim dos Ajustes |
-| SINAL e PAINEL | ao lado do título (os dois usam o mesmo `sinal/app.js`; `sinal/sw.js` e `sinal-painel/sw.js` levam a mesma `VERSAO`) |
+| SINAL e Sinal232 | ao lado do título (os dois usam o mesmo `sinal/app.js`; `sinal/sw.js` e `sinal-painel/sw.js` levam a mesma `VERSAO`) |
 | Escola | rodapé ("Escola v1") |
 | PixelMusic | ao lado do título |
 | Player | ao lado do título, no topo da lista |
