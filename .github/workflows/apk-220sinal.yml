@@ -1,0 +1,83 @@
+# Compila os APKs do AA220 e do 220Sinal (área 220) e publica em
+# https://github.com/gilsonbolivar-maker/Oficina/releases/download/220sinal-apk/aa220.apk
+# https://github.com/gilsonbolivar-maker/Oficina/releases/download/220sinal-apk/220sinal.apk
+# Os APKs abrem a página do site; só precisa recompilar quando o código Android muda.
+name: APKs do AA220 e do 220Sinal
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '220Sinal/android/**'
+      - '.github/workflows/apk-220sinal.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk-220sinal
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      # A chave de assinatura vem dos segredos do repositório (Settings → Secrets and
+      # variables → Actions), nunca do código: o repositório é público.
+      - name: Montar a chave de assinatura
+        id: chave
+        env:
+          SINAL_ASSINATURA: ${{ secrets.SINAL_ASSINATURA }}
+          SINAL_SENHA: ${{ secrets.SINAL_SENHA }}
+        run: |
+          if [ -z "$SINAL_ASSINATURA" ] || [ -z "$SINAL_SENHA" ]; then
+            echo "tem=nao" >> "$GITHUB_OUTPUT"
+          else
+            echo "$SINAL_ASSINATURA" | base64 -d > "$RUNNER_TEMP/assinatura.jks"
+            echo "tem=sim" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Sem os segredos, ainda compila (versão de teste) para conferir o código — mas não publica.
+      - name: Compilar só para conferir (sem a chave)
+        if: steps.chave.outputs.tem == 'nao'
+        working-directory: 220Sinal/android
+        run: |
+          gradle --no-daemon assembleSinalDebug assemblePainelDebug
+          echo "::error::Compilou, mas faltam os segredos SINAL_ASSINATURA e SINAL_SENHA (Settings → Secrets and variables → Actions) para assinar e publicar."
+          exit 1
+
+      - name: Compilar
+        if: steps.chave.outputs.tem == 'sim'
+        working-directory: 220Sinal/android
+        env:
+          SINAL_ASSINATURA_ARQUIVO: ${{ runner.temp }}/assinatura.jks
+          SINAL_SENHA: ${{ secrets.SINAL_SENHA }}
+        run: gradle --no-daemon assembleSinalRelease assemblePainelRelease
+
+      - name: Apagar a chave
+        if: always()
+        run: rm -f "$RUNNER_TEMP/assinatura.jks"
+
+      - name: Publicar os APKs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cp 220Sinal/android/app/build/outputs/apk/sinal/release/app-sinal-release.apk aa220.apk
+          cp 220Sinal/android/app/build/outputs/apk/painel/release/app-painel-release.apk 220sinal.apk
+          gh release delete 220sinal-apk --yes --cleanup-tag || true
+          gh release create 220sinal-apk aa220.apk 220sinal.apk \
+            --title "AA220 e 220Sinal para Android" \
+            --notes "APKs do AA220 e do 220Sinal (área 220): escutam com a tela apagada e tocam o alarme do aparelho. Compilado de ${GITHUB_SHA::7}." \
+            --target "$GITHUB_SHA"

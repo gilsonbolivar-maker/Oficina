@@ -17,7 +17,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.3.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.4.0';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const NOME_PAINEL = '220Sinal';                    // o que a pessoa lê; o papel interno continua "painel"
@@ -70,8 +70,8 @@ const PEDIDOS = [
 // apagada, alarme do aparelho, salvar em Downloads e compartilhar.
 const nativo = window.SinalNativo || null;
 const APK = {
-  sinal: 'https://github.com/gilsonbolivar-maker/Oficina/releases/download/sinal-apk/sinal.apk',
-  painel: 'https://github.com/gilsonbolivar-maker/Oficina/releases/download/sinal-apk/painel.apk'
+  sinal: 'https://github.com/gilsonbolivar-maker/Oficina/releases/download/220sinal-apk/aa220.apk',
+  painel: 'https://github.com/gilsonbolivar-maker/Oficina/releases/download/220sinal-apk/220sinal.apk'
 };
 
 const $ = s => document.querySelector(s);
@@ -1249,6 +1249,13 @@ function field(id, label, opts) {
     '" maxlength="' + opts.max + '" placeholder="' + (opts.ph || '') + '" autocomplete="off"' +
     (opts.area ? '' : ' enterkeyhint="done"') + '></' + tag + '>';
 }
+// Botão fixo para baixar o app Android (só no Android, fora do APK).
+function blocoApk() {
+  if (nativo || !/Android/.test(navigator.userAgent)) return '';
+  const nome = ROLE === 'painel' ? NOME_PAINEL : NOME_SINAL;
+  return '<a class="btn surface apk" href="' + APK[ROLE] + '">📲 Instalar o app Android do ' + nome + '</a>' +
+    '<p class="muted apk-ajuda">Toca o alarme mesmo com a tela apagada.</p>';
+}
 function blocoPedidos(compacto) {
   return '<h3 class="pedidos-titulo">Pedidos · área 220</h3>' +
     (compacto ? '' : '<p class="muted pedidos-ajuda">Um toque manda o pedido. Se houver algo escrito no cartão, vai junto.</p>') +
@@ -1335,7 +1342,7 @@ function telaPainel() {
         blocoAnexar() + blocoPedidos() + toneButtons() + '<div id="envio" class="envio" aria-live="polite"></div>'
       : (list.length ? '<p class="muted" style="margin-top:1rem">Toque numa pessoa para mandar.</p>' : '')) +
     blocoAparelhos() +
-    blocoHistorico() +
+    blocoHistorico() + blocoApk() +
     '</div>';
   preencherVersao();
   $('#nome').value = read('name', '');
@@ -1417,7 +1424,7 @@ function telaSinal() {
     blocoPedidos(true) + '<div id="envio" class="envio" aria-live="polite"></div>' +
     field('recado', 'Escrever junto (opcional)', { max: 80, ph: 'Ex.: urgente, sala de controle' }) +
     blocoAnexar() + toneButtons() +
-    blocoHistorico() +
+    blocoHistorico() + blocoApk() +
     '<button class="btn ghost" id="sair">Trocar de convite</button></div>';
   preencherVersao();
   ligarBotoesEscuta(telaSinal);
@@ -1474,7 +1481,7 @@ function faixaInstalar() {
       '<b>Adicionar à tela inicial</b>. Se não aparecer, saia da aba anônima.</p>';
   }
   // Android: o APK toca com a tela apagada, o que o app do navegador não faz.
-  if (false && !ios && /Android/.test(ua)) {   // o APK é do Sinal232 original; o 220Sinal ainda não tem
+  if (!ios && /Android/.test(ua)) {
     html += '<p class="apk-link">📲 Melhor ainda: <a href="' + APK[ROLE] + '">baixe o app Android (APK)</a> — toca com a tela apagada.</p>';
   }
   el.innerHTML = '<div class="faixa-instalar">' + html + '<button class="fechar-faixa" aria-label="Fechar">✕</button></div>';
