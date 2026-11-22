@@ -32,6 +32,18 @@ textarea::placeholder { color: rgba(243, 237, 228, .7); }
 .erase { min-height: 3.4rem; border: 0; background: transparent; color: var(--alert); font-size: .85rem; }
 .apk { display: flex; align-items: center; justify-content: center; text-align: center; text-decoration: none; margin-top: 1.4rem; }
 .apk-ajuda { text-align: center; margin: .4rem 0 0; font-size: .85rem; }
+.chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .8rem; }
+.chips .pick { min-height: 2.9rem; padding: .3rem .9rem; border-radius: 1rem; border: 1px solid var(--line); background: var(--surface); color: var(--fg); text-align: left; font-weight: 650; }
+.chips .pick small { display: block; font-size: .72rem; color: var(--muted); font-weight: 400; }
+.chips .pick.on { background: var(--alert); border-color: var(--alert); }
+.chips .pick.on small { color: rgba(243, 237, 228, .85); }
+.chips .pick.todos { border-style: dashed; }
+.para { margin: 1rem 0 0; font-size: 1.05rem; letter-spacing: .04em; color: var(--muted); }
+.para + .pedidos-titulo { margin-top: .2rem; }
+.ajustes { margin-top: 1.4rem; }
+.row.gerir { flex-wrap: nowrap; }
+.gerir-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gerir-nome b { color: var(--muted); font-weight: 400; letter-spacing: .08em; font-size: .85rem; }
 .quem { margin: .3rem 0 0; }
 .quem .codigo { letter-spacing: .12em; color: var(--fg); }
 .pedidos-titulo { margin: 1.2rem 0 .2rem; font-size: 1.05rem; letter-spacing: .04em; }

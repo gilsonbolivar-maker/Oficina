@@ -17,7 +17,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.5.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.6.0';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const NOME_PAINEL = '220Sinal';                    // o que a pessoa lê; o papel interno continua "painel"
@@ -1332,6 +1332,7 @@ async function compartilharConvite(p) {
   catch { prompt('Copie o convite e mande para ' + p.name + ':', texto); }
 }
 
+let ajustesAbertos = false;   // "Seu nome e pessoas" aberto entre um redesenho e outro
 function telaPainel() {
   const list = people();
   if (selected === '*' && list.length < 2) selected = '';
@@ -1341,31 +1342,39 @@ function telaPainel() {
   const escolhido = todos ? { name: 'todos' } : list.find(p => p.code === selected);
   const destinos = todos ? list.map(p => ({ chave: p.chave, nome: p.name }))
     : escolhido ? [{ chave: escolhido.chave, nome: escolhido.name }] : [];
-  app.innerHTML = '<div class="app">' + cabeca('DOIS CELULARES', NOME_PAINEL) +
-    '<p>Você recebe de qualquer pessoa da lista. Na hora de mandar, escolhe uma pessoa — ou todas.</p>' +
-    field('nome', 'Seu nome no alerta', { max: 24, ph: NOME_PAINEL }) +
+  // Tela enxuta, para usar com uma mão: quem recebe e os pedidos no alto;
+  // nome, pessoas novas e convites ficam em "Seu nome e pessoas", mais abaixo.
+  const abrirAjustes = ajustesAbertos || !read('name', '') || !list.length;
+  app.innerHTML = '<div class="app">' + cabeca('', NOME_PAINEL) +
     blocoEscuta() +
-    '<h2>Pessoas</h2>' +
-    '<div id="lista">' + (list.length > 1
-      ? '<div class="row"><button class="pick todos' + (todos ? ' on' : '') + '" data-pick="*">' +
-          '<span>Todos<small>chama as ' + list.length + ' pessoas de uma vez</small></span><b>★</b></button></div>' : '') +
+    '<div id="lista" class="chips">' + (list.length > 1
+      ? '<button class="pick todos' + (todos ? ' on' : '') + '" data-pick="*">' +
+          '<span>Todos<small>' + list.length + ' pessoas</small></span></button>' : '') +
       (list.map(p =>
-      '<div class="row"><button class="pick' + (p.code === selected ? ' on' : '') + '" data-pick="' + esc(p.code) + '">' +
-        '<span>' + esc(p.name) + '<small class="pres" data-pres="' + esc(p.code) + '"></small></span><b>' + esc(p.code) + '</b></button>' +
+      '<button class="pick' + (p.code === selected ? ' on' : '') + '" data-pick="' + esc(p.code) + '">' +
+        '<span>' + esc(p.name) + '<small class="pres" data-pres="' + esc(p.code) + '"></small></span></button>').join('') ||
+      '<p class="muted">Ninguém ainda. Adicione em "Seu nome e pessoas", abaixo.</p>') + '</div>' +
+    (escolhido
+      ? '<h3 class="para">Para ' + esc(escolhido.name) + '</h3>' +
+        blocoPedidos(true) + '<div id="envio" class="envio" aria-live="polite"></div>' +
+        field('recado', 'Escrever junto (opcional)', { max: 80, ph: 'Ex.: urgente, sala de controle' }) +
+        blocoAnexar() + toneButtons()
+      : (list.length ? '<p class="muted" style="margin-top:1rem">Toque numa pessoa para mandar.</p>' : '')) +
+    '<details class="historico ajustes" id="ajustes"' + (abrirAjustes ? ' open' : '') + '>' +
+      '<summary>Seu nome e pessoas</summary>' +
+      field('nome', 'Seu nome no alerta', { max: 24, ph: NOME_PAINEL }) +
+      list.map(p =>
+        '<div class="row gerir"><span class="gerir-nome">' + esc(p.name) + ' <b>' + esc(p.code) + '</b></span>' +
         '<button class="mini" data-convite="' + esc(p.code) + '">Convite</button>' +
         '<button class="mini" data-codigo="' + esc(p.code) + '">Código</button>' +
-        '<button class="erase" data-del="' + esc(p.code) + '">Apagar</button></div>').join('') ||
-      '<p class="muted">Ninguém ainda. Adicione abaixo e mande o convite.</p>') + '</div>' +
-    field('pessoa', 'Nova pessoa', { max: 24, ph: 'Nome do colega' }) +
-    '<button class="btn surface" id="novo">Adicionar e mandar convite</button>' +
-    (escolhido
-      ? '<h2>Mandar para ' + esc(escolhido.name) + '</h2>' +
-        field('recado', todos ? 'Cartão que todos veem' : 'Cartão que a pessoa vê', { max: 80, ph: 'Escreva a mensagem (opcional)', area: true }) +
-        blocoAnexar() + blocoPedidos() + toneButtons() + '<div id="envio" class="envio" aria-live="polite"></div>'
-      : (list.length ? '<p class="muted" style="margin-top:1rem">Toque numa pessoa para mandar.</p>' : '')) +
+        '<button class="erase" data-del="' + esc(p.code) + '">Apagar</button></div>').join('') +
+      field('pessoa', 'Nova pessoa', { max: 24, ph: 'Nome do colega' }) +
+      '<button class="btn surface" id="novo">Adicionar e mandar convite</button>' +
+    '</details>' +
     blocoAparelhos() +
     blocoHistorico() + blocoApk() +
     '</div>';
+  $('#ajustes').ontoggle = e => { ajustesAbertos = e.target.open; };
   preencherVersao();
   $('#nome').value = read('name', '');
   $('#nome').oninput = e => write('name', clean(e.target.value, 24));
