@@ -270,6 +270,7 @@ public class EscutaService extends Service implements Mqtt.Ouvinte {
             case "liga": return "Me liga";
             case "preciso": return "Compareça";
             case "olha": return "Olha aqui";
+            case "pedido": return "Pedido";
             default: return "É urgente";
         }
     }

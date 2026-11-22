@@ -23,12 +23,36 @@ textarea::placeholder { color: rgba(243, 237, 228, .7); }
 .btn.surface { background: var(--surface); color: var(--fg); border: 1px solid var(--line); }
 .btn.alert { background: var(--alert); color: var(--fg); }
 .btn.ghost { background: transparent; color: var(--muted); }
-.row { display: flex; gap: .4rem; align-items: center; margin-top: .6rem; }
-.row .pick { flex: 1; min-width: 0; min-height: 3.4rem; text-align: left; padding: 0 1rem; border-radius: 1rem; border: 1px solid var(--line); background: var(--surface); display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+.row { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin-top: .6rem; }
+.row .mini, .row .erase { min-height: 2.6rem; }
+.row .pick { flex: 1 1 100%; min-width: 0; min-height: 3.4rem; text-align: left; padding: 0 1rem; border-radius: 1rem; border: 1px solid var(--line); background: var(--surface); display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
 .row .pick span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row .pick.on { background: var(--alert); border-color: var(--alert); }
 .mini { min-height: 3.4rem; padding: 0 .7rem; border: 1px solid var(--line); border-radius: 1rem; background: transparent; color: var(--fg); font-size: .85rem; }
 .erase { min-height: 3.4rem; border: 0; background: transparent; color: var(--alert); font-size: .85rem; }
+.apk { display: flex; align-items: center; justify-content: center; text-align: center; text-decoration: none; margin-top: 1.4rem; }
+.apk-ajuda { text-align: center; margin: .4rem 0 0; font-size: .85rem; }
+.chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .8rem; }
+.chips .pick { min-height: 2.9rem; padding: .3rem .9rem; border-radius: 1rem; border: 1px solid var(--line); background: var(--surface); color: var(--fg); text-align: left; font-weight: 650; }
+.chips .pick small { display: block; font-size: .72rem; color: var(--muted); font-weight: 400; }
+.chips .pick.on { background: var(--alert); border-color: var(--alert); }
+.chips .pick.on small { color: rgba(243, 237, 228, .85); }
+.chips .pick.todos { border-style: dashed; }
+.para { margin: 1rem 0 0; font-size: 1.05rem; letter-spacing: .04em; color: var(--muted); }
+.para + .pedidos-titulo { margin-top: .2rem; }
+.ajustes { margin-top: 1.4rem; }
+.row.gerir { flex-wrap: nowrap; }
+.gerir-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gerir-nome b { color: var(--muted); font-weight: 400; letter-spacing: .08em; font-size: .85rem; }
+.quem { margin: .3rem 0 0; }
+.quem .codigo { letter-spacing: .12em; color: var(--fg); }
+.pedidos-titulo { margin: 1.2rem 0 .2rem; font-size: 1.05rem; letter-spacing: .04em; }
+.pedidos-ajuda { margin: 0 0 .6rem; font-size: .85rem; }
+.pedidos { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+.pedido { min-height: 3.2rem; border-radius: .9rem; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font-weight: 700; font-size: 1rem; }
+.pedido.on { border-color: var(--ok); color: var(--ok); }
+.pedido.off { border-color: var(--alert); color: #ff6b5e; }
+.pedido:active { transform: scale(.97); }
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; margin-top: .8rem; }
 .tone { min-height: 6.2rem; border-radius: 1rem; border: 1px solid var(--line); background: var(--surface); text-align: left; padding: 1rem; }
 .tone b { display: block; font-family: "Arial Narrow", Impact, sans-serif; font-size: 1.7rem; line-height: .95; letter-spacing: .03em; }
@@ -57,6 +81,7 @@ textarea::placeholder { color: rgba(243, 237, 228, .7); }
 .respostas { width: 100%; max-width: 28rem; margin-top: 1.4rem; }
 .respostas .eye { color: rgba(243, 237, 228, .8); }
 .rapidas { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-top: .5rem; }
+.rapidas button:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .rapidas button { min-height: 3.2rem; border: 2px solid rgba(243, 237, 228, .85); border-radius: 1rem; background: rgba(0, 0, 0, .18); color: var(--fg); font-weight: 650; }
 .livre { display: flex; gap: .5rem; margin-top: .5rem; }
 .livre input { margin: 0; flex: 1; min-width: 0; background: rgba(0, 0, 0, .25); border-color: rgba(243, 237, 228, .5); }
@@ -100,19 +125,3 @@ textarea::placeholder { color: rgba(243, 237, 228, .7); }
 .botoes-anexo button { min-height: 2.8rem; border: 0; border-radius: .8rem; background: var(--fg); color: var(--alert); font-weight: 700; }
 .historico .link { color: inherit; }
 .apk-link { margin: .5rem 0 0 !important; font-size: .88rem; } .apk-link a { color: #ffd27a; }
-
-.quem { margin: .3rem 0 0; }
-.quem .codigo { letter-spacing: .12em; color: var(--fg); }
-.chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .8rem; }
-.chips .pick { min-height: 2.9rem; padding: .3rem .9rem; border-radius: 1rem; border: 1px solid var(--line); background: var(--surface); color: var(--fg); text-align: left; font-weight: 650; }
-.chips .pick small { display: block; font-size: .72rem; color: var(--muted); font-weight: 400; }
-.chips .pick.on { background: var(--alert); border-color: var(--alert); }
-.chips .pick.on small { color: rgba(243, 237, 228, .85); }
-.chips .pick.todos { border-style: dashed; }
-.para { margin: 1rem 0 0; font-size: 1.05rem; letter-spacing: .04em; color: var(--muted); }
-.ajustes { margin-top: 1.4rem; }
-.row.gerir { flex-wrap: nowrap; }
-.row.gerir .mini, .row.gerir .erase { min-height: 2.6rem; }
-.gerir-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.gerir-nome b { color: var(--muted); font-weight: 400; letter-spacing: .08em; font-size: .85rem; }
-textarea#recado { min-height: 4.6rem; font-size: 1.5rem; }

@@ -17,10 +17,11 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.12.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.13.0';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const NOME_PAINEL = 'Sinal232';                    // o que a pessoa lê; o papel interno continua "painel"
+const NOME_SINAL = 'SINAL';                       // nome do lado de quem recebe
 const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // sem 0, 1, O e I
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -49,7 +50,20 @@ const TONES = [
   ['urgente', 'É urgente', ['É', 'URGENTE'], 'Sirene', true, 'Venha agora. Segurança ou parada.'],
   ['liga', 'Me liga', ['ME', 'LIGA'], 'Sino', false, 'Ligue assim que puder.'],
   ['preciso', 'Compareça', ['COMPAREÇA'], 'Apito', false, 'Venha ao local escrito no cartão.'],
-  ['olha', 'Olha aqui', ['OLHA', 'AQUI'], 'Toque curto', false, 'Só um aviso, sem pressa.']
+  ['olha', 'Olha aqui', ['OLHA', 'AQUI'], 'Toque curto', false, 'Só um aviso, sem pressa.'],
+  // Toque dos botões de pedido (não aparece na grade dos 4 toques).
+  ['pedido', 'Pedido', ['PEDIDO'], 'Apito', false, 'Faça o que o cartão pede.']
+];
+
+// Pedidos da área 220: um toque manda o pedido como cartão.
+// [texto, tipo] — tipo 'on' (verde), 'off' (vermelho) ou '' (neutro).
+const PEDIDOS = [
+  ['Rotativa ON', 'on'], ['Rotativa OFF', 'off'],
+  ['PT35', ''], ['PT36', ''],
+  ['Lab/Frascos', ''], ['Resultados?', ''],
+  ['TQ2202', ''], ['TQ2205', ''],
+  ['BA 2201 ON', 'on'], ['BA 2201 OFF', 'off'],
+  ['BA 2203 ON', 'on'], ['BA 2203 OFF', 'off']
 ];
 
 // Dentro do APK Android, a página ganha window.SinalNativo: escuta com a tela
@@ -553,8 +567,10 @@ async function responder(chave, extra) {
 }
 
 /** `destinos`: [{ chave, nome }] — uma pessoa, ou todas (PAINEL). */
-async function mandarAlarme(destinos, tone) {
-  const note = clean($('#recado') ? $('#recado').value : '', 80);
+async function mandarAlarme(destinos, tone, pedido) {
+  const escrito = clean($('#recado') ? $('#recado').value : '', 80);
+  // Pedido: o texto do botão vai na frente; o que estiver escrito no cartão vai junto.
+  const note = pedido ? clean(pedido + (escrito ? ' · ' + escrito : ''), 80) : escrito;
   const who = myName();
   if (!who) { setEnvio('Escreva o seu nome.'); return; }
   if (!bus || !bus.pronto()) { setEnvio('Ainda sem ligação com os servidores. Espere "Escuta ligada".'); return; }
@@ -1116,7 +1132,7 @@ function beep(tone) {
   g.gain.setValueAtTime(0.0001, now);
   g.gain.exponentialRampToValueAtTime(0.25, now + 0.02);
   if (tone === 'liga') { o.type = 'sine'; o.frequency.setValueAtTime(880, now); o.frequency.exponentialRampToValueAtTime(220, now + 0.6); }
-  else if (tone === 'preciso') { o.type = 'square'; o.frequency.setValueAtTime(1400, now); }
+  else if (tone === 'preciso' || tone === 'pedido') { o.type = 'square'; o.frequency.setValueAtTime(1400, now); }
   else if (tone === 'olha') { o.type = 'triangle'; o.frequency.setValueAtTime(660, now); }
   else { o.type = 'sawtooth'; o.frequency.setValueAtTime(480, now); o.frequency.linearRampToValueAtTime(920, now + 0.25); o.frequency.linearRampToValueAtTime(480, now + 0.5); }
   g.gain.exponentialRampToValueAtTime(0.0001, now + (tone === 'olha' ? 0.25 : 0.7));
@@ -1151,7 +1167,7 @@ function showAlarm(data, who) {
   clearInterval(ringing);
   if (nativo) {
     // No APK, quem toca é o alarme do aparelho (se o serviço ainda não tocou).
-    try { nativo.tocarAlarme(String(data.id || ''), who ? 'De ' + who : 'SINAL', note || tone[1]); } catch {}
+    try { nativo.tocarAlarme(String(data.id || ''), who ? 'De ' + who : NOME_SINAL, note || tone[1]); } catch {}
     return;
   }
   if (navigator.vibrate) navigator.vibrate([400, 150, 400, 150, 700]);
@@ -1160,10 +1176,11 @@ function showAlarm(data, who) {
     beep(tone[0]);
     if (navigator.vibrate) navigator.vibrate(300);
   }, tone[0] === 'olha' ? 700 : 800);
-  notificar(who ? 'De ' + who : 'SINAL', note || tone[1]);
+  notificar(who ? 'De ' + who : NOME_SINAL, note || tone[1]);
 }
 /* Respostas rápidas na tela do alarme: tocar numa delas já fecha o alarme. */
-const RESPOSTAS = ['Estou indo', 'Já ligo', 'Agora não posso', 'OK, entendi'];
+// Respostas em pares (o último ocupa a linha inteira): as da área 220 e as de sempre.
+const RESPOSTAS = ['Ligada', 'Desligada', 'Positivo', 'Negativo', 'Estou indo', 'Já ligo', 'Agora não posso', 'Ok'];
 
 function fecharAlarme(daqui = true) {
   if (daqui && alarmeAberto && ROLE === 'painel') avisarAtendido(alarmeAberto.ref);
@@ -1232,13 +1249,34 @@ function field(id, label, opts) {
     '" maxlength="' + opts.max + '" placeholder="' + (opts.ph || '') + '" autocomplete="off"' +
     (opts.area ? '' : ' enterkeyhint="done"') + '></' + tag + '>';
 }
+// Botão fixo para baixar o app Android (só no Android, fora do APK).
+function blocoApk() {
+  if (nativo || !/Android/.test(navigator.userAgent)) return '';
+  const nome = ROLE === 'painel' ? NOME_PAINEL : NOME_SINAL;
+  return '<a class="btn surface apk" href="' + APK[ROLE] + '">📲 Instalar o app Android do ' + nome + '</a>' +
+    '<p class="muted apk-ajuda">Toca o alarme mesmo com a tela apagada.</p>';
+}
+function blocoPedidos(compacto) {
+  return '<h3 class="pedidos-titulo">Pedidos · área 220</h3>' +
+    (compacto ? '' : '<p class="muted pedidos-ajuda">Um toque manda o pedido. Se houver algo escrito no cartão, vai junto.</p>') +
+    '<div class="pedidos">' + PEDIDOS.map(([texto, tipo]) =>
+      '<button class="pedido' + (tipo ? ' ' + tipo : '') + '" data-pedido="' + esc(texto) + '">' + esc(texto) + '</button>').join('') +
+    '</div>';
+}
+function ligarPedidos(destinos) {
+  app.querySelectorAll('[data-pedido]').forEach(b => b.onclick = () => {
+    unlock();
+    if (destinos.length) mandarAlarme(destinos, 'pedido', b.dataset.pedido);
+  });
+}
 function toneButtons() {
-  return '<div class="grid">' + TONES.map(t =>
+  return '<div class="grid">' + TONES.filter(t => t[0] !== 'pedido').map(t =>
     '<button class="tone' + (t[4] ? ' hot' : '') + '" data-tone="' + t[0] + '"><b>' + t[2].join('<br>') +
     '</b><small>' + t[5] + '</small></button>').join('') + '</div>';
 }
 function cabeca(eye, titulo) {
-  return '<p class="eye">' + eye + (nativo ? ' · APP ANDROID' : '') + '</p><h1>' + titulo + ' <small class="versao" data-versao></small></h1>';
+  const olho = eye + (nativo ? (eye ? ' · ' : '') + 'APP ANDROID' : '');
+  return (olho ? '<p class="eye">' + olho + '</p>' : '') + '<h1>' + titulo + ' <small class="versao" data-versao></small></h1>';
 }
 function blocoEscuta() {
   return bus
@@ -1282,13 +1320,13 @@ async function compartilharConvite(p) {
   const link = linkConvite(p);
   // O link instala o SINAL e já leva o convite (no Android, o app instalado
   // enxerga o que o Chrome guardou). No iPhone, o código vai colado à mão.
-  const texto = 'SINAL — convite de ' + myName() + ' para ' + p.name + '\n\n' +
-    '📲 1. Instale o SINAL: abra o link no Chrome (ou Safari) e toque em "Instalar o SINAL":\n' + link +
-    '\n\n🔑 2. Abra o SINAL instalado. Se o convite não vier preenchido, cole este código:\n' +
+  const texto = NOME_SINAL + ' — convite de ' + myName() + ' para ' + p.name + '\n\n' +
+    '📲 1. Instale o ' + NOME_SINAL + ': abra o link no Chrome (ou Safari) e toque em "Instalar o ' + NOME_SINAL + '":\n' + link +
+    '\n\n🔑 2. Abra o ' + NOME_SINAL + ' instalado. Se o convite não vier preenchido, cole este código:\n' +
     p.code + '-' + p.chave;
   if (nativo) { nativo.compartilhar(texto); return; }
   if (navigator.share) {
-    try { await navigator.share({ title: 'SINAL', text: texto }); return; } catch (e) { if (e.name === 'AbortError') return; }
+    try { await navigator.share({ title: NOME_SINAL, text: texto }); return; } catch (e) { if (e.name === 'AbortError') return; }
   }
   try { await navigator.clipboard.writeText(texto); alert('Convite copiado. Mande para ' + p.name + ' por mensagem.'); }
   catch { prompt('Copie o convite e mande para ' + p.name + ':', texto); }
@@ -1304,7 +1342,7 @@ function telaPainel() {
   const escolhido = todos ? { name: 'todos' } : list.find(p => p.code === selected);
   const destinos = todos ? list.map(p => ({ chave: p.chave, nome: p.name }))
     : escolhido ? [{ chave: escolhido.chave, nome: escolhido.name }] : [];
-  // Tela enxuta, para usar com uma mão: quem recebe e os toques no alto;
+  // Tela enxuta, para usar com uma mão: quem recebe e os pedidos no alto;
   // nome, pessoas novas e convites ficam em "Seu nome e pessoas", mais abaixo.
   const abrirAjustes = ajustesAbertos || !read('name', '') || !list.length;
   app.innerHTML = '<div class="app">' + cabeca('', NOME_PAINEL) +
@@ -1318,8 +1356,9 @@ function telaPainel() {
       '<p class="muted">Ninguém ainda. Adicione em "Seu nome e pessoas", abaixo.</p>') + '</div>' +
     (escolhido
       ? '<h3 class="para">Para ' + esc(escolhido.name) + '</h3>' +
-        field('recado', todos ? 'Cartão que todos veem' : 'Cartão que a pessoa vê', { max: 80, ph: 'Escreva a mensagem (opcional)', area: true }) +
-        blocoAnexar() + toneButtons() + '<div id="envio" class="envio" aria-live="polite"></div>'
+        blocoPedidos(true) + '<div id="envio" class="envio" aria-live="polite"></div>' +
+        field('recado', 'Escrever junto (opcional)', { max: 80, ph: 'Ex.: urgente, sala de controle' }) +
+        blocoAnexar() + toneButtons()
       : (list.length ? '<p class="muted" style="margin-top:1rem">Toque numa pessoa para mandar.</p>' : '')) +
     '<details class="historico ajustes" id="ajustes"' + (abrirAjustes ? ' open' : '') + '>' +
       '<summary>Seu nome e pessoas</summary>' +
@@ -1333,7 +1372,7 @@ function telaPainel() {
       '<button class="btn surface" id="novo">Adicionar e mandar convite</button>' +
     '</details>' +
     blocoAparelhos() +
-    blocoHistorico() +
+    blocoHistorico() + blocoApk() +
     '</div>';
   $('#ajustes').ontoggle = e => { ajustesAbertos = e.target.open; };
   preencherVersao();
@@ -1369,6 +1408,7 @@ function telaPainel() {
     unlock();
     if (destinos.length) mandarAlarme(destinos, b.dataset.tone);
   });
+  ligarPedidos(destinos);
   atualizarPresenca();
   redesenharEnvio();
   ligarHistorico();
@@ -1387,7 +1427,7 @@ function telaSinal() {
   }
   const chave = read('chave', '');
   if (!chave) {
-    app.innerHTML = '<div class="app">' + cabeca('USUÁRIO', 'SINAL') +
+    app.innerHTML = '<div class="app">' + cabeca('', NOME_SINAL) +
       '<p>Você recebe o que o ' + NOME_PAINEL + ' mandar. Sua resposta volta só para o ' + NOME_PAINEL + '.</p>' +
       field('nome', 'Seu nome', { max: 24, ph: 'Seu nome' }) +
       field('convite', 'Convite do ' + NOME_PAINEL, { max: 400, ph: 'Cole aqui o link ou o código', area: true }) +
@@ -1418,14 +1458,15 @@ function telaSinal() {
     };
     return;
   }
-  app.innerHTML = '<div class="app">' + cabeca('USUÁRIO', 'SINAL') +
+  app.innerHTML = '<div class="app">' + cabeca('', NOME_SINAL) +
+    // Tela enxuta, para usar com uma mão: os pedidos vêm logo no alto.
     '<p class="muted quem">Você é <b>' + esc(read('name', '')) + '</b> · código <b class="codigo">' + esc(read('code', '')) + '</b></p>' +
     blocoEscuta() +
-    '<h2>Chamar o ' + NOME_PAINEL + '</h2>' +
     '<p class="pres pres-painel" data-pres="painel" data-prefixo="' + NOME_PAINEL + ': "></p>' +
-    field('recado', 'Cartão que o ' + NOME_PAINEL + ' vê', { max: 80, ph: 'Escreva a mensagem (opcional)', area: true }) +
-    blocoAnexar() + toneButtons() + '<div id="envio" class="envio" aria-live="polite"></div>' +
-    blocoHistorico() +
+    blocoPedidos(true) + '<div id="envio" class="envio" aria-live="polite"></div>' +
+    field('recado', 'Escrever junto (opcional)', { max: 80, ph: 'Ex.: urgente, sala de controle' }) +
+    blocoAnexar() + toneButtons() +
+    blocoHistorico() + blocoApk() +
     '<button class="btn ghost" id="sair">Trocar de convite</button></div>';
   preencherVersao();
   ligarBotoesEscuta(telaSinal);
@@ -1433,6 +1474,7 @@ function telaSinal() {
     unlock();
     mandarAlarme([{ chave: read('chave', ''), nome: 'o ' + NOME_PAINEL }], b.dataset.tone);
   });
+  ligarPedidos([{ chave: read('chave', ''), nome: 'o ' + NOME_PAINEL }]);
   atualizarPresenca();
   redesenharEnvio();
   ligarHistorico();
@@ -1467,7 +1509,7 @@ function faixaInstalar() {
   const ua = navigator.userAgent;
   const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const dentroDeApp = /; wv\)|WhatsApp|FBAN|FBAV|Instagram|Line\//.test(ua);
-  const nome = ROLE === 'painel' ? NOME_PAINEL : 'SINAL';
+  const nome = ROLE === 'painel' ? NOME_PAINEL : NOME_SINAL;
   let html;
   if (pedidoInstalar) {
     html = '<button class="btn alert" id="instalar-agora">Instalar o ' + nome + '</button>';
