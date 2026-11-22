@@ -23,8 +23,9 @@ textarea::placeholder { color: rgba(243, 237, 228, .7); }
 .btn.surface { background: var(--surface); color: var(--fg); border: 1px solid var(--line); }
 .btn.alert { background: var(--alert); color: var(--fg); }
 .btn.ghost { background: transparent; color: var(--muted); }
-.row { display: flex; gap: .4rem; align-items: center; margin-top: .6rem; }
-.row .pick { flex: 1; min-width: 0; min-height: 3.4rem; text-align: left; padding: 0 1rem; border-radius: 1rem; border: 1px solid var(--line); background: var(--surface); display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+.row { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin-top: .6rem; }
+.row .mini, .row .erase { min-height: 2.6rem; }
+.row .pick { flex: 1 1 100%; min-width: 0; min-height: 3.4rem; text-align: left; padding: 0 1rem; border-radius: 1rem; border: 1px solid var(--line); background: var(--surface); display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
 .row .pick span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row .pick.on { background: var(--alert); border-color: var(--alert); }
 .mini { min-height: 3.4rem; padding: 0 .7rem; border: 1px solid var(--line); border-radius: 1rem; background: transparent; color: var(--fg); font-size: .85rem; }

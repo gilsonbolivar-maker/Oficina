@@ -17,7 +17,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.4.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.5.0';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const NOME_PAINEL = '220Sinal';                    // o que a pessoa lê; o papel interno continua "painel"
@@ -1295,6 +1295,27 @@ function ligarBotoesEscuta(redesenhar) {
   if (bus) bus.pronto() ? setLigacao('Escuta ligada. Deixe esta tela aberta.', true) : setLigacao('Conectando…', false);
 }
 
+// Só o nome e o código, em duas linhas: o operador cola tudo no AA220 de uma vez
+// (o nome vai para "Seu nome" e o código para o convite).
+async function compartilharCodigo(p) {
+  if (!p) return;
+  const texto = p.name + '\n' + p.code + '-' + p.chave;
+  if (nativo) { nativo.compartilhar(texto); return; }
+  if (navigator.share) {
+    try { await navigator.share({ text: texto }); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  try { await navigator.clipboard.writeText(texto); alert('Nome e código copiados. Mande para ' + p.name + '.'); }
+  catch { prompt('Copie e mande para ' + p.name + ':', texto); }
+}
+// O que sobra do texto colado, sem o código, é o nome — só no formato curto
+// ("Nome" + código). Do convite longo (com link e instruções) não tira nada.
+function nomeDoColado(texto) {
+  const t = String(texto || '');
+  if (/https?:\/\//i.test(t)) return '';
+  const resto = t.replace(/[A-Za-z2-9]{5}-[A-Za-z2-9]{26}/, ' ').replace(/\s+/g, ' ').trim();
+  return resto.length <= 24 ? clean(resto, 24) : '';
+}
+
 async function compartilharConvite(p) {
   const link = linkConvite(p);
   // O link instala o SINAL e já leva o convite (no Android, o app instalado
@@ -1332,6 +1353,7 @@ function telaPainel() {
       '<div class="row"><button class="pick' + (p.code === selected ? ' on' : '') + '" data-pick="' + esc(p.code) + '">' +
         '<span>' + esc(p.name) + '<small class="pres" data-pres="' + esc(p.code) + '"></small></span><b>' + esc(p.code) + '</b></button>' +
         '<button class="mini" data-convite="' + esc(p.code) + '">Convite</button>' +
+        '<button class="mini" data-codigo="' + esc(p.code) + '">Código</button>' +
         '<button class="erase" data-del="' + esc(p.code) + '">Apagar</button></div>').join('') ||
       '<p class="muted">Ninguém ainda. Adicione abaixo e mande o convite.</p>') + '</div>' +
     field('pessoa', 'Nova pessoa', { max: 24, ph: 'Nome do colega' }) +
@@ -1361,6 +1383,8 @@ function telaPainel() {
     compartilharConvite(p);
   };
   app.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => { selected = b.dataset.pick; telaPainel(); });
+  app.querySelectorAll('[data-codigo]').forEach(b => b.onclick = () =>
+    compartilharCodigo(people().find(p => p.code === b.dataset.codigo)));
   app.querySelectorAll('[data-convite]').forEach(b => b.onclick = () =>
     compartilharConvite(people().find(p => p.code === b.dataset.convite)));
   app.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
@@ -1406,6 +1430,15 @@ function telaSinal() {
     $('#nome').value = read('name', '');
     const pendente = read('convite', '');
     if (pendente) $('#convite').value = pendente;
+    $('#convite').oninput = () => {
+      const v = $('#convite').value;
+      const c = lerConvite(v);
+      if (!c) return;
+      const nome = nomeDoColado(v);
+      if (nome && !clean($('#nome').value, 24)) $('#nome').value = nome;
+      $('#convite').value = c.code + '-' + c.chave;
+      $('#hint').textContent = 'Pronto. Toque em Entrar.';
+    };
     $('#entrar').onclick = () => {
       const name = clean($('#nome').value, 24);
       const c = lerConvite($('#convite').value);
