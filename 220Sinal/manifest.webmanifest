@@ -1,7 +1,7 @@
 {
   "id": "/Oficina/220Sinal/",
-  "name": "220Sinal",
-  "short_name": "220Sinal",
+  "name": "Zap/220",
+  "short_name": "Zap/220",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
