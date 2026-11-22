@@ -17,7 +17,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.7.1';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.8.0';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const NOME_PAINEL = 'Zap/220';                    // o que a pessoa lê; o papel interno continua "painel"
