@@ -17,7 +17,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.0.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.1.0';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const NOME_PAINEL = '220Sinal';                    // o que a pessoa lê; o papel interno continua "painel"
@@ -50,7 +50,20 @@ const TONES = [
   ['urgente', 'É urgente', ['É', 'URGENTE'], 'Sirene', true, 'Venha agora. Segurança ou parada.'],
   ['liga', 'Me liga', ['ME', 'LIGA'], 'Sino', false, 'Ligue assim que puder.'],
   ['preciso', 'Compareça', ['COMPAREÇA'], 'Apito', false, 'Venha ao local escrito no cartão.'],
-  ['olha', 'Olha aqui', ['OLHA', 'AQUI'], 'Toque curto', false, 'Só um aviso, sem pressa.']
+  ['olha', 'Olha aqui', ['OLHA', 'AQUI'], 'Toque curto', false, 'Só um aviso, sem pressa.'],
+  // Toque dos botões de pedido (não aparece na grade dos 4 toques).
+  ['pedido', 'Pedido', ['PEDIDO'], 'Apito', false, 'Faça o que o cartão pede.']
+];
+
+// Pedidos da área 220: um toque manda o pedido como cartão.
+// [texto, tipo] — tipo 'on' (verde), 'off' (vermelho) ou '' (neutro).
+const PEDIDOS = [
+  ['Rotativa ON', 'on'], ['Rotativa OFF', 'off'],
+  ['PT35', ''], ['PT36', ''],
+  ['Lab/Frascos', ''], ['Resultados?', ''],
+  ['TQ2202', ''], ['TQ2205', ''],
+  ['BA 2201 ON', 'on'], ['BA 2201 OFF', 'off'],
+  ['BA 2203 ON', 'on'], ['BA 2203 OFF', 'off']
 ];
 
 // Dentro do APK Android, a página ganha window.SinalNativo: escuta com a tela
@@ -554,8 +567,10 @@ async function responder(chave, extra) {
 }
 
 /** `destinos`: [{ chave, nome }] — uma pessoa, ou todas (PAINEL). */
-async function mandarAlarme(destinos, tone) {
-  const note = clean($('#recado') ? $('#recado').value : '', 80);
+async function mandarAlarme(destinos, tone, pedido) {
+  const escrito = clean($('#recado') ? $('#recado').value : '', 80);
+  // Pedido: o texto do botão vai na frente; o que estiver escrito no cartão vai junto.
+  const note = pedido ? clean(pedido + (escrito ? ' · ' + escrito : ''), 80) : escrito;
   const who = myName();
   if (!who) { setEnvio('Escreva o seu nome.'); return; }
   if (!bus || !bus.pronto()) { setEnvio('Ainda sem ligação com os servidores. Espere "Escuta ligada".'); return; }
@@ -1117,7 +1132,7 @@ function beep(tone) {
   g.gain.setValueAtTime(0.0001, now);
   g.gain.exponentialRampToValueAtTime(0.25, now + 0.02);
   if (tone === 'liga') { o.type = 'sine'; o.frequency.setValueAtTime(880, now); o.frequency.exponentialRampToValueAtTime(220, now + 0.6); }
-  else if (tone === 'preciso') { o.type = 'square'; o.frequency.setValueAtTime(1400, now); }
+  else if (tone === 'preciso' || tone === 'pedido') { o.type = 'square'; o.frequency.setValueAtTime(1400, now); }
   else if (tone === 'olha') { o.type = 'triangle'; o.frequency.setValueAtTime(660, now); }
   else { o.type = 'sawtooth'; o.frequency.setValueAtTime(480, now); o.frequency.linearRampToValueAtTime(920, now + 0.25); o.frequency.linearRampToValueAtTime(480, now + 0.5); }
   g.gain.exponentialRampToValueAtTime(0.0001, now + (tone === 'olha' ? 0.25 : 0.7));
@@ -1233,8 +1248,21 @@ function field(id, label, opts) {
     '" maxlength="' + opts.max + '" placeholder="' + (opts.ph || '') + '" autocomplete="off"' +
     (opts.area ? '' : ' enterkeyhint="done"') + '></' + tag + '>';
 }
+function blocoPedidos() {
+  return '<h3 class="pedidos-titulo">Pedidos · área 220</h3>' +
+    '<p class="muted pedidos-ajuda">Um toque manda o pedido. Se houver algo escrito no cartão, vai junto.</p>' +
+    '<div class="pedidos">' + PEDIDOS.map(([texto, tipo]) =>
+      '<button class="pedido' + (tipo ? ' ' + tipo : '') + '" data-pedido="' + esc(texto) + '">' + esc(texto) + '</button>').join('') +
+    '</div>';
+}
+function ligarPedidos(destinos) {
+  app.querySelectorAll('[data-pedido]').forEach(b => b.onclick = () => {
+    unlock();
+    if (destinos.length) mandarAlarme(destinos, 'pedido', b.dataset.pedido);
+  });
+}
 function toneButtons() {
-  return '<div class="grid">' + TONES.map(t =>
+  return '<div class="grid">' + TONES.filter(t => t[0] !== 'pedido').map(t =>
     '<button class="tone' + (t[4] ? ' hot' : '') + '" data-tone="' + t[0] + '"><b>' + t[2].join('<br>') +
     '</b><small>' + t[5] + '</small></button>').join('') + '</div>';
 }
@@ -1302,7 +1330,7 @@ function telaPainel() {
     (escolhido
       ? '<h2>Mandar para ' + esc(escolhido.name) + '</h2>' +
         field('recado', todos ? 'Cartão que todos veem' : 'Cartão que a pessoa vê', { max: 80, ph: 'Escreva a mensagem (opcional)', area: true }) +
-        blocoAnexar() + toneButtons() + '<div id="envio" class="envio" aria-live="polite"></div>'
+        blocoAnexar() + blocoPedidos() + toneButtons() + '<div id="envio" class="envio" aria-live="polite"></div>'
       : (list.length ? '<p class="muted" style="margin-top:1rem">Toque numa pessoa para mandar.</p>' : '')) +
     blocoAparelhos() +
     blocoHistorico() +
@@ -1338,6 +1366,7 @@ function telaPainel() {
     unlock();
     if (destinos.length) mandarAlarme(destinos, b.dataset.tone);
   });
+  ligarPedidos(destinos);
   atualizarPresenca();
   redesenharEnvio();
   ligarHistorico();
@@ -1384,7 +1413,7 @@ function telaSinal() {
     '<h2>Chamar o ' + NOME_PAINEL + '</h2>' +
     '<p class="pres pres-painel" data-pres="painel" data-prefixo="' + NOME_PAINEL + ': "></p>' +
     field('recado', 'Cartão que o ' + NOME_PAINEL + ' vê', { max: 80, ph: 'Escreva a mensagem (opcional)', area: true }) +
-    blocoAnexar() + toneButtons() + '<div id="envio" class="envio" aria-live="polite"></div>' +
+    blocoAnexar() + blocoPedidos() + toneButtons() + '<div id="envio" class="envio" aria-live="polite"></div>' +
     blocoHistorico() +
     '<button class="btn ghost" id="sair">Trocar de convite</button></div>';
   preencherVersao();
@@ -1393,6 +1422,7 @@ function telaSinal() {
     unlock();
     mandarAlarme([{ chave: read('chave', ''), nome: 'o ' + NOME_PAINEL }], b.dataset.tone);
   });
+  ligarPedidos([{ chave: read('chave', ''), nome: 'o ' + NOME_PAINEL }]);
   atualizarPresenca();
   redesenharEnvio();
   ligarHistorico();
