@@ -17,7 +17,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.2.2';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.2.3';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const NOME_PAINEL = '220Sinal';                    // o que a pessoa lê; o papel interno continua "painel"
@@ -1412,7 +1412,6 @@ function telaSinal() {
   app.innerHTML = '<div class="app">' + cabeca('', NOME_SINAL) +
     '<p class="muted">Você é <b>' + esc(read('name', '')) + '</b> · código</p><p class="big">' + esc(read('code', '')) + '</p>' +
     blocoEscuta() +
-    '<h2>Chamar o ' + NOME_PAINEL + '</h2>' +
     '<p class="pres pres-painel" data-pres="painel" data-prefixo="' + NOME_PAINEL + ': "></p>' +
     field('recado', 'Cartão que o ' + NOME_PAINEL + ' vê', { max: 80, ph: 'Escreva a mensagem (opcional)', area: true }) +
     blocoAnexar() + blocoPedidos() + toneButtons() + '<div id="envio" class="envio" aria-live="polite"></div>' +
