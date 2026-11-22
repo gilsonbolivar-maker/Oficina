@@ -10,20 +10,29 @@
      PAINEL ──(chave da pessoa)──► servidor A e B ──► SINAL da pessoa
             ◄── "chegou ✓" / "viu ✓✓" ─────────────┘
 
-   Os dois servidores são usados AO MESMO TEMPO (publica e escuta nos
-   dois); basta um funcionar para os dois lados. A mensagem repete até
+   Os servidores são usados AO MESMO TEMPO (publica e escuta em
+   todos); basta um funcionar para os dois lados. Dois deles falam
+   na porta 443, que redes fechadas deixam sair. A mensagem repete até
    o outro lado responder "chegou".
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.10.1';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.11.0';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
+const NOME_PAINEL = 'Sinal232';                    // o que a pessoa lê; o papel interno continua "painel"
 const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // sem 0, 1, O e I
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 // window.SINAL_BROKERS existe só para os testes apontarem para um servidor local.
-const BROKERS = window.SINAL_BROKERS || ['wss://broker.hivemq.com:8884/mqtt', 'wss://broker.emqx.io:8084/mqtt'];
+// user:senha no endereço é o login MQTT (o WebSocket abre sem ele). O shiftr
+// público pede public/public. Coreflux e shiftr escutam na porta 443.
+const BROKERS = window.SINAL_BROKERS || [
+  'wss://broker.hivemq.com:8884/mqtt',
+  'wss://broker.emqx.io:8084/mqtt',
+  'wss://iot.coreflux.cloud:443/mqtt',
+  'wss://public:public@public.cloud.shiftr.io:443/mqtt'
+];
 const PREFIXO = 'app-sinal/v2/';
 // window.SINAL_TEMPOS também só para os testes (encurta as esperas).
 const T = Object.assign({
@@ -89,7 +98,7 @@ function people() { return read('people', []); }
 function savePeople(list) { write('people', list.slice(0, 20)); }
 function myName() {
   const typed = clean(read('name', ''), 24);
-  return ROLE === 'painel' ? (typed || 'PAINEL') : typed;
+  return ROLE === 'painel' ? (typed || NOME_PAINEL) : typed;
 }
 
 /* ————————————————— convite ————————————————— */
@@ -174,8 +183,19 @@ function concat(...parts) {
 }
 function packet(first, body) { return concat(Uint8Array.of(first), remLen(body.length), body); }
 
+/** Separa o login MQTT (user:senha@) do endereço que o WebSocket abre. */
+function abrirBroker(endereco) {
+  const u = new URL(endereco);
+  const usuario = u.username ? decodeURIComponent(u.username) : '';
+  const senha = u.password ? decodeURIComponent(u.password) : '';
+  u.username = '';
+  u.password = '';
+  return { url: u.href, usuario, senha };
+}
+
 /** Uma ligação com um servidor. Guarda pedaços de pacote entre um quadro e outro. */
-function conexao(url, topicos, aoMudar, aoReceber, aoPronto) {
+function conexao(endereco, topicos, aoMudar, aoReceber, aoPronto) {
+  const { url, usuario, senha } = abrirBroker(endereco);
   let ws = null, parado = false, pronto = false, ping = null, espera = 2000, resto = new Uint8Array(0), pid = 1;
   const enviar = bytes => { if (ws && ws.readyState === 1) ws.send(bytes); };
 
@@ -209,8 +229,15 @@ function conexao(url, topicos, aoMudar, aoReceber, aoPronto) {
     ws.binaryType = 'arraybuffer';
     ws.onopen = () => {
       // Nível 4 (3.1.1), sessão limpa, keepalive 30 s. ID novo a cada ligação: duas abas não se derrubam.
-      const vh = concat(encStr('MQTT'), Uint8Array.of(4, 2, 0, 30));
-      enviar(packet(0x10, concat(vh, encStr('sinal-' + aleatorio(12).toLowerCase()))));
+      // Login só quando o endereço traz user:senha (o shiftr público). Os outros seguem anônimos.
+      let flags = 2;
+      const extra = [];
+      if (usuario) {
+        flags |= 0xC0;
+        extra.push(encStr(usuario), encStr(senha));
+      }
+      const vh = concat(encStr('MQTT'), Uint8Array.of(4, flags, 0, 30));
+      enviar(packet(0x10, concat(vh, encStr('sinal-' + aleatorio(12).toLowerCase()), ...extra)));
     };
     ws.onmessage = ev => {
       let u = concat(resto, new Uint8Array(ev.data));
@@ -316,10 +343,10 @@ async function montarRotas() {
   if (ROLE === 'painel') {
     for (const p of people()) await por(p.chave, { chave: p.chave, nome: p.name, code: p.code });
     const mestra = read('mestra', '');
-    if (mestra) rotas[await topicoSync(mestra)] = { chave: mestra, nome: 'PAINEL', sync: true };
+    if (mestra) rotas[await topicoSync(mestra)] = { chave: mestra, nome: NOME_PAINEL, sync: true };
   } else {
     const chave = read('chave', '');
-    if (chave) await por(chave, { chave, nome: 'PAINEL' });
+    if (chave) await por(chave, { chave, nome: NOME_PAINEL });
   }
   return rotas;
 }
@@ -345,7 +372,7 @@ function configurarNativo(escutar) {
   if (!nativo) return;
   const contatos = ROLE === 'painel'
     ? people().map(p => ({ chave: p.chave, nome: p.name }))
-    : (read('chave', '') ? [{ chave: read('chave', ''), nome: 'PAINEL' }] : []);
+    : (read('chave', '') ? [{ chave: read('chave', ''), nome: NOME_PAINEL }] : []);
   try { nativo.configurar(JSON.stringify({ escutar: escutar && contatos.length > 0, papel: ROLE, contatos })); } catch {}
 }
 /** `lembrar`: a pessoa tocou em "Parar" — o app não liga sozinho na próxima vez. */
@@ -419,7 +446,7 @@ Object.entries(read('presenca', {})).forEach(([k, v]) => presenca.set(k, Object.
 
 async function recebeu(msg, rota, repetida) {
   if (rota.sync) { recebeuSync(msg, repetida); return; }
-  const quem = ROLE === 'painel' ? rota.nome : (clean(msg.who, 24) || 'PAINEL');
+  const quem = ROLE === 'painel' ? rota.nome : (clean(msg.who, 24) || NOME_PAINEL);
   if (msg.kind === 'presenca') {
     const atual = presenca.get(rota.chave);
     if (!atual || msg.ts >= atual.ts) {
@@ -998,7 +1025,7 @@ async function recebeuSync(msg, repetida) {
     telaPainel();
   } else if (msg.kind === 'atendido' && !repetida && alarmeAberto && alarmeAberto.ref === msg.ref) {
     fecharAlarme(false);
-    setEnvio('Atendido em outro aparelho do PAINEL.');
+    setEnvio('Atendido em outro aparelho do ' + NOME_PAINEL + '.');
   }
 }
 
@@ -1007,14 +1034,14 @@ function blocoAparelhos() {
   return '<details class="historico aparelhos" id="aparelhos"' + (read('mestra-pendente', '') ? ' open' : '') + '>' +
     '<summary>Outros aparelhos</summary>' +
     (mestra
-      ? '<p class="muted">Este PAINEL está ligado a outros aparelhos: a lista de pessoas é a mesma em todos, ' +
+      ? '<p class="muted">Este ' + NOME_PAINEL + ' está ligado a outros aparelhos: a lista de pessoas é a mesma em todos, ' +
         'todos recebem os chamados e, quando um atende, os outros param de tocar.</p>' +
         '<button class="btn surface" id="mandar-mestra">Ligar mais um aparelho</button>' +
         '<button class="btn ghost" id="sair-mestra">Desligar este aparelho do grupo</button>'
-      : '<p class="muted">Use o mesmo PAINEL no celular, no iPad e no computador.</p>' +
-        '<button class="btn surface" id="mandar-mestra">Usar este PAINEL em outro aparelho</button>' +
-        field('codigo-painel', 'Ou, neste aparelho, cole o código do PAINEL que já existe', { max: 200, ph: 'PAINEL-…' }) +
-        '<button class="btn surface" id="conectar-mestra">Conectar a esse PAINEL</button>') +
+      : '<p class="muted">Use o mesmo ' + NOME_PAINEL + ' no celular, no iPad e no computador.</p>' +
+        '<button class="btn surface" id="mandar-mestra">Usar este ' + NOME_PAINEL + ' em outro aparelho</button>' +
+        field('codigo-painel', 'Ou, neste aparelho, cole o código do ' + NOME_PAINEL + ' que já existe', { max: 200, ph: 'PAINEL-…' }) +
+        '<button class="btn surface" id="conectar-mestra">Conectar a esse ' + NOME_PAINEL + '</button>') +
     '</details>';
 }
 function ligarAparelhos() {
@@ -1031,13 +1058,13 @@ function ligarAparelhos() {
       publicarLista();
     }
     const link = new URL('#p=' + mestra, location.href).href;
-    const texto = 'PAINEL — para usar o mesmo PAINEL neste aparelho:\n\n' +
-      '1. Abra o link (no Chrome ou Safari) e instale o PAINEL:\n' + link +
-      '\n\n2. No PAINEL instalado, em "Outros aparelhos", cole este código e toque em Conectar:\nPAINEL-' + mestra +
-      '\n\n⚠️ Quem tiver este código controla o PAINEL. Não repasse.';
+    const texto = NOME_PAINEL + ' — para usar o mesmo ' + NOME_PAINEL + ' neste aparelho:\n\n' +
+      '1. Abra o link (no Chrome ou Safari) e instale o ' + NOME_PAINEL + ':\n' + link +
+      '\n\n2. No ' + NOME_PAINEL + ' instalado, em "Outros aparelhos", cole este código e toque em Conectar:\nPAINEL-' + mestra +
+      '\n\n⚠️ Quem tiver este código controla o ' + NOME_PAINEL + '. Não repasse.';
     if (nativo) { nativo.compartilhar(texto); telaPainel(); return; }
     if (navigator.share) {
-      try { await navigator.share({ title: 'PAINEL', text: texto }); telaPainel(); return; } catch (e) { if (e.name === 'AbortError') { telaPainel(); return; } }
+      try { await navigator.share({ title: NOME_PAINEL, text: texto }); telaPainel(); return; } catch (e) { if (e.name === 'AbortError') { telaPainel(); return; } }
     }
     try { await navigator.clipboard.writeText(texto); alert('Copiado. Mande para você mesmo e abra no outro aparelho.'); }
     catch { prompt('Copie e abra no outro aparelho:', texto); }
@@ -1255,9 +1282,9 @@ function telaPainel() {
   const escolhido = todos ? { name: 'todos' } : list.find(p => p.code === selected);
   const destinos = todos ? list.map(p => ({ chave: p.chave, nome: p.name }))
     : escolhido ? [{ chave: escolhido.chave, nome: escolhido.name }] : [];
-  app.innerHTML = '<div class="app">' + cabeca('DOIS CELULARES', 'PAINEL') +
+  app.innerHTML = '<div class="app">' + cabeca('DOIS CELULARES', NOME_PAINEL) +
     '<p>Você recebe de qualquer pessoa da lista. Na hora de mandar, escolhe uma pessoa — ou todas.</p>' +
-    field('nome', 'Seu nome no alerta', { max: 24, ph: 'PAINEL' }) +
+    field('nome', 'Seu nome no alerta', { max: 24, ph: NOME_PAINEL }) +
     blocoEscuta() +
     '<h2>Pessoas</h2>' +
     '<div id="lista">' + (list.length > 1
@@ -1329,9 +1356,9 @@ function telaSinal() {
   const chave = read('chave', '');
   if (!chave) {
     app.innerHTML = '<div class="app">' + cabeca('USUÁRIO', 'SINAL') +
-      '<p>Você recebe o que o PAINEL mandar. Sua resposta volta só para o PAINEL.</p>' +
+      '<p>Você recebe o que o ' + NOME_PAINEL + ' mandar. Sua resposta volta só para o ' + NOME_PAINEL + '.</p>' +
       field('nome', 'Seu nome', { max: 24, ph: 'Seu nome' }) +
-      field('convite', 'Convite do PAINEL', { max: 400, ph: 'Cole aqui o link ou o código', area: true }) +
+      field('convite', 'Convite do ' + NOME_PAINEL, { max: 400, ph: 'Cole aqui o link ou o código', area: true }) +
       '<p id="hint" class="muted"></p>' +
       '<button class="btn" id="entrar">Entrar</button>' +
       '<p class="muted">O convite chega por mensagem. Abrindo o link, ele já vem preenchido.</p></div>';
@@ -1343,7 +1370,7 @@ function telaSinal() {
     $('#entrar').onclick = () => {
       const name = clean($('#nome').value, 24);
       const c = lerConvite($('#convite').value);
-      if (!name) { $('#hint').textContent = 'Escreva o seu nome. Assim o PAINEL sabe quem chamou.'; return; }
+      if (!name) { $('#hint').textContent = 'Escreva o seu nome. Assim o ' + NOME_PAINEL + ' sabe quem chamou.'; return; }
       if (!c) { $('#hint').textContent = 'Convite não reconhecido. Ele tem um código de 5 letras, um traço e mais 26 letras.'; return; }
       write('name', name); write('code', c.code); write('chave', c.chave); write('convite', '');
       escutar().then(telaSinal);
@@ -1353,9 +1380,9 @@ function telaSinal() {
   app.innerHTML = '<div class="app">' + cabeca('USUÁRIO', 'SINAL') +
     '<p class="muted">Você é <b>' + esc(read('name', '')) + '</b> · código</p><p class="big">' + esc(read('code', '')) + '</p>' +
     blocoEscuta() +
-    '<h2>Chamar o PAINEL</h2>' +
-    '<p class="pres pres-painel" data-pres="painel" data-prefixo="PAINEL: "></p>' +
-    field('recado', 'Cartão que o PAINEL vê', { max: 80, ph: 'Escreva a mensagem (opcional)', area: true }) +
+    '<h2>Chamar o ' + NOME_PAINEL + '</h2>' +
+    '<p class="pres pres-painel" data-pres="painel" data-prefixo="' + NOME_PAINEL + ': "></p>' +
+    field('recado', 'Cartão que o ' + NOME_PAINEL + ' vê', { max: 80, ph: 'Escreva a mensagem (opcional)', area: true }) +
     blocoAnexar() + toneButtons() + '<div id="envio" class="envio" aria-live="polite"></div>' +
     blocoHistorico() +
     '<button class="btn ghost" id="sair">Trocar de convite</button></div>';
@@ -1363,7 +1390,7 @@ function telaSinal() {
   ligarBotoesEscuta(telaSinal);
   app.querySelectorAll('[data-tone]').forEach(b => b.onclick = () => {
     unlock();
-    mandarAlarme([{ chave: read('chave', ''), nome: 'o PAINEL' }], b.dataset.tone);
+    mandarAlarme([{ chave: read('chave', ''), nome: 'o ' + NOME_PAINEL }], b.dataset.tone);
   });
   atualizarPresenca();
   redesenharEnvio();
@@ -1399,7 +1426,7 @@ function faixaInstalar() {
   const ua = navigator.userAgent;
   const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const dentroDeApp = /; wv\)|WhatsApp|FBAN|FBAV|Instagram|Line\//.test(ua);
-  const nome = ROLE === 'painel' ? 'PAINEL' : 'SINAL';
+  const nome = ROLE === 'painel' ? NOME_PAINEL : 'SINAL';
   let html;
   if (pedidoInstalar) {
     html = '<button class="btn alert" id="instalar-agora">Instalar o ' + nome + '</button>';

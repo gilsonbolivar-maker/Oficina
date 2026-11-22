@@ -87,7 +87,7 @@ vez e o bloco de foco que avisa no fim.
 - **Abas de fichário.** *Início* tem os apps que você fixou. *Dev*,
   *Trabalho* e *Social* se enchem sozinhas pelo tipo de app (GitHub, Termux,
   Claude… / Gmail, Agenda, Drive… / WhatsApp, Instagram, YouTube…). *Oficina*
-  tem os apps da Oficina (Alarme GPS, Britagem, SINAL e PAINEL abrem o APK, se
+  tem os apps da Oficina (Alarme GPS, Britagem, SINAL e Sinal232 abrem o APK, se
   estiver instalado). Toque e segure qualquer app para mudá-lo de aba.
 - **Barra de comando** `nexo:~$`: digite e o app aparece; *Enter* abre.
   Tocar no campo vazio mostra os comandos: `foco 30` (bloco de 30 min),

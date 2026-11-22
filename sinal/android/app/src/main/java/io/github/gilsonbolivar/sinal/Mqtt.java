@@ -27,6 +27,8 @@ final class Mqtt {
 
     private final String host;
     private final int porta;
+    private final String usuario;
+    private final String senha;
     private final List<String> topicos;
     private final Ouvinte ouvinte;
     private volatile boolean parado = false;
@@ -34,9 +36,11 @@ final class Mqtt {
     private volatile OutputStream saida;
     private Thread fio;
 
-    Mqtt(String host, int porta, List<String> topicos, Ouvinte ouvinte) {
+    Mqtt(String host, int porta, String usuario, String senha, List<String> topicos, Ouvinte ouvinte) {
         this.host = host;
         this.porta = porta;
+        this.usuario = usuario == null ? "" : usuario;
+        this.senha = senha == null ? "" : senha;
         this.topicos = topicos;
         this.ouvinte = ouvinte;
     }
@@ -73,8 +77,11 @@ final class Mqtt {
 
                 ByteArrayOutputStream c = new ByteArrayOutputStream();
                 str(c, "MQTT");
-                c.write(4); c.write(2); c.write(0); c.write(60);   // 3.1.1, sessão limpa, 60 s
+                int flags = 2;   // 3.1.1, sessão limpa
+                if (!usuario.isEmpty()) flags |= 0xC0;   // usuário e senha (shiftr: public/public)
+                c.write(4); c.write(flags); c.write(0); c.write(60);   // keepalive 60 s
                 str(c, "sinal-apk-" + aleatorio());
+                if (!usuario.isEmpty()) { str(c, usuario); str(c, senha); }
                 o.write(pacote(0x10, c.toByteArray()));
                 o.flush();
 

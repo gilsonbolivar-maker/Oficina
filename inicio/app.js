@@ -10,7 +10,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '2.11.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '2.11.1';   // precisa casar com a VERSAO do sw.js
 for (const lugar of document.querySelectorAll('[data-versao]')) lugar.textContent = 'v' + VERSAO;
 
 const nativo = window.InicioNativo || null;
@@ -122,7 +122,7 @@ const OFICINA = [
   { pasta: 'agenda-telefonica', nome: 'Agenda Telefônica', icone: 'livro', fundo: 'verde' },
   { pasta: 'alarme-gps', nome: 'Alarme GPS', icone: 'alfinete', fundo: 'rosa', pacote: 'io.github.gilsonbolivar.alarmegps' },
   { pasta: 'sinal', nome: 'SINAL', icone: 'sino', fundo: 'ouro', pacote: 'io.github.gilsonbolivar.sinal' },
-  { pasta: 'sinal-painel', nome: 'PAINEL', icone: 'monitor', fundo: 'violeta', pacote: 'io.github.gilsonbolivar.painel' },
+  { pasta: 'sinal-painel', nome: 'Sinal232', icone: 'monitor', fundo: 'violeta', pacote: 'io.github.gilsonbolivar.painel' },
   { pasta: 'camera-medida', nome: 'Câmera Medida', icone: 'regua', fundo: 'ciano' },
   { pasta: 'camera-negativo', nome: 'Câmera Negativo', icone: 'camera', fundo: 'grafite' },
   { pasta: 'treino', nome: 'Treino', icone: 'peso', fundo: 'verde' },

@@ -1,7 +1,7 @@
 {
   "id": "/Oficina/sinal-painel/",
-  "name": "PAINEL",
-  "short_name": "PAINEL",
+  "name": "Sinal232",
+  "short_name": "Sinal232",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
