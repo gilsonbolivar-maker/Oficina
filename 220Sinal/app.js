@@ -17,7 +17,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.6.2';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.7.0';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const NOME_PAINEL = 'Zap/220';                    // o que a pessoa lê; o papel interno continua "painel"
@@ -1332,8 +1332,192 @@ async function compartilharConvite(p) {
   catch { prompt('Copie o convite e mande para ' + p.name + ':', texto); }
 }
 
+/* ————————————————— aba Leituras 220 ————————————————— */
+/* As leituras da AA-220 vêm do Painel AA-232 (/api/leitura-220), só leitura.
+   O 232 mora em outro endereço e não reconhece o cookie das telas dele aqui,
+   então a senha (da tela AA-220, do turno ou do painel) fica guardada neste
+   aparelho e vai a cada pedido. */
+const L232_PADRAO = 'https://aa232.onrender.com';
+const ITENS_220 = [
+  { tag: 'AIT-220001', eq: 'pH suspensão Ca(OH)2 TQ-2202', tipo: 'ph', unit: 'pH', l: 10, h: 13, min: 0, max: 14 },
+  { tag: 'FIT-220003', eq: 'Água proc. TQ-6301B → TQ-2201', tipo: 'vazao', unit: 'm³/h', l: 0, h: 2, min: 0, max: 4 },
+  { tag: 'LIT-220002', eq: 'TQ-2205 neutralização 2º', tipo: 'nivel', unit: '%', l: 20, h: 85, min: 0, max: 100 },
+  { tag: 'LT-220003', eq: 'TQ-2202 Ca(OH)2', tipo: 'nivel', unit: '%', l: 50, h: 85, min: 0, max: 100 },
+  { tag: 'DT-220003', eq: 'Densímetro suspensão', tipo: 'dens', unit: 'kg/l', l: 1.0, h: 1.4, min: 0, max: 2 }
+];
+let abaPainel = 'pedidos';
+let leituras = null;          // última resposta boa do 232
+let leiturasErro = '';
+let leiturasEm = 0;
+let leiturasTimer = null;
+
+function abas() {
+  const b = (id, txt) => '<button class="aba' + (abaPainel === id ? ' on' : '') + '" data-aba="' + id + '">' + txt + '</button>';
+  return '<div class="abas">' + b('pedidos', 'Pedidos') + b('leituras', 'Leituras 220') + '</div>';
+}
+function ligarAbas(redesenhar) {
+  app.querySelectorAll('[data-aba]').forEach(el => el.onclick = () => {
+    abaPainel = el.dataset.aba;
+    redesenhar();
+  });
+}
+function numL(raw) {
+  if (raw == null || raw === '') return null;
+  const n = typeof raw === 'number' ? raw : Number(String(raw).replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
+function fmtL(v) {
+  const n = numL(v);
+  if (n == null) return v == null || v === '' ? '—' : String(v);
+  if (Math.abs(n) > 0 && Math.abs(n) < 0.01) return n.toExponential(2);
+  return Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100);
+}
+function virgula(n) { return (Math.round(n * 100) / 100).toFixed(2).replace('.', ','); }
+function horaDe(quando) { const m = String(quando || '').match(/\d{2}:\d{2}/); return m ? m[0] : ''; }
+function dataDe(quando) {
+  const d = new Date(String(quando || ''));
+  return isNaN(d) ? null : d.getTime();
+}
+
+function serieL(item, momentos) {
+  const s = [];
+  momentos.forEach(m => {
+    const v = numL(m.valores && m.valores[item.tag]);
+    if (v != null) s.push({ v, hora: horaDe(m.quando), t: dataDe(m.quando) });
+  });
+  return s;
+}
+function tendencia(item, s) {
+  if (s.length < 2) return { rumo: 'na', txt: '' };
+  const fim = s[s.length - 1], ini = s[s.length - 2];
+  const d = fim.v - ini.v;
+  if (Math.abs(d) < 0.005) return { rumo: 'parado', txt: 'sem mudança' };
+  const rumo = d > 0 ? 'subindo' : 'descendo';
+  const seta = d > 0 ? '▲ +' : '▼ ';
+  const horas = (item.tipo !== 'vazao' && fim.t && ini.t) ? (fim.t - ini.t) / 3600000 : null;
+  if (horas != null && horas > 1 / 60) return { rumo, txt: seta + virgula(d / horas) + ' ' + item.unit + '/h' };
+  return { rumo, txt: seta + virgula(d) + (ini.hora ? ' desde ' + ini.hora : '') };
+}
+function graficoL(item, s, rumo) {
+  if (s.length < 2) return '';
+  const vals = s.map(p => p.v);
+  let baixo = Math.min(...vals), alto = Math.max(...vals);
+  const minimo = (item.max - item.min) * 0.1;
+  if (alto - baixo < minimo) { const meio = (alto + baixo) / 2; baixo = meio - minimo / 2; alto = meio + minimo / 2; }
+  const perto = (alto - baixo) * 0.3 || 1;
+  [item.l, item.h].forEach(lim => {
+    if (lim != null && lim >= baixo - perto && lim <= alto + perto) { baixo = Math.min(baixo, lim); alto = Math.max(alto, lim); }
+  });
+  const vao = (alto - baixo) || 1, L = 300, A = 52, f = 8;
+  const y = v => (A - f - ((v - baixo) / vao) * (A - 2 * f)).toFixed(1);
+  const pts = s.map((p, i) => ({ x: (f + (i / (s.length - 1)) * (L - 2 * f)).toFixed(1), y: y(p.v) }));
+  const cor = rumo === 'parado' ? '#9C9388' : rumo === 'subindo' ? '#3fbf6f' : '#ff5a4e';
+  const risco = lim => (lim == null || lim < baixo || lim > alto) ? '' :
+    '<line x1="0" x2="' + L + '" y1="' + y(lim) + '" y2="' + y(lim) + '" stroke="#9C9388" stroke-dasharray="3 3" stroke-width="1"/>';
+  return '<svg viewBox="0 0 ' + L + ' ' + A + '" class="spark">' + risco(item.h) + risco(item.l) +
+    '<polyline fill="none" stroke="' + cor + '" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" points="' +
+    pts.map(p => p.x + ',' + p.y).join(' ') + '"/>' +
+    pts.map((p, i) => '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (i === pts.length - 1 ? 4.4 : 3) + '" fill="' + cor + '"/>').join('') +
+    '</svg>';
+}
+
+function conteudoLeituras() {
+  const senha = read('l232-senha', '');
+  if (!senha) {
+    return '<p class="muted">As leituras vêm do Painel AA-232. Entre uma vez com a senha da tela AA-220 (ou a do turno).</p>' +
+      field('l232-end', 'Endereço do 232', { max: 200, ph: L232_PADRAO }) +
+      field('l232-senha', 'Senha', { max: 100, ph: 'Senha da tela AA-220' }) +
+      '<button class="btn alert" id="l232-entrar">Entrar</button>' +
+      (leiturasErro ? '<p class="erro-l">' + esc(leiturasErro) + '</p>' : '');
+  }
+  let h = '<div class="row"><button class="mini" id="l232-atualizar">Atualizar</button>' +
+    '<span class="muted">' + (leiturasEm ? 'Atualizado às ' + new Date(leiturasEm).toLocaleTimeString('pt-BR', { hour12: false }) : 'Buscando…') + '</span></div>' +
+    (leiturasErro ? '<p class="erro-l">' + esc(leiturasErro) + '</p>' : '');
+  if (leituras && leituras.aoVivo === false) {
+    h += '<p class="muted">O painel do 232 retirou o acesso do turno. Aguarde a liberação.</p>';
+  } else if (leituras) {
+    const momentos = (leituras.momentos || []).filter(m => m && m.quando);
+    if (!momentos.length) {
+      h += '<p class="muted">Nenhuma coleta registrada ainda neste turno.</p>';
+    } else {
+      h += '<div class="tab-l"><table><thead><tr><th>TAG</th><th>Equipamento</th>' +
+        momentos.map((m, i) => '<th>' + (i + 1) + 'ª ' + esc(horaDe(m.quando)) + '</th>').join('') +
+        '<th>Unid.</th></tr></thead><tbody>' +
+        ITENS_220.map(it => '<tr><td>' + esc(it.tag) + '</td><td>' + esc(it.eq) + '</td>' +
+          momentos.map(m => '<td>' + esc(fmtL(m.valores && m.valores[it.tag])) + '</td>').join('') +
+          '<td>' + esc(it.unit) + '</td></tr>').join('') +
+        '</tbody></table></div>';
+      h += '<div class="cards-l">' + ITENS_220.map(it => {
+        const s = serieL(it, momentos);
+        const t = tendencia(it, s);
+        const ult = s.length ? s[s.length - 1].v : null;
+        return '<div class="card-l"><b>' + esc(it.tag) + '</b><span class="eq-l">' + esc(it.eq) + '</span>' +
+          '<span class="val-l">' + (ult == null ? '—' : esc(fmtL(ult)) + ' <small>' + esc(it.unit) + '</small>') + '</span>' +
+          graficoL(it, s, t.rumo) + (t.txt ? '<span class="rumo-l ' + t.rumo + '">' + esc(t.txt) + '</span>' : '') + '</div>';
+      }).join('') + '</div>';
+    }
+    const lab = leituras.lab || [];
+    h += '<h3 class="lab-l">Leituras de laboratório</h3>' + (lab.length
+      ? '<div class="tab-l"><table><thead><tr><th>Ponto</th><th>Parâmetro</th><th>Horário</th><th>Valor</th><th>Unid.</th></tr></thead><tbody>' +
+        lab.map(l => '<tr><td>' + esc(l.ponto) + '</td><td>' + esc(l.param) + '</td><td>' + esc(l.hora) +
+          '</td><td>' + esc(l.valor) + '</td><td>' + esc(l.unid || '') + '</td></tr>').join('') + '</tbody></table></div>'
+      : '<p class="muted">Nenhuma leitura de laboratório ainda.</p>');
+  }
+  h += '<button class="btn ghost" id="l232-sair">Trocar senha ou endereço</button>';
+  return h;
+}
+
+async function puxarLeituras() {
+  const senha = read('l232-senha', '');
+  if (!senha) return;
+  const end = (read('l232-end', '') || L232_PADRAO).replace(/\/+$/, '');
+  try {
+    const r = await fetch(end + '/api/leitura-220', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ senha }), cache: 'no-store'
+    });
+    if (r.status === 401) { write('l232-senha', ''); leituras = null; leiturasErro = 'A senha não confere. Digite de novo.'; }
+    else if (!r.ok) leiturasErro = 'O 232 respondeu com erro (' + r.status + '). Tente de novo em instantes.';
+    else { leituras = await r.json(); leiturasErro = ''; leiturasEm = Date.now(); }
+  } catch {
+    leiturasErro = 'Sem resposta do 232. Se ele estava parado, leva cerca de 1 minuto para acordar.';
+  }
+  if (abaPainel === 'leituras' && ROLE === 'painel') telaPainel();
+}
+function pararLeituras() { clearInterval(leiturasTimer); leiturasTimer = null; }
+
+function telaLeituras() {
+  app.innerHTML = '<div class="app">' + cabeca('', NOME_PAINEL) + abas() + conteudoLeituras() + '</div>';
+  preencherVersao();
+  ligarAbas(telaPainel);
+  const entrar = $('#l232-entrar');
+  if (entrar) {
+    $('#l232-end').value = read('l232-end', '');
+    $('#l232-senha').type = 'password';
+    entrar.onclick = () => {
+      const s = String($('#l232-senha').value || '').trim();
+      if (!s) { leiturasErro = 'Escreva a senha.'; telaPainel(); return; }
+      write('l232-end', clean($('#l232-end').value, 200));
+      write('l232-senha', s);
+      leiturasErro = '';
+      telaPainel();
+      puxarLeituras();
+    };
+  }
+  const atual = $('#l232-atualizar');
+  if (atual) atual.onclick = () => { atual.textContent = 'Buscando…'; puxarLeituras(); };
+  const sair = $('#l232-sair');
+  if (sair) sair.onclick = () => { write('l232-senha', ''); leituras = null; leiturasEm = 0; leiturasErro = ''; pararLeituras(); telaPainel(); };
+  if (read('l232-senha', '') && !leiturasTimer) {
+    puxarLeituras();
+    leiturasTimer = setInterval(puxarLeituras, 30000);
+  }
+}
+
 let ajustesAbertos = false;   // "Seu nome e pessoas" aberto entre um redesenho e outro
 function telaPainel() {
+  if (abaPainel === 'leituras') { telaLeituras(); return; }
+  pararLeituras();
   const list = people();
   if (selected === '*' && list.length < 2) selected = '';
   if (selected && selected !== '*' && !list.some(p => p.code === selected)) selected = '';
@@ -1345,7 +1529,7 @@ function telaPainel() {
   // Tela enxuta, para usar com uma mão: quem recebe e os pedidos no alto;
   // nome, pessoas novas e convites ficam em "Seu nome e pessoas", mais abaixo.
   const abrirAjustes = ajustesAbertos || !read('name', '') || !list.length;
-  app.innerHTML = '<div class="app">' + cabeca('', NOME_PAINEL) +
+  app.innerHTML = '<div class="app">' + cabeca('', NOME_PAINEL) + abas() +
     blocoEscuta() +
     '<div id="lista" class="chips">' + (list.length > 1
       ? '<button class="pick todos' + (todos ? ' on' : '') + '" data-pick="*">' +
@@ -1379,6 +1563,7 @@ function telaPainel() {
   $('#nome').value = read('name', '');
   $('#nome').oninput = e => write('name', clean(e.target.value, 24));
   ligarBotoesEscuta(telaPainel);
+  ligarAbas(telaPainel);
 
   $('#novo').onclick = async () => {
     const name = clean($('#pessoa').value, 24);

@@ -125,3 +125,29 @@ textarea::placeholder { color: rgba(243, 237, 228, .7); }
 .botoes-anexo button { min-height: 2.8rem; border: 0; border-radius: .8rem; background: var(--fg); color: var(--alert); font-weight: 700; }
 .historico .link { color: inherit; }
 .apk-link { margin: .5rem 0 0 !important; font-size: .88rem; } .apk-link a { color: #ffd27a; }
+
+/* Abas do Zap/220: Pedidos | Leituras 220 */
+.abas { display: flex; gap: .4rem; margin: .6rem 0 .4rem; }
+.abas .aba { flex: 1; min-height: 2.8rem; border-radius: 1rem; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font-weight: 650; }
+.abas .aba.on { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.erro-l { color: #ff8a80; font-size: .92rem; margin: .5rem 0; }
+.tab-l { overflow-x: auto; margin-top: .8rem; border: 1px solid var(--line); border-radius: .8rem; }
+.tab-l table { border-collapse: collapse; width: 100%; font-size: .82rem; white-space: nowrap; }
+.tab-l th, .tab-l td { padding: .45rem .55rem; border-bottom: 1px solid var(--line); text-align: center; }
+.tab-l th { color: var(--muted); font-weight: 650; background: var(--surface); }
+.tab-l td:first-child, .tab-l th:first-child, .tab-l td:nth-child(2), .tab-l th:nth-child(2) { text-align: left; }
+.tab-l tr:last-child td { border-bottom: 0; }
+.cards-l { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-top: .8rem; }
+.card-l { background: var(--surface); border: 1px solid var(--line); border-top: 3px solid #9a3412; border-radius: .9rem; padding: .6rem .7rem; display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
+.card-l b { font-size: .9rem; }
+.card-l .eq-l { color: var(--muted); font-size: .75rem; line-height: 1.2; }
+.card-l .val-l { font-size: 1.3rem; font-weight: 700; }
+.card-l .val-l small { font-size: .75rem; color: var(--muted); font-weight: 400; }
+.card-l .spark { width: 100%; height: auto; margin-top: .2rem; }
+.rumo-l { font-size: .8rem; font-weight: 700; color: var(--muted); }
+.rumo-l.subindo { color: #3fbf6f; }
+.rumo-l.descendo { color: #ff5a4e; }
+.lab-l { color: #f0a27a; margin: 1.2rem 0 0; font-size: 1rem; }
+.tab-l td:first-child, .tab-l th:first-child { position: sticky; left: 0; background: var(--bg); z-index: 1; }
+.tab-l th:first-child { background: var(--surface); }
+.tab-l td:nth-child(2) { white-space: normal; min-width: 8.5rem; color: var(--muted); }
