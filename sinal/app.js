@@ -17,7 +17,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.11.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.12.0';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const NOME_PAINEL = 'Sinal232';                    // o que a pessoa lê; o papel interno continua "painel"
@@ -1257,6 +1257,27 @@ function ligarBotoesEscuta(redesenhar) {
   if (bus) bus.pronto() ? setLigacao('Escuta ligada. Deixe esta tela aberta.', true) : setLigacao('Conectando…', false);
 }
 
+// Só o nome e o código, em duas linhas: a pessoa cola tudo no SINAL de uma vez
+// (o nome vai para "Seu nome" e o código para o convite).
+async function compartilharCodigo(p) {
+  if (!p) return;
+  const texto = p.name + '\n' + p.code + '-' + p.chave;
+  if (nativo) { nativo.compartilhar(texto); return; }
+  if (navigator.share) {
+    try { await navigator.share({ text: texto }); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  try { await navigator.clipboard.writeText(texto); alert('Nome e código copiados. Mande para ' + p.name + '.'); }
+  catch { prompt('Copie e mande para ' + p.name + ':', texto); }
+}
+// O que sobra do texto colado, sem o código, é o nome — só no formato curto
+// ("Nome" + código). Do convite longo (com link e instruções) não tira nada.
+function nomeDoColado(texto) {
+  const t = String(texto || '');
+  if (/https?:\/\//i.test(t)) return '';
+  const resto = t.replace(/[A-Za-z2-9]{5}-[A-Za-z2-9]{26}/, ' ').replace(/\s+/g, ' ').trim();
+  return resto.length <= 24 ? clean(resto, 24) : '';
+}
+
 async function compartilharConvite(p) {
   const link = linkConvite(p);
   // O link instala o SINAL e já leva o convite (no Android, o app instalado
@@ -1273,6 +1294,7 @@ async function compartilharConvite(p) {
   catch { prompt('Copie o convite e mande para ' + p.name + ':', texto); }
 }
 
+let ajustesAbertos = false;   // "Seu nome e pessoas" aberto entre um redesenho e outro
 function telaPainel() {
   const list = people();
   if (selected === '*' && list.length < 2) selected = '';
@@ -1282,30 +1304,38 @@ function telaPainel() {
   const escolhido = todos ? { name: 'todos' } : list.find(p => p.code === selected);
   const destinos = todos ? list.map(p => ({ chave: p.chave, nome: p.name }))
     : escolhido ? [{ chave: escolhido.chave, nome: escolhido.name }] : [];
-  app.innerHTML = '<div class="app">' + cabeca('DOIS CELULARES', NOME_PAINEL) +
-    '<p>Você recebe de qualquer pessoa da lista. Na hora de mandar, escolhe uma pessoa — ou todas.</p>' +
-    field('nome', 'Seu nome no alerta', { max: 24, ph: NOME_PAINEL }) +
+  // Tela enxuta, para usar com uma mão: quem recebe e os toques no alto;
+  // nome, pessoas novas e convites ficam em "Seu nome e pessoas", mais abaixo.
+  const abrirAjustes = ajustesAbertos || !read('name', '') || !list.length;
+  app.innerHTML = '<div class="app">' + cabeca('', NOME_PAINEL) +
     blocoEscuta() +
-    '<h2>Pessoas</h2>' +
-    '<div id="lista">' + (list.length > 1
-      ? '<div class="row"><button class="pick todos' + (todos ? ' on' : '') + '" data-pick="*">' +
-          '<span>Todos<small>chama as ' + list.length + ' pessoas de uma vez</small></span><b>★</b></button></div>' : '') +
+    '<div id="lista" class="chips">' + (list.length > 1
+      ? '<button class="pick todos' + (todos ? ' on' : '') + '" data-pick="*">' +
+          '<span>Todos<small>' + list.length + ' pessoas</small></span></button>' : '') +
       (list.map(p =>
-      '<div class="row"><button class="pick' + (p.code === selected ? ' on' : '') + '" data-pick="' + esc(p.code) + '">' +
-        '<span>' + esc(p.name) + '<small class="pres" data-pres="' + esc(p.code) + '"></small></span><b>' + esc(p.code) + '</b></button>' +
-        '<button class="mini" data-convite="' + esc(p.code) + '">Convite</button>' +
-        '<button class="erase" data-del="' + esc(p.code) + '">Apagar</button></div>').join('') ||
-      '<p class="muted">Ninguém ainda. Adicione abaixo e mande o convite.</p>') + '</div>' +
-    field('pessoa', 'Nova pessoa', { max: 24, ph: 'Nome do colega' }) +
-    '<button class="btn surface" id="novo">Adicionar e mandar convite</button>' +
+      '<button class="pick' + (p.code === selected ? ' on' : '') + '" data-pick="' + esc(p.code) + '">' +
+        '<span>' + esc(p.name) + '<small class="pres" data-pres="' + esc(p.code) + '"></small></span></button>').join('') ||
+      '<p class="muted">Ninguém ainda. Adicione em "Seu nome e pessoas", abaixo.</p>') + '</div>' +
     (escolhido
-      ? '<h2>Mandar para ' + esc(escolhido.name) + '</h2>' +
+      ? '<h3 class="para">Para ' + esc(escolhido.name) + '</h3>' +
         field('recado', todos ? 'Cartão que todos veem' : 'Cartão que a pessoa vê', { max: 80, ph: 'Escreva a mensagem (opcional)', area: true }) +
         blocoAnexar() + toneButtons() + '<div id="envio" class="envio" aria-live="polite"></div>'
       : (list.length ? '<p class="muted" style="margin-top:1rem">Toque numa pessoa para mandar.</p>' : '')) +
+    '<details class="historico ajustes" id="ajustes"' + (abrirAjustes ? ' open' : '') + '>' +
+      '<summary>Seu nome e pessoas</summary>' +
+      field('nome', 'Seu nome no alerta', { max: 24, ph: NOME_PAINEL }) +
+      list.map(p =>
+        '<div class="row gerir"><span class="gerir-nome">' + esc(p.name) + ' <b>' + esc(p.code) + '</b></span>' +
+        '<button class="mini" data-convite="' + esc(p.code) + '">Convite</button>' +
+        '<button class="mini" data-codigo="' + esc(p.code) + '">Código</button>' +
+        '<button class="erase" data-del="' + esc(p.code) + '">Apagar</button></div>').join('') +
+      field('pessoa', 'Nova pessoa', { max: 24, ph: 'Nome do colega' }) +
+      '<button class="btn surface" id="novo">Adicionar e mandar convite</button>' +
+    '</details>' +
     blocoAparelhos() +
     blocoHistorico() +
     '</div>';
+  $('#ajustes').ontoggle = e => { ajustesAbertos = e.target.open; };
   preencherVersao();
   $('#nome').value = read('name', '');
   $('#nome').oninput = e => write('name', clean(e.target.value, 24));
@@ -1323,6 +1353,8 @@ function telaPainel() {
     compartilharConvite(p);
   };
   app.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => { selected = b.dataset.pick; telaPainel(); });
+  app.querySelectorAll('[data-codigo]').forEach(b => b.onclick = () =>
+    compartilharCodigo(people().find(p => p.code === b.dataset.codigo)));
   app.querySelectorAll('[data-convite]').forEach(b => b.onclick = () =>
     compartilharConvite(people().find(p => p.code === b.dataset.convite)));
   app.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
@@ -1367,6 +1399,15 @@ function telaSinal() {
     $('#nome').value = read('name', '');
     const pendente = read('convite', '');
     if (pendente) $('#convite').value = pendente;
+    $('#convite').oninput = () => {
+      const v = $('#convite').value;
+      const c = lerConvite(v);
+      if (!c) return;
+      const nome = nomeDoColado(v);
+      if (nome && !clean($('#nome').value, 24)) $('#nome').value = nome;
+      $('#convite').value = c.code + '-' + c.chave;
+      $('#hint').textContent = 'Pronto. Toque em Entrar.';
+    };
     $('#entrar').onclick = () => {
       const name = clean($('#nome').value, 24);
       const c = lerConvite($('#convite').value);
@@ -1378,7 +1419,7 @@ function telaSinal() {
     return;
   }
   app.innerHTML = '<div class="app">' + cabeca('USUÁRIO', 'SINAL') +
-    '<p class="muted">Você é <b>' + esc(read('name', '')) + '</b> · código</p><p class="big">' + esc(read('code', '')) + '</p>' +
+    '<p class="muted quem">Você é <b>' + esc(read('name', '')) + '</b> · código <b class="codigo">' + esc(read('code', '')) + '</b></p>' +
     blocoEscuta() +
     '<h2>Chamar o ' + NOME_PAINEL + '</h2>' +
     '<p class="pres pres-painel" data-pres="painel" data-prefixo="' + NOME_PAINEL + ': "></p>' +
