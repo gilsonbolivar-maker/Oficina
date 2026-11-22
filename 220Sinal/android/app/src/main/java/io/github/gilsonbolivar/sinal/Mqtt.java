@@ -77,9 +77,9 @@ final class Mqtt {
 
                 ByteArrayOutputStream c = new ByteArrayOutputStream();
                 str(c, "MQTT");
-                int flags = 2;   // 3.1.1, sessão limpa
-                if (!usuario.isEmpty()) flags |= 0xC0;   // usuário e senha (shiftr: public/public)
-                c.write(4); c.write(flags); c.write(0); c.write(60);   // keepalive 60 s
+                int conFlags = 2;   // 3.1.1, sessão limpa
+                if (!usuario.isEmpty()) conFlags |= 0xC0;   // usuário e senha (shiftr: public/public)
+                c.write(4); c.write(conFlags); c.write(0); c.write(60);   // keepalive 60 s
                 str(c, "sinal-apk-" + aleatorio());
                 if (!usuario.isEmpty()) { str(c, usuario); str(c, senha); }
                 o.write(pacote(0x10, c.toByteArray()));
