@@ -17,7 +17,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.7.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.7.1';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const NOME_PAINEL = 'Zap/220';                    // o que a pessoa lê; o papel interno continua "painel"
@@ -1337,7 +1337,15 @@ async function compartilharConvite(p) {
    O 232 mora em outro endereço e não reconhece o cookie das telas dele aqui,
    então a senha (da tela AA-220, do turno ou do painel) fica guardada neste
    aparelho e vai a cada pedido. */
-const L232_PADRAO = 'https://aa232.onrender.com';
+const L232_PADRAO = 'https://aa232-jlsc.onrender.com';
+/* Do que a pessoa digitou, fica só o começo do endereço: colar o link de uma
+   tela do 232 (".../area/aa-220") também vale. Vazio ou inválido → o padrão. */
+function endereco232() {
+  let t = String(read('l232-end', '') || '').trim();
+  if (!t || /^https?:\/\/aa232\.onrender\.com/i.test(t)) return L232_PADRAO;
+  if (!/^https?:\/\//i.test(t)) t = 'https://' + t;
+  try { return new URL(t).origin; } catch { return L232_PADRAO; }
+}
 const ITENS_220 = [
   { tag: 'AIT-220001', eq: 'pH suspensão Ca(OH)2 TQ-2202', tipo: 'ph', unit: 'pH', l: 10, h: 13, min: 0, max: 14 },
   { tag: 'FIT-220003', eq: 'Água proc. TQ-6301B → TQ-2201', tipo: 'vazao', unit: 'm³/h', l: 0, h: 2, min: 0, max: 4 },
@@ -1470,7 +1478,7 @@ function conteudoLeituras() {
 async function puxarLeituras() {
   const senha = read('l232-senha', '');
   if (!senha) return;
-  const end = (read('l232-end', '') || L232_PADRAO).replace(/\/+$/, '');
+  const end = endereco232();
   try {
     const r = await fetch(end + '/api/leitura-220', {
       method: 'POST', headers: { 'content-type': 'application/json' },
@@ -1480,7 +1488,7 @@ async function puxarLeituras() {
     else if (!r.ok) leiturasErro = 'O 232 respondeu com erro (' + r.status + '). Tente de novo em instantes.';
     else { leituras = await r.json(); leiturasErro = ''; leiturasEm = Date.now(); }
   } catch {
-    leiturasErro = 'Sem resposta do 232. Se ele estava parado, leva cerca de 1 minuto para acordar.';
+    leiturasErro = 'Sem resposta do 232 (' + endereco232().replace(/^https:\/\//, '') + '). Se ele estava parado, leva cerca de 1 minuto para acordar.';
   }
   if (abaPainel === 'leituras' && ROLE === 'painel') telaPainel();
 }
