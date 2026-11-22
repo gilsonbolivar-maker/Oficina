@@ -17,10 +17,10 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.14.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.14.1';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
-const NOME_PAINEL = 'Sinal232';                    // o que a pessoa lê; o papel interno continua "painel"
+const NOME_PAINEL = 'Zap232';                    // o que a pessoa lê; o papel interno continua "painel"
 const NOME_SINAL = 'SINAL';                       // nome do lado de quem recebe
 const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // sem 0, 1, O e I
 const enc = new TextEncoder();

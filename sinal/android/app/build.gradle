@@ -15,8 +15,8 @@ android {
         minSdk 24
         targetSdk 34
         // versionCode sobe a cada APK novo; versionName acompanha o app do site.
-        versionCode 3
-        versionName '1.13.0'
+        versionCode 4
+        versionName '1.14.1'
     }
 
     flavorDimensions 'papel'
@@ -33,7 +33,7 @@ android {
             applicationId 'io.github.gilsonbolivar.painel'
             buildConfigField 'String', 'ENDERECO', '"https://gilsonbolivar-maker.github.io/Oficina/sinal-painel/"'
             buildConfigField 'String', 'CAMINHO', '"/Oficina/sinal-painel"'
-            resValue 'string', 'app_name', 'Sinal232'
+            resValue 'string', 'app_name', 'Zap232'
         }
     }
 

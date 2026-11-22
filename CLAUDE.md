@@ -23,8 +23,8 @@ Todo app da Oficina mostra o número da versão na tela, sempre.
 | Caderno Pencil | no meio do topo, embaixo do estado |
 | Câmera Negativo | embaixo do estado, no topo (`#versao-topo`) |
 | Câmera Medida | ao lado do nome, no topo; e no fim dos Ajustes |
-| SINAL e Sinal232 | ao lado do título (os dois usam o mesmo `sinal/app.js`; `sinal/sw.js` e `sinal-painel/sw.js` levam a mesma `VERSAO`) |
-| 220Sinal (cópia do Sinal232) | ao lado do título; o código fica em `220Sinal/app.js` (lado que chama, `220Sinal/`), e o lado que recebe (`220Sinal-sinal/`) carrega `../220Sinal/app.js`; `220Sinal/sw.js` e `220Sinal-sinal/sw.js` levam a mesma `VERSAO`. Guarda tudo com prefixo `220-` e usa tópicos `app-220sinal/`: não se mistura com o Sinal232. O Android fica em `220Sinal/android` (APKs `aa220.apk` e `220sinal.apk`, workflow `apk-220sinal.yml`): o `Cifra.PREFIXO` precisa casar com o `PREFIXO` do `app.js` |
+| SINAL e Zap232 (antigo Sinal232) | ao lado do título (os dois usam o mesmo `sinal/app.js`; `sinal/sw.js` e `sinal-painel/sw.js` levam a mesma `VERSAO`) |
+| 220Sinal (cópia do Zap232) | ao lado do título; o código fica em `220Sinal/app.js` (lado que chama, `220Sinal/`), e o lado que recebe (`220Sinal-sinal/`) carrega `../220Sinal/app.js`; `220Sinal/sw.js` e `220Sinal-sinal/sw.js` levam a mesma `VERSAO`. Guarda tudo com prefixo `220-` e usa tópicos `app-220sinal/`: não se mistura com o Zap232. O Android fica em `220Sinal/android` (APKs `aa220.apk` e `220sinal.apk`, workflow `apk-220sinal.yml`): o `Cifra.PREFIXO` precisa casar com o `PREFIXO` do `app.js` |
 | Escola | rodapé ("Escola v1") |
 | PixelMusic | ao lado do título |
 | Player | ao lado do título, no topo da lista |

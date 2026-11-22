@@ -150,7 +150,7 @@ public class EscutaService extends Service implements Mqtt.Ouvinte {
                 JSONObject o = lista.getJSONObject(i);
                 String chave = o.getString("chave");
                 Contato c = new Contato();
-                c.nome = o.optString("nome", painel ? "Alguém" : "Sinal232");
+                c.nome = o.optString("nome", painel ? "Alguém" : "Zap232");
                 c.aes = Cifra.chave(chave);
                 c.entra = Cifra.topico(painel ? "para-painel" : "para-sinal", chave);
                 c.volta = Cifra.topico(painel ? "para-sinal" : "para-painel", chave);
