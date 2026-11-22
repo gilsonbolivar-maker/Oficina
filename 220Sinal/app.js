@@ -17,7 +17,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.2.3';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.3.0';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const NOME_PAINEL = '220Sinal';                    // o que a pessoa lê; o papel interno continua "painel"
@@ -1249,9 +1249,9 @@ function field(id, label, opts) {
     '" maxlength="' + opts.max + '" placeholder="' + (opts.ph || '') + '" autocomplete="off"' +
     (opts.area ? '' : ' enterkeyhint="done"') + '></' + tag + '>';
 }
-function blocoPedidos() {
+function blocoPedidos(compacto) {
   return '<h3 class="pedidos-titulo">Pedidos · área 220</h3>' +
-    '<p class="muted pedidos-ajuda">Um toque manda o pedido. Se houver algo escrito no cartão, vai junto.</p>' +
+    (compacto ? '' : '<p class="muted pedidos-ajuda">Um toque manda o pedido. Se houver algo escrito no cartão, vai junto.</p>') +
     '<div class="pedidos">' + PEDIDOS.map(([texto, tipo]) =>
       '<button class="pedido' + (tipo ? ' ' + tipo : '') + '" data-pedido="' + esc(texto) + '">' + esc(texto) + '</button>').join('') +
     '</div>';
@@ -1410,11 +1410,13 @@ function telaSinal() {
     return;
   }
   app.innerHTML = '<div class="app">' + cabeca('', NOME_SINAL) +
-    '<p class="muted">Você é <b>' + esc(read('name', '')) + '</b> · código</p><p class="big">' + esc(read('code', '')) + '</p>' +
+    // Tela enxuta, para usar com uma mão: os pedidos vêm logo no alto.
+    '<p class="muted quem">Você é <b>' + esc(read('name', '')) + '</b> · código <b class="codigo">' + esc(read('code', '')) + '</b></p>' +
     blocoEscuta() +
     '<p class="pres pres-painel" data-pres="painel" data-prefixo="' + NOME_PAINEL + ': "></p>' +
-    field('recado', 'Cartão que o ' + NOME_PAINEL + ' vê', { max: 80, ph: 'Escreva a mensagem (opcional)', area: true }) +
-    blocoAnexar() + blocoPedidos() + toneButtons() + '<div id="envio" class="envio" aria-live="polite"></div>' +
+    blocoPedidos(true) + '<div id="envio" class="envio" aria-live="polite"></div>' +
+    field('recado', 'Escrever junto (opcional)', { max: 80, ph: 'Ex.: urgente, sala de controle' }) +
+    blocoAnexar() + toneButtons() +
     blocoHistorico() +
     '<button class="btn ghost" id="sair">Trocar de convite</button></div>';
   preencherVersao();

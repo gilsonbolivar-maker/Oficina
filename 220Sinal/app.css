@@ -29,6 +29,8 @@ textarea::placeholder { color: rgba(243, 237, 228, .7); }
 .row .pick.on { background: var(--alert); border-color: var(--alert); }
 .mini { min-height: 3.4rem; padding: 0 .7rem; border: 1px solid var(--line); border-radius: 1rem; background: transparent; color: var(--fg); font-size: .85rem; }
 .erase { min-height: 3.4rem; border: 0; background: transparent; color: var(--alert); font-size: .85rem; }
+.quem { margin: .3rem 0 0; }
+.quem .codigo { letter-spacing: .12em; color: var(--fg); }
 .pedidos-titulo { margin: 1.2rem 0 .2rem; font-size: 1.05rem; letter-spacing: .04em; }
 .pedidos-ajuda { margin: 0 0 .6rem; font-size: .85rem; }
 .pedidos { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
