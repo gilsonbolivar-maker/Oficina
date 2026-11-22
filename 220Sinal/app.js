@@ -17,7 +17,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.1.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.2.0';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const NOME_PAINEL = '220Sinal';                    // o que a pessoa lê; o papel interno continua "painel"
@@ -1179,7 +1179,8 @@ function showAlarm(data, who) {
   notificar(who ? 'De ' + who : NOME_SINAL, note || tone[1]);
 }
 /* Respostas rápidas na tela do alarme: tocar numa delas já fecha o alarme. */
-const RESPOSTAS = ['Estou indo', 'Já ligo', 'Agora não posso', 'OK, entendi'];
+// Respostas da área 220, em pares (o último ocupa a linha inteira).
+const RESPOSTAS = ['Ligada', 'Desligada', 'Positivo', 'Negativo', 'Ok'];
 
 function fecharAlarme(daqui = true) {
   if (daqui && alarmeAberto && ROLE === 'painel') avisarAtendido(alarmeAberto.ref);

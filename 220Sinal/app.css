@@ -64,6 +64,7 @@ textarea::placeholder { color: rgba(243, 237, 228, .7); }
 .respostas { width: 100%; max-width: 28rem; margin-top: 1.4rem; }
 .respostas .eye { color: rgba(243, 237, 228, .8); }
 .rapidas { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-top: .5rem; }
+.rapidas button:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .rapidas button { min-height: 3.2rem; border: 2px solid rgba(243, 237, 228, .85); border-radius: 1rem; background: rgba(0, 0, 0, .18); color: var(--fg); font-weight: 650; }
 .livre { display: flex; gap: .5rem; margin-top: .5rem; }
 .livre input { margin: 0; flex: 1; min-width: 0; background: rgba(0, 0, 0, .25); border-color: rgba(243, 237, 228, .5); }
