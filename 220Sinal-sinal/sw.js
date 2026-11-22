@@ -1,8 +1,8 @@
-/* Service worker do SINAL 220: o app abre sem internet (para mandar e
+/* Service worker do AA220: o app abre sem internet (para mandar e
    receber, precisa de internet). Página vem da rede quando dá; o resto, do cache. */
 'use strict';
 
-const VERSAO = '1.2.1';   // precisa casar com a VERSAO do app.js
+const VERSAO = '1.2.2';   // precisa casar com a VERSAO do app.js
 const CACHE_APP = '220sinal-v' + VERSAO;
 const ARQUIVOS = ['.', 'index.html', '../220Sinal/app.js', '../220Sinal/app.css', 'manifest.webmanifest',
   'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];

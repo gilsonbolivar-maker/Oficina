@@ -1,7 +1,7 @@
 {
   "id": "/Oficina/220Sinal-sinal/",
-  "name": "SINAL 220",
-  "short_name": "SINAL 220",
+  "name": "AA220",
+  "short_name": "AA220",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -17,11 +17,11 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.2.1';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.2.2';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const NOME_PAINEL = '220Sinal';                    // o que a pessoa lê; o papel interno continua "painel"
-const NOME_SINAL = 'SINAL 220';                  // nome do lado de quem recebe
+const NOME_SINAL = 'AA220';                       // nome do lado de quem recebe
 const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // sem 0, 1, O e I
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -1268,7 +1268,8 @@ function toneButtons() {
     '</b><small>' + t[5] + '</small></button>').join('') + '</div>';
 }
 function cabeca(eye, titulo) {
-  return '<p class="eye">' + eye + (nativo ? ' · APP ANDROID' : '') + '</p><h1>' + titulo + ' <small class="versao" data-versao></small></h1>';
+  const olho = eye + (nativo ? (eye ? ' · ' : '') + 'APP ANDROID' : '');
+  return (olho ? '<p class="eye">' + olho + '</p>' : '') + '<h1>' + titulo + ' <small class="versao" data-versao></small></h1>';
 }
 function blocoEscuta() {
   return bus
@@ -1386,7 +1387,7 @@ function telaSinal() {
   }
   const chave = read('chave', '');
   if (!chave) {
-    app.innerHTML = '<div class="app">' + cabeca('AA 220', NOME_SINAL) +
+    app.innerHTML = '<div class="app">' + cabeca('', NOME_SINAL) +
       '<p>Você recebe o que o ' + NOME_PAINEL + ' mandar. Sua resposta volta só para o ' + NOME_PAINEL + '.</p>' +
       field('nome', 'Seu nome', { max: 24, ph: 'Seu nome' }) +
       field('convite', 'Convite do ' + NOME_PAINEL, { max: 400, ph: 'Cole aqui o link ou o código', area: true }) +
@@ -1408,7 +1409,7 @@ function telaSinal() {
     };
     return;
   }
-  app.innerHTML = '<div class="app">' + cabeca('AA 220', NOME_SINAL) +
+  app.innerHTML = '<div class="app">' + cabeca('', NOME_SINAL) +
     '<p class="muted">Você é <b>' + esc(read('name', '')) + '</b> · código</p><p class="big">' + esc(read('code', '')) + '</p>' +
     blocoEscuta() +
     '<h2>Chamar o ' + NOME_PAINEL + '</h2>' +
