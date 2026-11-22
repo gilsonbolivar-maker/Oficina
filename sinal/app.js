@@ -17,7 +17,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.14.2';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.15.0';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const NOME_PAINEL = 'Zap232';                    // o que a pessoa lê; o papel interno continua "painel"
@@ -50,20 +50,7 @@ const TONES = [
   ['urgente', 'É urgente', ['É', 'URGENTE'], 'Sirene', true, 'Venha agora. Segurança ou parada.'],
   ['liga', 'Me liga', ['ME', 'LIGA'], 'Sino', false, 'Ligue assim que puder.'],
   ['preciso', 'Compareça', ['COMPAREÇA'], 'Apito', false, 'Venha ao local escrito no cartão.'],
-  ['olha', 'Olha aqui', ['OLHA', 'AQUI'], 'Toque curto', false, 'Só um aviso, sem pressa.'],
-  // Toque dos botões de pedido (não aparece na grade dos 4 toques).
-  ['pedido', 'Pedido', ['PEDIDO'], 'Apito', false, 'Faça o que o cartão pede.']
-];
-
-// Pedidos da área 220: um toque manda o pedido como cartão.
-// [texto, tipo] — tipo 'on' (verde), 'off' (vermelho) ou '' (neutro).
-const PEDIDOS = [
-  ['Rotativa ON', 'on'], ['Rotativa OFF', 'off'],
-  ['PT35', ''], ['PT36', ''],
-  ['Lab/Frascos', ''], ['Resultados?', ''],
-  ['TQ2202', ''], ['TQ2205', ''],
-  ['BA 2201 ON', 'on'], ['BA 2201 OFF', 'off'],
-  ['BA 2203 ON', 'on'], ['BA 2203 OFF', 'off']
+  ['olha', 'Olha aqui', ['OLHA', 'AQUI'], 'Toque curto', false, 'Só um aviso, sem pressa.']
 ];
 
 // Dentro do APK Android, a página ganha window.SinalNativo: escuta com a tela
@@ -567,10 +554,8 @@ async function responder(chave, extra) {
 }
 
 /** `destinos`: [{ chave, nome }] — uma pessoa, ou todas (PAINEL). */
-async function mandarAlarme(destinos, tone, pedido) {
-  const escrito = clean($('#recado') ? $('#recado').value : '', 80);
-  // Pedido: o texto do botão vai na frente; o que estiver escrito no cartão vai junto.
-  const note = pedido ? clean(pedido + (escrito ? ' · ' + escrito : ''), 80) : escrito;
+async function mandarAlarme(destinos, tone) {
+  const note = clean($('#recado') ? $('#recado').value : '', 80);
   const who = myName();
   if (!who) { setEnvio('Escreva o seu nome.'); return; }
   if (!bus || !bus.pronto()) { setEnvio('Ainda sem ligação com os servidores. Espere "Escuta ligada".'); return; }
@@ -1132,7 +1117,7 @@ function beep(tone) {
   g.gain.setValueAtTime(0.0001, now);
   g.gain.exponentialRampToValueAtTime(0.25, now + 0.02);
   if (tone === 'liga') { o.type = 'sine'; o.frequency.setValueAtTime(880, now); o.frequency.exponentialRampToValueAtTime(220, now + 0.6); }
-  else if (tone === 'preciso' || tone === 'pedido') { o.type = 'square'; o.frequency.setValueAtTime(1400, now); }
+  else if (tone === 'preciso') { o.type = 'square'; o.frequency.setValueAtTime(1400, now); }
   else if (tone === 'olha') { o.type = 'triangle'; o.frequency.setValueAtTime(660, now); }
   else { o.type = 'sawtooth'; o.frequency.setValueAtTime(480, now); o.frequency.linearRampToValueAtTime(920, now + 0.25); o.frequency.linearRampToValueAtTime(480, now + 0.5); }
   g.gain.exponentialRampToValueAtTime(0.0001, now + (tone === 'olha' ? 0.25 : 0.7));
@@ -1179,8 +1164,7 @@ function showAlarm(data, who) {
   notificar(who ? 'De ' + who : NOME_SINAL, note || tone[1]);
 }
 /* Respostas rápidas na tela do alarme: tocar numa delas já fecha o alarme. */
-// Respostas em pares (o último ocupa a linha inteira): as da área 220 e as de sempre.
-const RESPOSTAS = ['Ligada', 'Desligada', 'Positivo', 'Negativo', 'Estou indo', 'Já ligo', 'Agora não posso', 'Ok'];
+const RESPOSTAS = ['Estou indo', 'Já ligo', 'Agora não posso', 'OK, entendi'];
 
 function fecharAlarme(daqui = true) {
   if (daqui && alarmeAberto && ROLE === 'painel') avisarAtendido(alarmeAberto.ref);
@@ -1256,48 +1240,13 @@ function blocoApk() {
   return '<a class="btn surface apk" href="' + APK[ROLE] + '">📲 Instalar o app Android do ' + nome + '</a>' +
     '<p class="muted apk-ajuda">Toca o alarme mesmo com a tela apagada.</p>';
 }
-// Duas abas: "Sinal" (cartão + 4 toques) e "220" (pedidos da área 220).
-function abaAtual() { return read('aba', '220') === 'sinal' ? 'sinal' : '220'; }
-function blocoAbas() {
-  const a = abaAtual();
-  return '<div class="abas" role="tablist">' +
-    '<button role="tab" data-aba="sinal" class="aba' + (a === 'sinal' ? ' on' : '') + '" aria-selected="' + (a === 'sinal') + '">Sinal</button>' +
-    '<button role="tab" data-aba="220" class="aba' + (a === '220' ? ' on' : '') + '" aria-selected="' + (a === '220') + '">220</button></div>';
-}
+// O cartão, o anexo e os 4 toques (a área 232 não tem pedidos: cada área tem o seu app).
 function blocoEnvio(rotuloCartao) {
-  const envio = '<div id="envio" class="envio" aria-live="polite"></div>';
-  return blocoAbas() + (abaAtual() === 'sinal'
-    ? field('recado', rotuloCartao, { max: 80, ph: 'Escreva a mensagem (opcional)', area: true }) +
-      blocoAnexar() + toneButtons() + envio
-    : blocoPedidos(true) + envio +
-      field('recado', 'Escrever junto (opcional)', { max: 80, ph: 'Ex.: urgente, sala de controle' }) +
-      blocoAnexar());
-}
-// Troca de aba: guarda a escolha e redesenha, sem perder o que estava escrito.
-function ligarAbas(redesenhar) {
-  app.querySelectorAll('[data-aba]').forEach(b => b.onclick = () => {
-    if (b.dataset.aba === abaAtual()) return;
-    const escrito = $('#recado') ? $('#recado').value : '';
-    write('aba', b.dataset.aba);
-    redesenhar();
-    if ($('#recado')) $('#recado').value = escrito;
-  });
-}
-function blocoPedidos(compacto) {
-  return '<h3 class="pedidos-titulo">Pedidos · área 220</h3>' +
-    (compacto ? '' : '<p class="muted pedidos-ajuda">Um toque manda o pedido. Se houver algo escrito no cartão, vai junto.</p>') +
-    '<div class="pedidos">' + PEDIDOS.map(([texto, tipo]) =>
-      '<button class="pedido' + (tipo ? ' ' + tipo : '') + '" data-pedido="' + esc(texto) + '">' + esc(texto) + '</button>').join('') +
-    '</div>';
-}
-function ligarPedidos(destinos) {
-  app.querySelectorAll('[data-pedido]').forEach(b => b.onclick = () => {
-    unlock();
-    if (destinos.length) mandarAlarme(destinos, 'pedido', b.dataset.pedido);
-  });
+  return field('recado', rotuloCartao, { max: 80, ph: 'Escreva a mensagem (opcional)', area: true }) +
+    blocoAnexar() + toneButtons() + '<div id="envio" class="envio" aria-live="polite"></div>';
 }
 function toneButtons() {
-  return '<div class="grid">' + TONES.filter(t => t[0] !== 'pedido').map(t =>
+  return '<div class="grid">' + TONES.map(t =>
     '<button class="tone' + (t[4] ? ' hot' : '') + '" data-tone="' + t[0] + '"><b>' + t[2].join('<br>') +
     '</b><small>' + t[5] + '</small></button>').join('') + '</div>';
 }
@@ -1369,7 +1318,7 @@ function telaPainel() {
   const escolhido = todos ? { name: 'todos' } : list.find(p => p.code === selected);
   const destinos = todos ? list.map(p => ({ chave: p.chave, nome: p.name }))
     : escolhido ? [{ chave: escolhido.chave, nome: escolhido.name }] : [];
-  // Tela enxuta, para usar com uma mão: quem recebe e os pedidos no alto;
+  // Tela enxuta, para usar com uma mão: quem recebe e os toques no alto;
   // nome, pessoas novas e convites ficam em "Seu nome e pessoas", mais abaixo.
   const abrirAjustes = ajustesAbertos || !read('name', '') || !list.length;
   app.innerHTML = '<div class="app">' + cabeca('', NOME_PAINEL) +
@@ -1433,8 +1382,6 @@ function telaPainel() {
     unlock();
     if (destinos.length) mandarAlarme(destinos, b.dataset.tone);
   });
-  ligarPedidos(destinos);
-  ligarAbas(telaPainel);
   atualizarPresenca();
   redesenharEnvio();
   ligarHistorico();
@@ -1485,7 +1432,6 @@ function telaSinal() {
     return;
   }
   app.innerHTML = '<div class="app">' + cabeca('', NOME_SINAL) +
-    // Tela enxuta, para usar com uma mão: os pedidos vêm logo no alto.
     '<p class="muted quem">Você é <b>' + esc(read('name', '')) + '</b> · código <b class="codigo">' + esc(read('code', '')) + '</b></p>' +
     blocoEscuta() +
     '<p class="pres pres-painel" data-pres="painel" data-prefixo="' + NOME_PAINEL + ': "></p>' +
@@ -1498,8 +1444,6 @@ function telaSinal() {
     unlock();
     mandarAlarme([{ chave: read('chave', ''), nome: 'o ' + NOME_PAINEL }], b.dataset.tone);
   });
-  ligarPedidos([{ chave: read('chave', ''), nome: 'o ' + NOME_PAINEL }]);
-  ligarAbas(telaSinal);
   atualizarPresenca();
   redesenharEnvio();
   ligarHistorico();
