@@ -17,7 +17,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.13.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.14.0';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const NOME_PAINEL = 'Sinal232';                    // o que a pessoa lê; o papel interno continua "painel"
@@ -1256,6 +1256,33 @@ function blocoApk() {
   return '<a class="btn surface apk" href="' + APK[ROLE] + '">📲 Instalar o app Android do ' + nome + '</a>' +
     '<p class="muted apk-ajuda">Toca o alarme mesmo com a tela apagada.</p>';
 }
+// Duas abas: "Sinal" (cartão + 4 toques) e "220" (pedidos da área 220).
+function abaAtual() { return read('aba', '220') === 'sinal' ? 'sinal' : '220'; }
+function blocoAbas() {
+  const a = abaAtual();
+  return '<div class="abas" role="tablist">' +
+    '<button role="tab" data-aba="sinal" class="aba' + (a === 'sinal' ? ' on' : '') + '" aria-selected="' + (a === 'sinal') + '">Sinal</button>' +
+    '<button role="tab" data-aba="220" class="aba' + (a === '220' ? ' on' : '') + '" aria-selected="' + (a === '220') + '">220</button></div>';
+}
+function blocoEnvio(rotuloCartao) {
+  const envio = '<div id="envio" class="envio" aria-live="polite"></div>';
+  return blocoAbas() + (abaAtual() === 'sinal'
+    ? field('recado', rotuloCartao, { max: 80, ph: 'Escreva a mensagem (opcional)', area: true }) +
+      blocoAnexar() + toneButtons() + envio
+    : blocoPedidos(true) + envio +
+      field('recado', 'Escrever junto (opcional)', { max: 80, ph: 'Ex.: urgente, sala de controle' }) +
+      blocoAnexar());
+}
+// Troca de aba: guarda a escolha e redesenha, sem perder o que estava escrito.
+function ligarAbas(redesenhar) {
+  app.querySelectorAll('[data-aba]').forEach(b => b.onclick = () => {
+    if (b.dataset.aba === abaAtual()) return;
+    const escrito = $('#recado') ? $('#recado').value : '';
+    write('aba', b.dataset.aba);
+    redesenhar();
+    if ($('#recado')) $('#recado').value = escrito;
+  });
+}
 function blocoPedidos(compacto) {
   return '<h3 class="pedidos-titulo">Pedidos · área 220</h3>' +
     (compacto ? '' : '<p class="muted pedidos-ajuda">Um toque manda o pedido. Se houver algo escrito no cartão, vai junto.</p>') +
@@ -1356,9 +1383,7 @@ function telaPainel() {
       '<p class="muted">Ninguém ainda. Adicione em "Seu nome e pessoas", abaixo.</p>') + '</div>' +
     (escolhido
       ? '<h3 class="para">Para ' + esc(escolhido.name) + '</h3>' +
-        blocoPedidos(true) + '<div id="envio" class="envio" aria-live="polite"></div>' +
-        field('recado', 'Escrever junto (opcional)', { max: 80, ph: 'Ex.: urgente, sala de controle' }) +
-        blocoAnexar() + toneButtons()
+        blocoEnvio(todos ? 'Cartão que todos veem' : 'Cartão que a pessoa vê')
       : (list.length ? '<p class="muted" style="margin-top:1rem">Toque numa pessoa para mandar.</p>' : '')) +
     '<details class="historico ajustes" id="ajustes"' + (abrirAjustes ? ' open' : '') + '>' +
       '<summary>Seu nome e pessoas</summary>' +
@@ -1409,6 +1434,7 @@ function telaPainel() {
     if (destinos.length) mandarAlarme(destinos, b.dataset.tone);
   });
   ligarPedidos(destinos);
+  ligarAbas(telaPainel);
   atualizarPresenca();
   redesenharEnvio();
   ligarHistorico();
@@ -1463,9 +1489,7 @@ function telaSinal() {
     '<p class="muted quem">Você é <b>' + esc(read('name', '')) + '</b> · código <b class="codigo">' + esc(read('code', '')) + '</b></p>' +
     blocoEscuta() +
     '<p class="pres pres-painel" data-pres="painel" data-prefixo="' + NOME_PAINEL + ': "></p>' +
-    blocoPedidos(true) + '<div id="envio" class="envio" aria-live="polite"></div>' +
-    field('recado', 'Escrever junto (opcional)', { max: 80, ph: 'Ex.: urgente, sala de controle' }) +
-    blocoAnexar() + toneButtons() +
+    blocoEnvio('Cartão que o ' + NOME_PAINEL + ' vê') +
     blocoHistorico() + blocoApk() +
     '<button class="btn ghost" id="sair">Trocar de convite</button></div>';
   preencherVersao();
@@ -1475,6 +1499,7 @@ function telaSinal() {
     mandarAlarme([{ chave: read('chave', ''), nome: 'o ' + NOME_PAINEL }], b.dataset.tone);
   });
   ligarPedidos([{ chave: read('chave', ''), nome: 'o ' + NOME_PAINEL }]);
+  ligarAbas(telaSinal);
   atualizarPresenca();
   redesenharEnvio();
   ligarHistorico();

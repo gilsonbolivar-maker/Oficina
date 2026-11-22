@@ -44,6 +44,10 @@ textarea::placeholder { color: rgba(243, 237, 228, .7); }
 .row.gerir { flex-wrap: nowrap; }
 .gerir-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gerir-nome b { color: var(--muted); font-weight: 400; letter-spacing: .08em; font-size: .85rem; }
+.abas { display: grid; grid-template-columns: 1fr 1fr; gap: .3rem; margin-top: .8rem; padding: .3rem; border-radius: 1.1rem; background: var(--surface); border: 1px solid var(--line); }
+.aba { min-height: 2.8rem; border: 0; border-radius: .85rem; background: transparent; color: var(--muted); font-weight: 700; font-size: 1.05rem; letter-spacing: .04em; }
+.aba.on { background: var(--fg); color: var(--bg); }
+.abas + .pedidos-titulo { margin-top: .8rem; }
 .quem { margin: .3rem 0 0; }
 .quem .codigo { letter-spacing: .12em; color: var(--fg); }
 .pedidos-titulo { margin: 1.2rem 0 .2rem; font-size: 1.05rem; letter-spacing: .04em; }
