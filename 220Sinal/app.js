@@ -17,7 +17,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.2.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.2.1';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const NOME_PAINEL = '220Sinal';                    // o que a pessoa lê; o papel interno continua "painel"
@@ -1386,7 +1386,7 @@ function telaSinal() {
   }
   const chave = read('chave', '');
   if (!chave) {
-    app.innerHTML = '<div class="app">' + cabeca('USUÁRIO', NOME_SINAL) +
+    app.innerHTML = '<div class="app">' + cabeca('AA 220', NOME_SINAL) +
       '<p>Você recebe o que o ' + NOME_PAINEL + ' mandar. Sua resposta volta só para o ' + NOME_PAINEL + '.</p>' +
       field('nome', 'Seu nome', { max: 24, ph: 'Seu nome' }) +
       field('convite', 'Convite do ' + NOME_PAINEL, { max: 400, ph: 'Cole aqui o link ou o código', area: true }) +
@@ -1408,7 +1408,7 @@ function telaSinal() {
     };
     return;
   }
-  app.innerHTML = '<div class="app">' + cabeca('USUÁRIO', NOME_SINAL) +
+  app.innerHTML = '<div class="app">' + cabeca('AA 220', NOME_SINAL) +
     '<p class="muted">Você é <b>' + esc(read('name', '')) + '</b> · código</p><p class="big">' + esc(read('code', '')) + '</p>' +
     blocoEscuta() +
     '<h2>Chamar o ' + NOME_PAINEL + '</h2>' +
