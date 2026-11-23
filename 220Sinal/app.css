@@ -41,8 +41,9 @@ textarea::placeholder { color: rgba(243, 237, 228, .7); }
 .para { margin: 1rem 0 0; font-size: 1.05rem; letter-spacing: .04em; color: var(--muted); }
 .para + .pedidos-titulo { margin-top: .2rem; }
 .ajustes { margin-top: 1.4rem; }
-.row.gerir { flex-wrap: nowrap; }
-.gerir-nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row.gerir { flex-wrap: wrap; row-gap: .3rem; }
+.row.gerir #novo-nome { flex: 1 1 100%; margin: 0; }
+.gerir-nome { flex: 1 1 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gerir-nome b { color: var(--muted); font-weight: 400; letter-spacing: .08em; font-size: .85rem; }
 .quem { margin: .3rem 0 0; }
 .quem .codigo { letter-spacing: .12em; color: var(--fg); }

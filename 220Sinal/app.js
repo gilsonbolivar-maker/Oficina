@@ -17,7 +17,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.10.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.10.1';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const NOME_PAINEL = 'Zap/220';                    // o que a pessoa lê; o papel interno continua "painel"
@@ -1522,7 +1522,8 @@ function telaLeituras() {
   }
 }
 
-let ajustesAbertos = false;   // "Seu nome e pessoas" aberto entre um redesenho e outro
+let ajustesAbertos = false;
+let renomeando = '';   // código da pessoa sendo renomeada   // "Seu nome e pessoas" aberto entre um redesenho e outro
 function telaPainel() {
   if (abaPainel === 'leituras') { telaLeituras(); return; }
   pararLeituras();
@@ -1555,8 +1556,10 @@ function telaPainel() {
     '<details class="historico ajustes" id="ajustes"' + (abrirAjustes ? ' open' : '') + '>' +
       '<summary>Seu nome e pessoas</summary>' +
       field('nome', 'Seu nome no alerta', { max: 24, ph: NOME_PAINEL }) +
-      list.map(p =>
-        '<div class="row gerir"><span class="gerir-nome">' + esc(p.name) + ' <b>' + esc(p.code) + '</b></span>' +
+      list.map(p => renomeando === p.code
+        ? '<div class="row gerir"><input id="novo-nome" maxlength="24" value="' + esc(p.name) + '" aria-label="Novo nome">' +
+          '<button class="mini" id="salvar-nome">Salvar</button><button class="erase" id="cancelar-nome">Cancelar</button></div>'
+        : '<div class="row gerir"><span class="gerir-nome">' + esc(p.name) + ' <b>' + esc(p.code) + '</b></span>' +
         '<button class="mini" data-convite="' + esc(p.code) + '">Convite</button>' +
         '<button class="mini" data-renomear="' + esc(p.code) + '">Renomear</button>' +
         '<button class="mini" data-codigo="' + esc(p.code) + '">Código</button>' +
@@ -1591,16 +1594,28 @@ function telaPainel() {
   app.querySelectorAll('[data-convite]').forEach(b => b.onclick = () =>
     compartilharConvite(people().find(p => p.code === b.dataset.convite)));
   // Renomear: muda só o nome na lista; código e convite continuam os mesmos.
-  app.querySelectorAll('[data-renomear]').forEach(b => b.onclick = async () => {
-    const person = people().find(p => p.code === b.dataset.renomear);
-    if (!person) return;
-    const novo = clean(prompt('Novo nome para ' + person.name + ':', person.name) || '', 24);
-    if (!novo || novo === person.name) return;
-    savePeople(people().map(p => p.code === person.code ? Object.assign({}, p, { name: novo }) : p));
-    listaMudou();
-    if (bus) await escutar();   // o Android passa a mostrar o nome novo nos alertas
-    telaPainel();
+  // (Editado na própria linha: o app Android não mostra a janela do prompt().)
+  app.querySelectorAll('[data-renomear]').forEach(b => b.onclick = () => {
+    renomeando = b.dataset.renomear; ajustesAbertos = true; telaPainel();
+    const campo = $('#novo-nome'); if (campo) { campo.focus(); campo.select(); }
   });
+  const salvarNome = $('#salvar-nome');
+  if (salvarNome) {
+    const salvar = async () => {
+      const novo = clean($('#novo-nome').value, 24);
+      const code = renomeando;
+      renomeando = '';
+      if (novo) {
+        savePeople(people().map(p => p.code === code ? Object.assign({}, p, { name: novo }) : p));
+        listaMudou();
+        if (bus) await escutar();   // o Android passa a mostrar o nome novo nos alertas
+      }
+      telaPainel();
+    };
+    salvarNome.onclick = salvar;
+    $('#novo-nome').onkeydown = e => { if (e.key === 'Enter') salvar(); };
+    $('#cancelar-nome').onclick = () => { renomeando = ''; telaPainel(); };
+  }
   app.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
     const person = people().find(p => p.code === b.dataset.del);
     if (!confirm('Apagar ' + (person ? person.name : 'esta pessoa') + '? O convite dela deixa de valer.')) return;
