@@ -17,7 +17,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.9.2';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.10.0';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const NOME_PAINEL = 'Zap/220';                    // o que a pessoa lê; o papel interno continua "painel"
@@ -1558,6 +1558,7 @@ function telaPainel() {
       list.map(p =>
         '<div class="row gerir"><span class="gerir-nome">' + esc(p.name) + ' <b>' + esc(p.code) + '</b></span>' +
         '<button class="mini" data-convite="' + esc(p.code) + '">Convite</button>' +
+        '<button class="mini" data-renomear="' + esc(p.code) + '">Renomear</button>' +
         '<button class="mini" data-codigo="' + esc(p.code) + '">Código</button>' +
         '<button class="erase" data-del="' + esc(p.code) + '">Apagar</button></div>').join('') +
       field('pessoa', 'Nova pessoa', { max: 24, ph: 'Nome do colega' }) +
@@ -1589,6 +1590,17 @@ function telaPainel() {
     compartilharCodigo(people().find(p => p.code === b.dataset.codigo)));
   app.querySelectorAll('[data-convite]').forEach(b => b.onclick = () =>
     compartilharConvite(people().find(p => p.code === b.dataset.convite)));
+  // Renomear: muda só o nome na lista; código e convite continuam os mesmos.
+  app.querySelectorAll('[data-renomear]').forEach(b => b.onclick = async () => {
+    const person = people().find(p => p.code === b.dataset.renomear);
+    if (!person) return;
+    const novo = clean(prompt('Novo nome para ' + person.name + ':', person.name) || '', 24);
+    if (!novo || novo === person.name) return;
+    savePeople(people().map(p => p.code === person.code ? Object.assign({}, p, { name: novo }) : p));
+    listaMudou();
+    if (bus) await escutar();   // o Android passa a mostrar o nome novo nos alertas
+    telaPainel();
+  });
   app.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
     const person = people().find(p => p.code === b.dataset.del);
     if (!confirm('Apagar ' + (person ? person.name : 'esta pessoa') + '? O convite dela deixa de valer.')) return;
