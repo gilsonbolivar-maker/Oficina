@@ -17,7 +17,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.9.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.9.1';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const NOME_PAINEL = 'Zap/220';                    // o que a pessoa lê; o papel interno continua "painel"
@@ -1802,7 +1802,7 @@ function avisarVersaoNova(v) {
 function atualizarAgora() {
   const b = $('#atualizar-agora');
   if (b) { b.textContent = 'Atualizando…'; b.disabled = true; }
-  location.href = 'atualizar.html';
+  location.href = 'atualizar.html?v=' + Date.now();
 }
 async function procurarVersao() {
   const v = await versaoPublicada();

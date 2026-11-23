@@ -19,6 +19,9 @@
       const nomes = await caches.keys();
       const prefixo = '220sinal-v';
       await Promise.all(nomes.filter(n => n.startsWith(prefixo)).map(n => caches.delete(n)));
+      // O navegador também guarda os arquivos por uns minutos (cache HTTP):
+      // busca de novo, sem cache, para a página não voltar na versão velha.
+      await Promise.all(['index.html', '../220Sinal/app.js', '../220Sinal/app.css', 'sw.js', 'manifest.webmanifest'].map(f => fetch(f, { cache: 'reload' }).catch(() => {})));
     } catch (e) {}
     document.getElementById('msg').innerHTML = '<b>Pronto.</b> Abrindo a versão nova…';
     setTimeout(() => location.replace(pasta + '?v=' + Date.now()), 800);
