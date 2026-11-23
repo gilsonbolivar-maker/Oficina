@@ -17,7 +17,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.8.0';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.9.0';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const NOME_PAINEL = 'Zap/220';                    // o que a pessoa lê; o papel interno continua "painel"
@@ -1490,32 +1490,32 @@ async function puxarLeituras() {
   } catch {
     leiturasErro = 'Sem resposta do 232 (' + endereco232().replace(/^https:\/\//, '') + '). Se ele estava parado, leva cerca de 1 minuto para acordar.';
   }
-  if (abaPainel === 'leituras' && ROLE === 'painel') telaPainel();
+  if (abaPainel === 'leituras') desenharTela();
 }
 function pararLeituras() { clearInterval(leiturasTimer); leiturasTimer = null; }
 
 function telaLeituras() {
-  app.innerHTML = '<div class="app">' + cabeca('', NOME_PAINEL) + abas() + conteudoLeituras() + '</div>';
+  app.innerHTML = '<div class="app">' + cabeca('', ROLE === 'painel' ? NOME_PAINEL : NOME_SINAL) + abas() + conteudoLeituras() + '</div>';
   preencherVersao();
-  ligarAbas(telaPainel);
+  ligarAbas(desenharTela);
   const entrar = $('#l232-entrar');
   if (entrar) {
     $('#l232-end').value = read('l232-end', '');
     $('#l232-senha').type = 'password';
     entrar.onclick = () => {
       const s = String($('#l232-senha').value || '').trim();
-      if (!s) { leiturasErro = 'Escreva a senha.'; telaPainel(); return; }
+      if (!s) { leiturasErro = 'Escreva a senha.'; desenharTela(); return; }
       write('l232-end', clean($('#l232-end').value, 200));
       write('l232-senha', s);
       leiturasErro = '';
-      telaPainel();
+      desenharTela();
       puxarLeituras();
     };
   }
   const atual = $('#l232-atualizar');
   if (atual) atual.onclick = () => { atual.textContent = 'Buscando…'; puxarLeituras(); };
   const sair = $('#l232-sair');
-  if (sair) sair.onclick = () => { write('l232-senha', ''); leituras = null; leiturasEm = 0; leiturasErro = ''; pararLeituras(); telaPainel(); };
+  if (sair) sair.onclick = () => { write('l232-senha', ''); leituras = null; leiturasEm = 0; leiturasErro = ''; pararLeituras(); desenharTela(); };
   if (read('l232-senha', '') && !leiturasTimer) {
     puxarLeituras();
     leiturasTimer = setInterval(puxarLeituras, 30000);
@@ -1651,7 +1651,9 @@ function telaSinal() {
     };
     return;
   }
-  app.innerHTML = '<div class="app">' + cabeca('', NOME_SINAL) +
+  if (abaPainel === 'leituras') { telaLeituras(); return; }
+  pararLeituras();
+  app.innerHTML = '<div class="app">' + cabeca('', NOME_SINAL) + abas() +
     // Tela enxuta, para usar com uma mão: os pedidos vêm logo no alto.
     '<p class="muted quem">Você é <b>' + esc(read('name', '')) + '</b> · código <b class="codigo">' + esc(read('code', '')) + '</b></p>' +
     blocoEscuta() +
@@ -1663,6 +1665,7 @@ function telaSinal() {
     '<button class="btn ghost" id="sair">Trocar de convite</button></div>';
   preencherVersao();
   ligarBotoesEscuta(telaSinal);
+  ligarAbas(telaSinal);
   app.querySelectorAll('[data-tone]').forEach(b => b.onclick = () => {
     unlock();
     mandarAlarme([{ chave: read('chave', ''), nome: 'o ' + NOME_PAINEL }], b.dataset.tone);
@@ -1827,7 +1830,7 @@ confirmarAtualizacao();
 setTimeout(procurarVersao, 3000);
 preencherVersao();
 faixaInstalar();
-const desenharTela = () => (ROLE === 'painel' ? telaPainel() : telaSinal());
+function desenharTela() { return ROLE === 'painel' ? telaPainel() : telaSinal(); }
 desenharTela();
 // Liga a escuta sozinho ao abrir — a menos que a pessoa tenha tocado em "Parar de escutar".
 if (read('escutar', true) && (ROLE === 'painel' || read('chave', ''))) escutar().then(desenharTela);

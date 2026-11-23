@@ -152,29 +152,29 @@ textarea::placeholder { color: rgba(243, 237, 228, .7); }
 .tab-l th:first-child { background: var(--surface); }
 .tab-l td:nth-child(2) { white-space: normal; min-width: 8.5rem; color: var(--muted); }
 
-/* Paleta 4 (teste): claro com laranja — só no Zap/220 (painel), o AA220 continua escuro.
+/* Paleta 4 (teste): claro com laranja — vale para o Zap/220 e para o AA220 dos operadores.
    Para voltar à paleta escura, apague este bloco inteiro. */
-body[data-role="painel"] { --bg: #F6F3EE; --surface: #FFFFFF; --fg: #1F1A14; --muted: #7A7064; --alert: #D9480F; --line: #E2DBD0; --ok: #1E8E4E; }
-body[data-role="painel"] .btn.alert,
-body[data-role="painel"] .row .pick.on,
-body[data-role="painel"] .chips .pick.on,
-body[data-role="painel"] .tone.hot,
-body[data-role="painel"] textarea:not(.convite) { color: #fff; }
-body[data-role="painel"] .chips .pick.on small,
-body[data-role="painel"] .row .pick.on span small { color: rgba(255, 255, 255, .88); }
-body[data-role="painel"] .pick.on .pres.on-line { color: #fff !important; }
-body[data-role="painel"] #alarm { --fg: #fff; --muted: rgba(255, 255, 255, .88); color: #fff; }
-body[data-role="painel"] .pedido.off { color: #C2410C; }
-body[data-role="painel"] .envio[data-estado="falhou"],
-body[data-role="painel"] .envio .por-pessoa li[data-estado="falhou"],
-body[data-role="painel"] .erro-l { color: #B42318; }
-body[data-role="painel"] .envio[data-estado="guardada"],
-body[data-role="painel"] .apk-link a { color: #92400E; }
-body[data-role="painel"] .aviso-som { background: #FEF3C7; color: #92400E; }
-body[data-role="painel"] .historico li.entrou { color: #9A3412; }
-body[data-role="painel"] .anexo-recebido { background: rgba(0, 0, 0, .05); }
-body[data-role="painel"] .pres::before { background: #B8AFA3; }
-body[data-role="painel"] .rumo-l.subindo { color: #1E8E4E; }
-body[data-role="painel"] .rumo-l.descendo { color: #B42318; }
-body[data-role="painel"] .lab-l { color: #9A3412; }
-body[data-role="painel"] .tab-l td:first-child { background: var(--bg); }
+body { --bg: #F6F3EE; --surface: #FFFFFF; --fg: #1F1A14; --muted: #7A7064; --alert: #D9480F; --line: #E2DBD0; --ok: #1E8E4E; }
+body .btn.alert,
+body .row .pick.on,
+body .chips .pick.on,
+body .tone.hot,
+body textarea:not(.convite) { color: #fff; }
+body .chips .pick.on small,
+body .row .pick.on span small { color: rgba(255, 255, 255, .88); }
+body .pick.on .pres.on-line { color: #fff !important; }
+body #alarm { --fg: #fff; --muted: rgba(255, 255, 255, .88); color: #fff; }
+body .pedido.off { color: #C2410C; }
+body .envio[data-estado="falhou"],
+body .envio .por-pessoa li[data-estado="falhou"],
+body .erro-l { color: #B42318; }
+body .envio[data-estado="guardada"],
+body .apk-link a { color: #92400E; }
+body .aviso-som { background: #FEF3C7; color: #92400E; }
+body .historico li.entrou { color: #9A3412; }
+body .anexo-recebido { background: rgba(0, 0, 0, .05); }
+body .pres::before { background: #B8AFA3; }
+body .rumo-l.subindo { color: #1E8E4E; }
+body .rumo-l.descendo { color: #B42318; }
+body .lab-l { color: #9A3412; }
+body .tab-l td:first-child { background: var(--bg); }
