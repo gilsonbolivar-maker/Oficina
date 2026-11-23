@@ -17,7 +17,7 @@
    ———————————————————————————————————————————————————————————— */
 'use strict';
 
-const VERSAO = '1.10.1';   // precisa casar com a VERSAO do sw.js
+const VERSAO = '1.11.0';   // precisa casar com a VERSAO do sw.js
 
 const ROLE = document.body.dataset.role;          // 'painel' | 'sinal'
 const NOME_PAINEL = 'Zap/220';                    // o que a pessoa lê; o papel interno continua "painel"
@@ -1464,6 +1464,20 @@ function conteudoLeituras() {
           graficoL(it, s, t.rumo) + (t.txt ? '<span class="rumo-l ' + t.rumo + '">' + esc(t.txt) + '</span>' : '') + '</div>';
       }).join('') + '</div>';
     }
+    /* Calculadora de nível: o que foi lançado de lá com "Lançar no Zap/220",
+       um por tanque, o mais novo primeiro. O texto vem pronto do 232. */
+    const calc = (leituras.calc || []).slice().sort((x, y) => String(y.em).localeCompare(String(x.em)));
+    h += '<h3 class="lab-l">Calculadora de nível</h3>' + (calc.length
+      ? '<div class="calc-l">' + calc.map(c => {
+          const pct = v => v === '' || v == null ? '—' : esc(String(v).replace('.', ',')) + '%';
+          const quando = c.em ? new Date(c.em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+          return '<div class="card-l calc-item"><b>' + esc(c.eq || c.tag) + '</b><span class="eq-l">' + esc(c.tag) + '</span>' +
+            '<span class="calc-par-l">' + esc(c.hi) + ' · ' + pct(c.li) + ' → ' + esc(c.hf) + ' · ' + pct(c.lf) +
+            (c.alvo ? ' <small>(alvo ' + pct(c.alvo) + ')</small>' : '') + '</span>' +
+            '<span class="rumo-l ' + esc(c.rumo || '') + '">' + esc(c.texto) + '</span>' +
+            (quando ? '<span class="eq-l">Lançado às ' + quando + '</span>' : '') + '</div>';
+        }).join('') + '</div>'
+      : '<p class="muted">Nada lançado ainda. Na calculadora de nível do 232, escolha um tanque da AA-220 e toque em "Lançar no Zap/220".</p>');
     const lab = leituras.lab || [];
     h += '<h3 class="lab-l">Leituras de laboratório</h3>' + (lab.length
       ? '<div class="tab-l"><table><thead><tr><th>Ponto</th><th>Parâmetro</th><th>Horário</th><th>Valor</th><th>Unid.</th></tr></thead><tbody>' +

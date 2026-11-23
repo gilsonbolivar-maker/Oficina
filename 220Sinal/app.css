@@ -179,3 +179,7 @@ body .rumo-l.subindo { color: #1E8E4E; }
 body .rumo-l.descendo { color: #B42318; }
 body .lab-l { color: #9A3412; }
 body .tab-l td:first-child { background: var(--bg); }
+.calc-l { display: grid; gap: .5rem; margin-top: .6rem; }
+.calc-item .calc-par-l { font-size: .95rem; font-weight: 650; }
+.calc-item .calc-par-l small { font-weight: 400; color: var(--muted); }
+.calc-item .rumo-l { font-size: .9rem; }
