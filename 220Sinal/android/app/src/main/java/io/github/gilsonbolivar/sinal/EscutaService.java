@@ -138,7 +138,7 @@ public class EscutaService extends Service implements Mqtt.Ouvinte {
     private synchronized void reconfigurar(String json) {
         if (json.equals(assinatura) && !conexoes.isEmpty()) return;
         assinatura = json;
-        for (Mqtt m : conexoes) m.parar();
+        pararLigacoes();
         conexoes.clear();
         porTopico.clear();
         contatos.clear();
@@ -383,9 +383,18 @@ public class EscutaService extends Service implements Mqtt.Ouvinte {
         }
     }
 
+    /** Fecha as ligações numa linha à parte: fechar um socket TLS manda dados
+     *  pela rede, e o Android derruba o app se isso acontecer na linha principal
+     *  (era o que fechava o app ao adicionar ou apagar uma pessoa). */
+    private void pararLigacoes() {
+        final List<Mqtt> velhas = new ArrayList<>(conexoes);
+        if (velhas.isEmpty()) return;
+        new Thread(() -> { for (Mqtt m : velhas) m.parar(); }, "mqtt-parar").start();
+    }
+
     private void pararTudo() {
         pararAlarme();
-        for (Mqtt m : conexoes) m.parar();
+        pararLigacoes();
         conexoes.clear();
         assinatura = "";
         if (relogio != null) { relogio.shutdownNow(); relogio = null; }
@@ -402,7 +411,7 @@ public class EscutaService extends Service implements Mqtt.Ouvinte {
     public void onDestroy() {
         atual = null;
         pararSom();
-        for (Mqtt m : conexoes) m.parar();
+        pararLigacoes();
         if (relogio != null) relogio.shutdownNow();
         if (trava != null && trava.isHeld()) trava.release();
         if (travaWifi != null && travaWifi.isHeld()) travaWifi.release();

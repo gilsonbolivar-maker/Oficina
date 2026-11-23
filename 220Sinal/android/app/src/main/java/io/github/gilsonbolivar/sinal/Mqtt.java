@@ -148,7 +148,7 @@ final class Mqtt {
 
     private void fecharSocket() {
         saida = null;
-        try { if (sock != null) sock.close(); } catch (IOException e) { /* já fechado */ }
+        try { if (sock != null) sock.close(); } catch (Exception e) { /* já fechado */ }
         sock = null;
     }
 
