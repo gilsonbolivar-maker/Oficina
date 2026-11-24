@@ -2,9 +2,9 @@
    receber, precisa de internet). Página vem da rede quando dá; o resto, do cache. */
 'use strict';
 
-const VERSAO = '1.11.1';   // precisa casar com a VERSAO do app.js
+const VERSAO = '1.12.0';   // precisa casar com a VERSAO do app.js
 const CACHE_APP = '220sinal-painel-v' + VERSAO;
-const ARQUIVOS = ['.', 'index.html', 'app.js', 'app.css', 'manifest.webmanifest',
+const ARQUIVOS = ['.', 'index.html', 'app.js', 'areas.js', 'app.css', 'manifest.webmanifest',
   'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', ev => {
