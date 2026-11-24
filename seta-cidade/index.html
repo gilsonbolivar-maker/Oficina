@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Seta">
+<meta name="theme-color" content="#0d1c24">
+<title>Seta para a Cidade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: calma, de instrumento de navegação
+   IDEA: uma bússola de mapa topográfico
+   PICTURE: rosa dos ventos grande com a seta magenta apontando a cidade
+   COLOUR/TYPE: noite #0d1c24, terra #fbfbf2, magenta #d6127e, contorno #a8551b; Overpass
+   LAYOUT: título, bússola grande, campo de busca, informações embaixo */
+:root{--bg:#0d1c24;--land:#fbfbf2;--ink:#e8f0f2;--dim:#8fa6ae;--route:#ff3d9a;--contour:#d98a4e;--card:#132a35}
+*{box-sizing:border-box;min-width:0}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.5 Overpass,system-ui,sans-serif;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);overflow-x:clip}
+main{max-width:640px;margin:0 auto;padding:20px 18px 40px;display:flex;flex-direction:column;gap:18px}
+h1{font-weight:800;font-size:clamp(28px,6vw,40px);line-height:1.05;margin:6px 0 0}
+.sub{color:var(--dim);margin:0}
+.dial{position:relative;width:min(86vw,460px);aspect-ratio:1;margin:4px auto}
+.dial svg{position:absolute;inset:0;width:100%;height:100%}
+#rose{transition:transform .25s linear}
+#arrow{transition:transform .25s linear}
+@media(prefers-reduced-motion:reduce){#rose,#arrow{transition:none}}
+.big{text-align:center}
+.big .city{font-size:26px;font-weight:800;line-height:1.1}
+.big .info{color:var(--dim);font-size:16px}
+.big .dir{font-size:20px;font-weight:600;color:var(--route)}
+form{display:flex;gap:10px}
+input{flex:1;font:inherit;font-size:18px;padding:14px 16px;border-radius:14px;border:2px solid #2b4a57;background:var(--card);color:var(--ink)}
+input:focus{outline:none;border-color:var(--route)}
+button{font:inherit;font-weight:800;font-size:17px;min-height:52px;padding:0 20px;border:0;border-radius:14px;background:var(--route);color:#fff;cursor:pointer}
+button:focus-visible{outline:3px solid #fff;outline-offset:2px}
+button.ghost{background:var(--card);color:var(--ink);border:2px solid #2b4a57;width:100%}
+.list{display:flex;flex-direction:column;gap:8px}
+.list button{background:var(--card);color:var(--ink);border:2px solid #2b4a57;text-align:left;font-weight:600;padding:10px 16px}
+.list small{display:block;color:var(--dim);font-weight:400}
+.status{background:var(--card);border-radius:14px;padding:12px 16px;font-size:16px}
+.status b{color:var(--contour)}
+.hidden{display:none}
+.versao{position:fixed;right:max(10px,env(safe-area-inset-right));bottom:max(8px,env(safe-area-inset-bottom));font-size:13px;color:var(--dim)}
+</style>
+</head>
+<body>
+<main>
+  <div>
+    <h1>Seta para a cidade</h1>
+    <p class="sub">Digite uma cidade. A seta rosa aponta para ela.</p>
+  </div>
+
+  <div class="dial" aria-label="Bússola">
+    <svg viewBox="-200 -200 400 400" aria-hidden="true">
+      <circle r="190" fill="#102631" stroke="#2b4a57" stroke-width="2"/>
+      <g id="rose">
+        <g id="ticks"></g>
+        <text y="-150" text-anchor="middle" font-size="30" font-weight="800" fill="#ff5a5a" font-family="Overpass">N</text>
+        <text y="166" text-anchor="middle" font-size="24" font-weight="600" fill="#8fa6ae" font-family="Overpass">S</text>
+        <text x="158" y="9" text-anchor="middle" font-size="24" font-weight="600" fill="#8fa6ae" font-family="Overpass">L</text>
+        <text x="-158" y="9" text-anchor="middle" font-size="24" font-weight="600" fill="#8fa6ae" font-family="Overpass">O</text>
+        <g id="arrow" class="hidden">
+          <path d="M0,-135 L26,-70 L9,-74 L9,60 L-9,60 L-9,-74 L-26,-70 Z" fill="#ff3d9a" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
+        </g>
+      </g>
+      <circle r="12" fill="#fbfbf2"/>
+      <path d="M0,-196 L-9,-180 L9,-180 Z" fill="#fbfbf2"/>
+    </svg>
+  </div>
+
+  <div class="big" id="big">
+    <div class="city" id="cityName">—</div>
+    <div class="dir" id="dirText"></div>
+    <div class="info" id="info"></div>
+  </div>
+
+  <form id="f" autocomplete="off">
+    <input id="q" type="text" placeholder="Ex.: Salvador" aria-label="Nome da cidade" enterkeyhint="search">
+    <button type="submit">Buscar</button>
+  </form>
+  <div class="list" id="list"></div>
+
+  <button class="ghost" id="startBtn">1. Ativar localização e bússola</button>
+  <div class="status" id="status">Toque no botão acima primeiro.</div>
+</main>
+<div class="versao" data-versao></div>
+
+<script>
+{
+const VERSAO = '1.0.0';
+document.querySelectorAll('[data-versao]').forEach(e => e.textContent = 'v' + VERSAO);
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// marcas da bússola
+let t = '';
+for (let a = 0; a < 360; a += 10) {
+  const long = a % 30 === 0;
+  t += `<line x1="0" y1="-190" x2="0" y2="${long ? -172 : -180}" stroke="${long ? '#d98a4e' : '#2b4a57'}" stroke-width="${long ? 3 : 2}" transform="rotate(${a})"/>`;
+}
+$('ticks').innerHTML = t;
+
+let me = null;       // {lat, lon}
+let target = null;   // {name, lat, lon}
+let heading = null;  // graus, 0 = norte
+
+const rad = d => d * Math.PI / 180, deg = r => r * 180 / Math.PI;
+
+function bearing(a, b) {
+  const y = Math.sin(rad(b.lon - a.lon)) * Math.cos(rad(b.lat));
+  const x = Math.cos(rad(a.lat)) * Math.sin(rad(b.lat)) - Math.sin(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.cos(rad(b.lon - a.lon));
+  return (deg(Math.atan2(y, x)) + 360) % 360;
+}
+function distKm(a, b) {
+  const dLat = rad(b.lat - a.lat), dLon = rad(b.lon - a.lon);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.sqrt(h));
+}
+const NAMES = ['Norte','Nordeste','Leste','Sudeste','Sul','Sudoeste','Oeste','Noroeste'];
+const card = b => NAMES[Math.round(b / 45) % 8];
+
+function render() {
+  // a rosa gira para o norte real ficar no norte; a seta fica no ângulo da cidade
+  const rot = heading == null ? 0 : -heading;
+  $('rose').setAttribute('transform', `rotate(${rot})`);
+  if (!target) return;
+  $('cityName').textContent = target.name;
+  if (!me) { $('info').textContent = 'Falta a sua localização.'; return; }
+  const b = bearing(me, target);
+  const km = distKm(me, target);
+  $('arrow').classList.remove('hidden');
+  $('arrow').setAttribute('transform', `rotate(${b})`);
+  $('dirText').textContent = `${card(b)} · ${Math.round(b)}°`;
+  $('info').textContent = `${km < 10 ? km.toFixed(1) : Math.round(km).toLocaleString('pt-BR')} km em linha reta`;
+}
+
+// 1. localização + bússola
+$('startBtn').addEventListener('click', async () => {
+  $('status').textContent = 'Pedindo permissões…';
+  // bússola (iPad/iPhone pede permissão)
+  try {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      const r = await DeviceOrientationEvent.requestPermission();
+      if (r !== 'granted') throw new Error('negada');
+    }
+    const onOri = e => {
+      let h = null;
+      if (typeof e.webkitCompassHeading === 'number') h = e.webkitCompassHeading;   // iPad / iPhone
+      else if (e.absolute && e.alpha != null) h = (360 - e.alpha) % 360;          // Android
+      if (h != null) { heading = h; render(); }
+    };
+    window.addEventListener('deviceorientationabsolute', onOri);
+    window.addEventListener('deviceorientation', onOri);
+  } catch (err) { /* segue sem bússola */ }
+
+  if (!navigator.geolocation) { $('status').innerHTML = '<b>Sem localização</b> neste navegador.'; return; }
+  navigator.geolocation.watchPosition(p => {
+    me = { lat: p.coords.latitude, lon: p.coords.longitude };
+    $('startBtn').classList.add('hidden');
+    $('status').innerHTML = heading == null
+      ? '✔ Localização ok. <b>Bússola não respondeu</b>: o norte fica para cima, segure o iPad com o topo apontando para o norte.'
+      : '✔ Localização e bússola ativas. Segure o iPad deitado, na horizontal.';
+    render();
+  }, err => {
+    $('status').innerHTML = '<b>Localização negada.</b> Ajustes › Privacidade › Serviços de Localização › Safari.';
+  }, { enableHighAccuracy: true, maximumAge: 30000 });
+});
+
+// 2. busca da cidade (Open-Meteo, gratuito, sem chave)
+$('f').addEventListener('submit', async e => {
+  e.preventDefault();
+  const q = $('q').value.trim();
+  if (!q) return;
+  $('list').innerHTML = '<div class="status">Buscando…</div>';
+  try {
+    const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&language=pt&format=json`);
+    const d = await r.json();
+    const res = d.results || [];
+    if (!res.length) { $('list').innerHTML = '<div class="status">Não achei essa cidade. Confira a escrita.</div>'; return; }
+    $('list').innerHTML = res.map((c, i) =>
+      `<button type="button" data-i="${i}">${esc(c.name)}<small>${esc([c.admin1, c.country].filter(Boolean).join(', '))}</small></button>`).join('');
+    $('list').querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => {
+      const c = res[+btn.dataset.i];
+      target = { name: `${c.name}${c.admin1 ? ' – ' + c.admin1 : ''}`, lat: c.latitude, lon: c.longitude };
+      $('list').innerHTML = '';
+      $('q').blur();
+      render();
+    }));
+    if (res.length === 1) $('list').querySelector('button').click();
+  } catch (err) {
+    $('list').innerHTML = '<div class="status">Sem internet ou o serviço não respondeu.</div>';
+  }
+});
+
+render();
+}
+</script>
+</body>
+</html>
