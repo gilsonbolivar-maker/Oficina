@@ -26,6 +26,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Trava contra voltar no tempo: se alguém apertar "Re-run" numa publicação
+      # antiga, ela pararia aqui em vez de trocar o site por uma versão velha.
+      # Só publica se este commit for o mais novo da main.
+      - name: Conferir se esta é a versão mais nova
+        run: |
+          novo=$(git ls-remote origin refs/heads/main | cut -f1)
+          if [ "$novo" != "$GITHUB_SHA" ]; then
+            echo "::error::Publicação antiga (${GITHUB_SHA:0:7}). A versão mais nova é ${novo:0:7}. Nada foi publicado: o site continua como está."
+            exit 1
+          fi
+
       - name: Ligar o Pages, se ainda não estiver
         uses: actions/configure-pages@v5
         with:
