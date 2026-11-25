@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.publicacao.outputs.page_url }}
+      url: ${{ steps.publicacao.outputs.page_url || steps.publicacao2.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -47,5 +47,16 @@ jobs:
         with:
           path: .
 
+      # O GitHub às vezes falha na primeira tentativa ("Fetching artifact metadata
+      # failed"). Em vez de alguém precisar apertar Re-run, tenta de novo sozinho.
       - id: publicacao
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      - name: Esperar antes da segunda tentativa
+        if: steps.publicacao.outcome == 'failure'
+        run: sleep 30
+
+      - id: publicacao2
+        if: steps.publicacao.outcome == 'failure'
         uses: actions/deploy-pages@v4
